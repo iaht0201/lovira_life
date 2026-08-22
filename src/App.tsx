@@ -27,6 +27,7 @@ import {
   reconcileSessionDerivedState,
   resolveCurrentStep,
 } from './services/actionEngine';
+import { buildPartialSuccessReply, deduceHonorifics } from './services/conversationStyle';
 import { parseLocalIntent } from './services/localIntentEngine';
 import { createLifeSessionFromPlan } from './services/sessionFactory';
 import { speakText } from './services/ttsService';
@@ -518,9 +519,17 @@ export default function App() {
 
         if (batchRes.status === 'full' || batchRes.status === 'partial') {
           const finalSession = batchRes.newState;
-          const consistentReply = replyText;
+          let consistentReply = replyText;
+
           if (batchRes.status === 'partial' && batchRes.rejectedActions.length > 0) {
             console.warn('Some agent actions were ignored by validator:', batchRes.rejectedActions);
+            const honorifics = deduceHonorifics(userProfile, userText);
+            consistentReply = buildPartialSuccessReply(
+              batchRes.appliedActions,
+              batchRes.rejectedActions,
+              replyText,
+              honorifics
+            );
           }
 
           const loviraMsg = {

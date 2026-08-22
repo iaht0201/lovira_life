@@ -1,18 +1,66 @@
 import { LifeSession } from '../types';
 import { UserProfile, PronounStyle } from '../types/userProfile';
 
+export interface SessionContextDescriptor {
+  scenarioType?: string;
+  scenarioFamily?: string;
+  subtype?: string;
+}
+
 /**
- * Filter sensitive self-reported health conditions based on the current session scenario type.
- * Section 5.1 of specification:
- * - "medical" scenario -> Send ALL self-reported conditions.
- * - Other scenarios -> Do NOT send medical conditions unless explicitly relevant.
+ * Filter sensitive self-reported health conditions based on the current session context.
+ * - Healthcare/medical scenarios -> Send all health conditions.
+ * - Movement/transit scenarios -> Include mobility/vision relevant conditions.
+ * - Other scenarios -> Do not leak medical conditions unless directly relevant.
  */
 export function getRelevantConditions(
   allConditions: string[] = [],
-  scenarioType: LifeSession['scenarioType']
+  sessionContext?: string | SessionContextDescriptor
 ): string[] {
   if (!allConditions || allConditions.length === 0) return [];
-  if (scenarioType === 'medical') return allConditions;
+
+  let scenarioType = '';
+  let scenarioFamily = '';
+  let subtype = '';
+
+  if (typeof sessionContext === 'string') {
+    scenarioType = sessionContext;
+  } else if (sessionContext) {
+    scenarioType = sessionContext.scenarioType || '';
+    scenarioFamily = sessionContext.scenarioFamily || '';
+    subtype = sessionContext.subtype || '';
+  }
+
+  const isMedicalOrHealth =
+    scenarioType === 'medical' ||
+    scenarioFamily === 'healthcare' ||
+    scenarioFamily === 'emergency' ||
+    subtype.includes('medical') ||
+    subtype.includes('kham_benh') ||
+    subtype.includes('tiem_chung');
+
+  if (isMedicalOrHealth) {
+    return allConditions;
+  }
+
+  if (
+    scenarioFamily === 'movement' ||
+    subtype.includes('di_chuyen') ||
+    subtype.includes('xe_bus')
+  ) {
+    return allConditions.filter((c) => {
+      const cLower = c.toLowerCase();
+      return (
+        cLower.includes('đi lại') ||
+        cLower.includes('chân') ||
+        cLower.includes('khớp') ||
+        cLower.includes('xe lăn') ||
+        cLower.includes('mắt') ||
+        cLower.includes('thị lực')
+      );
+    });
+  }
+
   return [];
 }
 

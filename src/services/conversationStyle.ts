@@ -1,4 +1,5 @@
-import { UserProfile } from '../types';
+import { AgentAction } from '../types';
+import { UserProfile } from '../types/userProfile';
 import { buildAddressing } from '../utils/filterRelevantConditions';
 
 export interface HonorificContext {
@@ -10,6 +11,15 @@ export interface HonorificContext {
   isElderly: boolean;
   isYoungerSenior: boolean;
 }
+
+export type GuidanceIntent =
+  | 'prepare'
+  | 'move'
+  | 'wait'
+  | 'verify'
+  | 'submit'
+  | 'complete'
+  | 'generic';
 
 /**
  * Deduce natural honorifics without forced repetition or robotic stiffness
@@ -54,7 +64,86 @@ export function deduceHonorifics(userProfile?: UserProfile | null, textContext?:
 }
 
 /**
- * Transforms raw Todo titles into warm, conversational, natural spoken prompts
+ * Detect semantic guidance intent from task action semantics rather than rigid scenarios
+ */
+export function detectGuidanceIntent(title: string, desc?: string, goal?: string): GuidanceIntent {
+  const combined = `${title} ${desc || ''} ${goal || ''}`.toLowerCase();
+
+  if (
+    combined.includes('chuẩn bị') ||
+    combined.includes('kiểm tra giấy') ||
+    combined.includes('soạn') ||
+    combined.includes('danh sách') ||
+    combined.includes('mang theo') ||
+    combined.includes('ví tiền') ||
+    combined.includes('điện thoại') ||
+    combined.includes('hồ sơ')
+  ) {
+    return 'prepare';
+  }
+
+  if (
+    combined.includes('di chuyển') ||
+    combined.includes('đến nơi') ||
+    combined.includes('đến cửa hàng') ||
+    combined.includes('đến phòng') ||
+    combined.includes('sang phòng') ||
+    combined.includes('xuất phát') ||
+    combined.includes('ra quầy') ||
+    combined.includes('tới')
+  ) {
+    return 'move';
+  }
+
+  if (
+    combined.includes('lấy số') ||
+    combined.includes('bốc số') ||
+    combined.includes('tiếp nhận') ||
+    combined.includes('chờ gọi') ||
+    combined.includes('xếp hàng') ||
+    combined.includes('chờ đối chiếu')
+  ) {
+    return 'wait';
+  }
+
+  if (
+    combined.includes('xét nghiệm') ||
+    combined.includes('đối chiếu') ||
+    combined.includes('kiểm tra thành phần') ||
+    combined.includes('đo') ||
+    combined.includes('chụp') ||
+    combined.includes('khám')
+  ) {
+    return 'verify';
+  }
+
+  if (
+    combined.includes('thanh toán') ||
+    combined.includes('tính tiền') ||
+    combined.includes('nộp hồ sơ') ||
+    combined.includes('bàn giao') ||
+    combined.includes('lấy thuốc') ||
+    combined.includes('nhận đơn') ||
+    combined.includes('nhận kết quả') ||
+    combined.includes('giấy hẹn')
+  ) {
+    return 'submit';
+  }
+
+  if (
+    combined.includes('hoàn tất') ||
+    combined.includes('kết thúc') ||
+    combined.includes('lưu lịch') ||
+    combined.includes('tái khám')
+  ) {
+    return 'complete';
+  }
+
+  return 'generic';
+}
+
+/**
+ * Transforms raw Todo titles into warm, conversational, natural guidance based on action semantics
  */
 export function formatSoftNextStepGuidance(
   nextAction: { title: string; description?: string },
@@ -63,66 +152,69 @@ export function formatSoftNextStepGuidance(
 ): string {
   const { addressing, me, a } = honorifics;
   const title = nextAction.title;
-  const titleLower = title.toLowerCase();
   const desc = nextAction.description || '';
-  const goalLower = (goal || '').toLowerCase();
+  const intent = detectGuidanceIntent(title, desc, goal);
 
-  // 1. Shopping / Đi chợ / Mua sắm
-  if (
-    titleLower.includes('danh sách') ||
-    titleLower.includes('loại đồ') ||
-    titleLower.includes('mua gì') ||
-    goalLower.includes('mua') ||
-    goalLower.includes('chợ')
-  ) {
-    if (titleLower.includes('di chuyển') || titleLower.includes('đến cửa hàng') || titleLower.includes('siêu thị')) {
-      return `Bây giờ ${addressing} thong thả di chuyển ra cửa hàng nhé${a}, đi đường ${addressing} đi cẩn thận nha!`;
+  const capAddressing = addressing.charAt(0).toUpperCase() + addressing.slice(1);
+
+  switch (intent) {
+    case 'prepare':
+      return `${capAddressing} kiểm tra lại các đồ dùng hoặc giấy tờ cần thiết trước khi bắt đầu nhé${a}!`;
+
+    case 'move':
+      return `Bây giờ ${addressing} thong thả di chuyển đến nơi nhé${a}, đi đường ${addressing} đi cẩn thận nha!`;
+
+    case 'wait':
+      return `${capAddressing} lại quầy lấy số thứ tự hoặc ngồi nghỉ ngơi một chút trong lúc chờ lượt nhé${a}!`;
+
+    case 'verify':
+      return `Tiếp theo là phần kiểm tra: ${title}${desc ? ` (${desc})` : ''}. ${capAddressing} cứ thong thả thực hiện nhé${a}!`;
+
+    case 'submit':
+      return `${capAddressing} tiến hành ${title.toLowerCase()} theo hướng dẫn nhé${a}. Xong ${addressing} nhớ kiểm tra lại đồ đạc nha!`;
+
+    case 'complete':
+      return `Phần việc tiếp theo: ${title}. Khi hoàn thành ${addressing} cứ báo cho ${me} biết nhé${a}!`;
+
+    case 'generic':
+    default: {
+      const actionContent = desc ? `${title} (${desc})` : title;
+      return `Tiếp theo, ${addressing} thong thả làm phần này trước nhé${a}: ${actionContent}. Khi nào xong ${addressing} cứ báo cho ${me} biết nha!`;
     }
-    if (titleLower.includes('thanh toán') || titleLower.includes('tính tiền')) {
-      return `${addressing.charAt(0).toUpperCase() + addressing.slice(1)} đem đồ ra quầy thu ngân thanh toán và kiểm tra lại túi đồ nhé${a}!`;
+  }
+}
+
+/**
+ * Reconciles chat bubble reply text with the truth of the state when action batch was only partially applied
+ */
+export function buildPartialSuccessReply(
+  appliedActions: AgentAction[],
+  rejectedActions: { action: AgentAction; reason: string }[],
+  originalReply: string,
+  honorifics: HonorificContext
+): string {
+  const { addressing, me, da, a } = honorifics;
+  const appliedPhrases: string[] = [];
+
+  for (const act of appliedActions) {
+    if (act.type === 'ADD_FACT' || act.type === 'UPDATE_FACT') {
+      const title = act.payload?.title || 'thông tin mới';
+      appliedPhrases.push(`đã lưu "${title}"`);
+    } else if (act.type === 'COMPLETE_TASK' || act.type === 'COMPLETE_SUBTASK') {
+      appliedPhrases.push('đã đánh dấu hoàn thành bước này');
+    } else if (act.type === 'ADD_TASK' || act.type === 'ADD_SUBTASK') {
+      const title = act.payload?.title || 'việc mới';
+      appliedPhrases.push(`đã thêm "${title}" vào danh sách`);
+    } else if (act.type === 'UPDATE_NEXT_ACTION') {
+      appliedPhrases.push('đã cập nhật bước tiếp theo');
     }
-    return `${addressing.charAt(0).toUpperCase() + addressing.slice(1)} kiểm tra lại xem cần mua thêm món gì và mang theo ví tiền hoặc điện thoại trước khi đi nhé${a}!`;
   }
 
-  // 2. Healthcare / Khám bệnh
-  if (
-    titleLower.includes('lấy số') ||
-    titleLower.includes('bốc số') ||
-    titleLower.includes('tiếp nhận')
-  ) {
-    return `${addressing.charAt(0).toUpperCase() + addressing.slice(1)} lại quầy tiếp nhận lấy số thứ tự khám trước nhé${a}!`;
-  }
-  if (
-    titleLower.includes('phòng khám') ||
-    titleLower.includes('đến phòng') ||
-    titleLower.includes('chờ gọi')
-  ) {
-    return `${addressing.charAt(0).toUpperCase() + addressing.slice(1)} thong thả lại trước phòng khám ngồi nghỉ ngơi một chút trong lúc chờ gọi số nhé${a}!`;
-  }
-  if (titleLower.includes('xét nghiệm') || titleLower.includes('lấy máu')) {
-    return `Bây giờ ${addressing} sang phòng làm xét nghiệm theo chỉ dẫn của bác sĩ nhé${a}!`;
-  }
-  if (titleLower.includes('đơn thuốc') || titleLower.includes('lấy thuốc')) {
-    return `${addressing.charAt(0).toUpperCase() + addressing.slice(1)} mang đơn qua quầy dược để nhận thuốc nhé${a}!`;
+  const prefix = da ? `${da}, ` : '';
+  if (appliedPhrases.length > 0) {
+    const successPart = appliedPhrases.join(' và ');
+    return `${prefix}${me} ${successPart}. Tuy nhiên, một số cập nhật tiến độ chưa thực hiện được do dữ liệu chưa khớp. ${addressing.charAt(0).toUpperCase() + addressing.slice(1)} xem lại giúp ${me} nhé${a}!`;
   }
 
-  // 3. Administrative / CCCD / Giấy tờ
-  if (titleLower.includes('kiểm tra giấy') || titleLower.includes('chuẩn bị giấy') || titleLower.includes('hồ sơ')) {
-    return `${addressing.charAt(0).toUpperCase() + addressing.slice(1)} kiểm tra sẵn các giấy tờ cần thiết cất vào túi mang theo nhé${a}!`;
-  }
-  if (titleLower.includes('bộ phận 1 cửa') || titleLower.includes('cơ quan') || titleLower.includes('trụ sở')) {
-    return `Bây giờ ${addressing} thong thả đến nơi làm thủ tục nhé${a}, đi đường ${addressing} đi cẩn thận ạ!`;
-  }
-  if (titleLower.includes('giấy hẹn') || titleLower.includes('mã hồ sơ')) {
-    return `${addressing.charAt(0).toUpperCase() + addressing.slice(1)} nhớ giữ kỹ giấy hẹn hoặc lưu lại mã hồ sơ nhé${a}!`;
-  }
-
-  // 4. Movement / Di chuyển chung
-  if (titleLower.startsWith('đến') || titleLower.startsWith('di chuyển') || titleLower.includes('xuất phát')) {
-    return `Bây giờ ${addressing} thong thả di chuyển đến nơi nhé${a}, đi đường cẩn thận ạ!`;
-  }
-
-  // 5. Default natural formulation
-  const actionContent = desc ? `${title} (${desc})` : title;
-  return `Tiếp theo, ${addressing} thong thả làm phần này trước nhé${a}: ${actionContent}. Khi nào xong ${addressing} cứ báo cho ${me} biết nha!`;
+  return originalReply;
 }
