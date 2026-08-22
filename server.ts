@@ -164,13 +164,13 @@ async function startServer() {
                   },
                   appActions: {
                     type: Type.ARRAY,
-                    description: 'Danh sách các hành động điều hướng hoặc thao tác cấp ứng dụng (GO_HOME, OPEN_SETTINGS, OPEN_PROFILE, OPEN_SESSION, CREATE_SESSION, OPEN_CAMERA)',
+                    description: 'Danh sách các hành động điều hướng hoặc thao tác cấp ứng dụng (GO_HOME, OPEN_SETTINGS, OPEN_PROFILE, OPEN_SESSION, CREATE_SESSION, OPEN_CAMERA, UPDATE_ACCESSIBILITY_SETTING)',
                     items: {
                       type: Type.OBJECT,
                       properties: {
                         type: {
                           type: Type.STRING,
-                          description: 'GO_HOME, GO_BACK, OPEN_SESSION, CREATE_SESSION, OPEN_SETTINGS, OPEN_PROFILE, OPEN_CAMERA',
+                          description: 'GO_HOME, GO_BACK, OPEN_SESSION, CREATE_SESSION, OPEN_SETTINGS, OPEN_PROFILE, OPEN_CAMERA, UPDATE_ACCESSIBILITY_SETTING',
                         },
                         payload: {
                           type: Type.OBJECT,
@@ -179,10 +179,24 @@ async function startServer() {
                             sessionTitle: { type: Type.STRING },
                             goal: { type: Type.STRING },
                             setting: { type: Type.STRING },
+                            value: { type: Type.STRING },
                           },
                         },
                       },
                       required: ['type'],
+                    },
+                  },
+                  pendingInteraction: {
+                    type: Type.OBJECT,
+                    description: 'Tương tác chờ xác nhận (ví dụ khi AI đề xuất tạo phiên làm việc mới)',
+                    properties: {
+                      type: { type: Type.STRING, description: 'create_session, confirm_action' },
+                      data: {
+                        type: Type.OBJECT,
+                        properties: {
+                          goal: { type: Type.STRING },
+                        },
+                      },
                     },
                   },
                 },
@@ -210,6 +224,7 @@ async function startServer() {
 
       let actions: AgentAction[] = [];
       let appActions: any[] = [];
+      let pendingInteraction: any = undefined;
       let textReply = response.text || '';
       let speechText: string | undefined = undefined;
       let suggestedReplies: string[] | undefined = undefined;
@@ -223,6 +238,13 @@ async function startServer() {
             if (Array.isArray(args.suggestedReplies)) suggestedReplies = args.suggestedReplies;
             if (Array.isArray(args.actions)) actions = args.actions;
             if (Array.isArray(args.appActions)) appActions = args.appActions;
+            if (args.pendingInteraction) {
+              pendingInteraction = {
+                ...args.pendingInteraction,
+                createdAt: new Date().toISOString(),
+                expiresAt: Date.now() + 180000,
+              };
+            }
           }
         }
       }
@@ -240,6 +262,7 @@ async function startServer() {
         speech: speechText ? speechText.replace(/\*\*/g, '').replace(/[*#]/g, '') : cleanReply,
         actions,
         appActions: appActions.length > 0 ? appActions : undefined,
+        pendingInteraction,
         suggestedReplies,
         meta: {
           engine: 'gemini',

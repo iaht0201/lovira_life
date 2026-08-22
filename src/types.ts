@@ -1,4 +1,5 @@
 import { AppAction } from './services/interaction/appActionTypes';
+import { PendingInteraction } from './services/interaction/interactionTypes';
 
 export * from './types/userProfile';
 export * from './types/clarification';
@@ -213,6 +214,7 @@ export interface LoviraAgentResponse {
   speech?: string;
   actions: AgentAction[];
   appActions?: AppAction[];
+  pendingInteraction?: PendingInteraction;
   suggestedReplies?: string[];
   nextRecommendedAction?: RecommendedAction;
   warnings?: string[];

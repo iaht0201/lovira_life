@@ -1,8 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Send, Mic, MicOff, Camera, Sparkles, Volume2, Bot, User, Loader2 } from 'lucide-react';
-import { SessionMessage, AgentAction } from '../../types';
+import { Send, Mic, MicOff, Camera, Sparkles, Volume2, Bot, User, Loader2, X } from 'lucide-react';
+import { SessionMessage, VoiceInteractionState } from '../../types';
 import { speakText, stopSpeaking } from '../../services/ttsService';
-import { speechRecognitionService } from '../../services/voice/speechRecognitionService';
 
 interface AssistantComposerProps {
   messages: SessionMessage[];
@@ -10,6 +9,11 @@ interface AssistantComposerProps {
   onOpenCamera: () => void;
   isLoading?: boolean;
   scenarioType?: string;
+  voiceStatus?: VoiceInteractionState;
+  interimTranscript?: string;
+  onStartVoice?: () => void;
+  onStopVoice?: () => void;
+  onCancelVoice?: () => void;
 }
 
 export const AssistantComposer: React.FC<AssistantComposerProps> = ({
@@ -17,12 +21,16 @@ export const AssistantComposer: React.FC<AssistantComposerProps> = ({
   onSendMessage,
   onOpenCamera,
   isLoading = false,
+  voiceStatus = 'idle',
+  interimTranscript = '',
+  onStartVoice,
+  onStopVoice,
+  onCancelVoice,
 }) => {
   const [input, setInput] = useState('');
-  const [isRecording, setIsRecording] = useState(false);
-  const [interimText, setInterimText] = useState<string | null>(null);
-  const [recordNotice, setRecordNotice] = useState<string | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+
+  const isListening = voiceStatus === 'listening';
 
   // Dynamic suggested replies from the latest assistant message
   const lastAssistantMessage = [...messages]
@@ -58,48 +66,11 @@ export const AssistantComposer: React.FC<AssistantComposerProps> = ({
   };
 
   const handleMicClick = () => {
-    if (isRecording) {
-      speechRecognitionService.stopListening();
-      setIsRecording(false);
-      setInterimText(null);
-      return;
-    }
-
-    // Stop speaking if Lovira is currently talking
-    stopSpeaking();
-
-    const started = speechRecognitionService.startListening({
-      onStart: () => {
-        setIsRecording(true);
-        setInterimText(null);
-        setRecordNotice('Đang lắng nghe giọng nói...');
-      },
-      onInterimResult: (transcript) => {
-        setInterimText(transcript);
-      },
-      onFinalResult: (transcript) => {
-        setIsRecording(false);
-        setInterimText(null);
-        setRecordNotice(null);
-        if (transcript.trim()) {
-          onSendMessage(transcript.trim(), { inputMode: 'voice' });
-        }
-      },
-      onError: (errType, message) => {
-        setIsRecording(false);
-        setInterimText(null);
-        setRecordNotice(message);
-        setTimeout(() => setRecordNotice(null), 3500);
-      },
-      onEnd: () => {
-        setIsRecording(false);
-        setInterimText(null);
-      },
-    });
-
-    if (!started) {
-      setRecordNotice('Chưa bật được micro. Bạn hãy nhập câu hỏi bằng bàn phím nhé!');
-      setTimeout(() => setRecordNotice(null), 3000);
+    if (isListening) {
+      onStopVoice?.();
+    } else {
+      stopSpeaking();
+      onStartVoice?.();
     }
   };
 
@@ -193,18 +164,38 @@ export const AssistantComposer: React.FC<AssistantComposerProps> = ({
         ))}
       </div>
 
-      {/* Speech notice or interim feedback */}
-      {(recordNotice || interimText) && (
-        <div className="p-2.5 rounded-xl bg-primary/10 border border-primary/20 text-xs font-medium text-text-primary flex items-center justify-between animate-in fade-in">
-          <span>{interimText ? `Đang nghe: "${interimText}"` : recordNotice}</span>
-          {isRecording && (
+      {/* Speech feedback in Composer (synchronized with Global Voice) */}
+      {isListening && (
+        <div className="p-3 rounded-xl bg-primary/10 border border-primary/25 text-xs font-medium text-text-primary flex items-center justify-between animate-in fade-in">
+          <div className="flex items-center gap-2 min-w-0 pr-2">
+            <span className="relative flex h-2 w-2 shrink-0">
+              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-rose-500 opacity-75"></span>
+              <span className="relative inline-flex rounded-full h-2 w-2 bg-rose-600"></span>
+            </span>
+            <span className="truncate italic">
+              {interimTranscript ? `"${interimTranscript}"` : 'Đang lắng nghe giọng nói của bạn...'}
+            </span>
+          </div>
+
+          <div className="flex items-center gap-2 shrink-0">
             <button
-              onClick={() => speechRecognitionService.stopListening()}
-              className="text-[11px] font-bold text-primary underline ml-2 shrink-0"
+              type="button"
+              onClick={onStopVoice}
+              className="px-2 py-1 rounded bg-primary text-white text-[11px] font-bold hover:bg-primary-hover"
             >
               Gửi ngay
             </button>
-          )}
+            {onCancelVoice && (
+              <button
+                type="button"
+                onClick={onCancelVoice}
+                className="p-1 rounded text-text-secondary hover:text-rose-500"
+                title="Hủy"
+              >
+                <X className="w-3.5 h-3.5" />
+              </button>
+            )}
+          </div>
         </div>
       )}
 
@@ -214,14 +205,14 @@ export const AssistantComposer: React.FC<AssistantComposerProps> = ({
           type="button"
           onClick={handleMicClick}
           className={`p-3 rounded-xl border transition-all ${
-            isRecording
+            isListening
               ? 'bg-rose-500 text-white border-rose-600 animate-pulse'
               : 'bg-surface-raised text-text-secondary border-default hover:text-primary hover:border-primary'
           }`}
-          title={isRecording ? 'Bấm để dừng thu âm' : 'Nói chuyện bằng giọng nói'}
-          aria-label={isRecording ? 'Dừng thu âm' : 'Bật micro'}
+          title={isListening ? 'Bấm để hoàn tất và gửi câu nói' : 'Nói chuyện bằng giọng nói'}
+          aria-label={isListening ? 'Dừng và gửi giọng nói' : 'Bật micro'}
         >
-          {isRecording ? <MicOff className="w-5 h-5" /> : <Mic className="w-5 h-5" />}
+          {isListening ? <MicOff className="w-5 h-5" /> : <Mic className="w-5 h-5" />}
         </button>
 
         <button

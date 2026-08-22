@@ -1,6 +1,6 @@
-import { LifeSession, UserProfile } from '../../types';
+import { LifeSession } from '../../types';
 
-export function selectGroqModel(message: string, session: LifeSession): string {
+export function selectGroqModel(message: string, session?: LifeSession | null): string {
   const text = message.toLowerCase();
 
   // 1. Deep reasoning required (Conflict resolution, planning, multi-step tradeoff)
@@ -26,11 +26,11 @@ export function selectGroqModel(message: string, session: LifeSession): string {
     return 'qwen/qwen3.6-27b';
   }
 
-  // 3. Lightweight router/helper classification for short inputs
-  if (text.length < 10) {
+  // 3. Fast lightweight responses for short commands or simple prompts
+  if (text.length < 15) {
     return 'groq/compound-mini';
   }
 
-  // 4. Default fast text model
+  // 4. Default fast text model on user's Groq tier
   return 'openai/gpt-oss-20b';
 }

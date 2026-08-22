@@ -8,6 +8,16 @@ export interface AppActionValidationResult {
   reason?: string;
 }
 
+const ACTIVE_SESSION_KEYWORDS = [
+  'hiện tại',
+  'đang làm',
+  'quay lại',
+  'phiên này',
+  'bước này',
+  'current',
+  'active',
+];
+
 export function validateAppAction(
   action: AppAction,
   context: AppInteractionContext
@@ -26,7 +36,8 @@ export function validateAppAction(
 
     case 'OPEN_SESSION': {
       const sessionId = action.payload?.sessionId;
-      const sessionTitle = action.payload?.sessionTitle?.trim().toLowerCase();
+      const rawTitle = action.payload?.sessionTitle?.trim();
+      const sessionTitle = rawTitle ? rawTitle.toLowerCase() : '';
       const sessions = context.availableSessions || [];
 
       // 1. Direct ID match
@@ -40,7 +51,9 @@ export function validateAppAction(
       // 2. Title/keyword match in available sessions
       if (sessionTitle && sessions.length > 0) {
         const exactMatch = sessions.find(
-          (s) => s.title.toLowerCase() === sessionTitle || s.goal.toLowerCase() === sessionTitle
+          (s) =>
+            s.title.toLowerCase() === sessionTitle ||
+            (s.goal || '').toLowerCase() === sessionTitle
         );
         if (exactMatch) {
           return { valid: true, action, resolvedSessionId: exactMatch.id };
@@ -49,7 +62,7 @@ export function validateAppAction(
         const substringMatches = sessions.filter(
           (s) =>
             s.title.toLowerCase().includes(sessionTitle) ||
-            s.goal.toLowerCase().includes(sessionTitle)
+            (s.goal || '').toLowerCase().includes(sessionTitle)
         );
 
         if (substringMatches.length === 1) {
@@ -59,17 +72,26 @@ export function validateAppAction(
         if (substringMatches.length > 1) {
           return {
             valid: false,
-            reason: `Có nhiều phiên liên quan đến "${sessionTitle}". Bạn muốn mở phiên nào cụ thể?`,
+            reason: `Có nhiều phiên liên quan đến "${rawTitle}". Bạn muốn mở phiên nào cụ thể?`,
           };
         }
       }
 
-      // If active session exists and user says open active session
-      if (context.hasActiveSession && context.activeSessionId) {
+      // 3. Fallback to active session ONLY if the user explicitly meant the current/active session
+      const isExplicitCurrent =
+        !sessionTitle ||
+        ACTIVE_SESSION_KEYWORDS.some((kw) => sessionTitle.includes(kw));
+
+      if (isExplicitCurrent && context.hasActiveSession && context.activeSessionId) {
         return { valid: true, action, resolvedSessionId: context.activeSessionId };
       }
 
-      return { valid: false, reason: 'Không tìm thấy phiên hỗ trợ phù hợp để mở' };
+      // If user named a specific session title that does not exist, reject instead of incorrectly opening current session
+      if (rawTitle) {
+        return { valid: false, reason: `Không tìm thấy phiên hỗ trợ nào có tên "${rawTitle}".` };
+      }
+
+      return { valid: false, reason: 'Không tìm thấy phiên hỗ trợ phù hợp để mở.' };
     }
 
     case 'CREATE_SESSION': {
@@ -82,10 +104,36 @@ export function validateAppAction(
 
     case 'UPDATE_ACCESSIBILITY_SETTING': {
       const setting = action.payload?.setting;
+      const value = action.payload?.value;
       if (!setting) {
         return { valid: false, reason: 'Thiếu tên cài đặt trợ năng' };
       }
-      return { valid: true, action };
+
+      // Whitelist validation for security and type safety
+      switch (setting) {
+        case 'fontScale': {
+          const num = Number(value);
+          if (![1, 1.25, 1.5, 1.75].includes(num)) {
+            return { valid: false, reason: 'Cỡ chữ hỗ trợ: 1 (chuẩn), 1.25 (vừa), 1.5 (lớn), 1.75 (rất lớn)' };
+          }
+          return { valid: true, action: { ...action, payload: { setting, value: num } } };
+        }
+        case 'highContrast':
+        case 'speakResponse':
+        case 'vslEnabled':
+        case 'reducedMotion': {
+          const boolVal = value === true || value === 'true' || value === 1;
+          return { valid: true, action: { ...action, payload: { setting, value: boolVal } } };
+        }
+        case 'theme': {
+          if (typeof value !== 'string' || !['light', 'dark', 'system'].includes(value)) {
+            return { valid: false, reason: 'Giao diện hỗ trợ: light (sáng), dark (tối), system (theo máy)' };
+          }
+          return { valid: true, action };
+        }
+        default:
+          return { valid: false, reason: `Cài đặt trợ năng "${setting}" không được hỗ trợ` };
+      }
     }
 
     default:

@@ -379,9 +379,9 @@ export default function App() {
         const parentStatus = allDone
           ? ('completed' as const)
           : anyDone
-          ? ('in_progress' as const)
+          ? ('active' as const)
           : t.status === 'completed'
-          ? ('in_progress' as const)
+          ? ('active' as const)
           : t.status;
 
         return {
@@ -556,6 +556,30 @@ export default function App() {
   // ----------------------------------------------------
   // SHARED INTERACTION PIPELINE (V2 Voice & Text Action Engine)
   // ----------------------------------------------------
+  const executeValidatedAppAction = async (
+    rawAction: AppAction,
+    appCtx: AppInteractionContext,
+    rtCtx: any
+  ): Promise<boolean> => {
+    const val = validateAppAction(rawAction, appCtx);
+    if (!val.valid || !val.action) {
+      if (val.reason) {
+        showToast(`⚠️ ${val.reason}`);
+      }
+      return false;
+    }
+
+    const actionToApply = { ...val.action };
+    if (actionToApply.type === 'OPEN_SESSION' && val.resolvedSessionId) {
+      actionToApply.payload = {
+        ...actionToApply.payload,
+        sessionId: val.resolvedSessionId,
+      };
+    }
+
+    return await applyAppAction(actionToApply, rtCtx);
+  };
+
   const sendInteraction = async (
     userText: string,
     options: { inputMode?: InteractionInputMode } = {}
@@ -591,15 +615,15 @@ export default function App() {
       availableSessions: sessionsList,
     };
 
-    // A. Check Pending Interaction (e.g. User confirms "Có / Tạo đi" for a previous proposal)
-    if (!activeSession && pendingInteraction) {
+    // A. Check Pending Interaction FIRST (e.g. User confirms "Có / Tạo đi" for previous proposal)
+    if (pendingInteraction) {
       const pendingRes = resolvePendingInteraction(trimmedText, pendingInteraction);
       if (pendingRes.clearPending) {
         setPendingInteraction(null);
       }
       if (pendingRes.resolved) {
         if (pendingRes.appAction) {
-          await applyAppAction(pendingRes.appAction, runtimeContext);
+          await executeValidatedAppAction(pendingRes.appAction, appContext, runtimeContext);
         }
         if (pendingRes.reply) {
           if (inputMode === 'voice' || accessibility.speakResponse) {
@@ -664,10 +688,7 @@ export default function App() {
         // 1. Process App Actions (e.g. user says "Về trang chủ", "Mở cài đặt", "Mở camera")
         if (appActions.length > 0) {
           for (const appAct of appActions) {
-            const val = validateAppAction(appAct, appContext);
-            if (val.valid && val.action) {
-              await applyAppAction(val.action, runtimeContext);
-            }
+            await executeValidatedAppAction(appAct, appContext, runtimeContext);
           }
         }
 
@@ -814,16 +835,13 @@ export default function App() {
       // 1. Execute app navigation actions
       if (appActions.length > 0) {
         for (const appAct of appActions) {
-          const val = validateAppAction(appAct, appContext);
-          if (val.valid && val.action) {
-            if (val.resolvedSessionId && val.action.type === 'OPEN_SESSION') {
-              val.action.payload = { ...val.action.payload, sessionId: val.resolvedSessionId };
-            }
-            await applyAppAction(val.action, runtimeContext);
-          }
+          await executeValidatedAppAction(appAct, appContext, runtimeContext);
         }
+      } else if (data.pendingInteraction) {
+        // Structured pending interaction from backend
+        setPendingInteraction(data.pendingInteraction);
       } else {
-        // Check if reply proposes to create a session
+        // Heuristic fallback check if reply proposes to create a session
         const hasCreateProposal =
           replyText.toLowerCase().includes('mở một phiên') ||
           replyText.toLowerCase().includes('tạo một phiên') ||
@@ -897,7 +915,13 @@ export default function App() {
   };
 
   const handleStopVoiceListening = () => {
-    speechRecognitionService.stopListening();
+    speechRecognitionService.finishListening();
+  };
+
+  const handleCancelVoiceListening = () => {
+    speechRecognitionService.cancelListening();
+    setVoiceStatus('idle');
+    setInterimTranscript('');
   };
 
   const handleStopSpeaking = () => {
@@ -1053,6 +1077,11 @@ export default function App() {
               onSendMessage={(text, opts) => sendInteraction(text, opts)}
               onOpenCamera={() => setCameraModalOpen(true)}
               isLoading={isLoading}
+              voiceStatus={voiceStatus}
+              interimTranscript={interimTranscript}
+              onStartVoice={handleStartVoiceListening}
+              onStopVoice={handleStopVoiceListening}
+              onCancelVoice={handleCancelVoiceListening}
             />
           )}
 
@@ -1109,8 +1138,10 @@ export default function App() {
         errorMessage={voiceError}
         onStartListening={handleStartVoiceListening}
         onStopListening={handleStopVoiceListening}
+        onCancelListening={handleCancelVoiceListening}
         onStopSpeaking={handleStopSpeaking}
         disabled={isLoading}
+        reducedMotion={accessibility.reducedMotion}
       />
 
       {/* Profile Setup Flow Modal */}

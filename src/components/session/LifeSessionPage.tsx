@@ -1,5 +1,5 @@
 import React from 'react';
-import { LifeSession, SessionStatus, ImportantFactType } from '../../types';
+import { LifeSession, SessionStatus, ImportantFactType, VoiceInteractionState } from '../../types';
 import { SessionHeader } from './SessionHeader';
 import { NextRecommendedAction } from './NextRecommendedAction';
 import { ImportantFactsPanel } from './ImportantFactsPanel';
@@ -24,6 +24,11 @@ interface LifeSessionPageProps {
   onSendMessage: (text: string, options?: { inputMode?: 'text' | 'voice' }) => void;
   onOpenCamera: () => void;
   isLoading?: boolean;
+  voiceStatus?: VoiceInteractionState;
+  interimTranscript?: string;
+  onStartVoice?: () => void;
+  onStopVoice?: () => void;
+  onCancelVoice?: () => void;
 }
 
 export const LifeSessionPage: React.FC<LifeSessionPageProps> = ({
@@ -43,6 +48,11 @@ export const LifeSessionPage: React.FC<LifeSessionPageProps> = ({
   onSendMessage,
   onOpenCamera,
   isLoading = false,
+  voiceStatus = 'idle',
+  interimTranscript = '',
+  onStartVoice,
+  onStopVoice,
+  onCancelVoice,
 }) => {
   return (
     <div className="space-y-6 pb-16 animate-fade-in">
@@ -95,6 +105,11 @@ export const LifeSessionPage: React.FC<LifeSessionPageProps> = ({
         onOpenCamera={onOpenCamera}
         isLoading={isLoading}
         scenarioType={session.scenarioType}
+        voiceStatus={voiceStatus}
+        interimTranscript={interimTranscript}
+        onStartVoice={onStartVoice}
+        onStopVoice={onStopVoice}
+        onCancelVoice={onCancelVoice}
       />
     </div>
   );

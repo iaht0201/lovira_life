@@ -127,7 +127,14 @@ export class SpeechRecognitionService {
     if (this.isSubmitted) return;
     this.isSubmitted = true;
     this.clearSilenceTimer();
-    this.stopListening();
+    this.isListening = false;
+    if (this.recognition) {
+      try {
+        this.recognition.stop();
+      } catch (e) {
+        // Ignore
+      }
+    }
     this.events.onFinalResult?.(text);
   }
 
@@ -205,22 +212,40 @@ export class SpeechRecognitionService {
     }
   }
 
-  public stopListening() {
+  /**
+   * Finish and submit current transcript immediately.
+   */
+  public finishListening() {
     this.clearSilenceTimer();
-    this.isListening = false;
-    if (this.recognition) {
-      try {
-        this.recognition.stop();
-      } catch (e) {
-        // Ignore errors on stopping
+    if (!this.isSubmitted && this.currentTranscript.trim()) {
+      this.submitFinal(this.currentTranscript.trim());
+    } else {
+      this.isListening = false;
+      if (this.recognition) {
+        try {
+          this.recognition.stop();
+        } catch (e) {
+          // Ignore
+        }
       }
     }
   }
 
-  public abortListening() {
+  /**
+   * Stop listening alias (safe completion).
+   */
+  public stopListening() {
+    this.finishListening();
+  }
+
+  /**
+   * Cancel listening and discard any active transcript.
+   */
+  public cancelListening() {
     this.clearSilenceTimer();
     this.isListening = false;
     this.isSubmitted = true;
+    this.currentTranscript = '';
     if (this.recognition) {
       try {
         this.recognition.abort();
@@ -228,6 +253,11 @@ export class SpeechRecognitionService {
         // Ignore
       }
     }
+    this.events.onEnd?.();
+  }
+
+  public getCurrentTranscript(): string {
+    return this.currentTranscript;
   }
 }
 
