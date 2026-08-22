@@ -112,7 +112,7 @@ export function createLifeSessionFromPlan(
     {
       id: `msg-${Date.now()}`,
       sender: 'lovira',
-      text: `${da}${me.charAt(0).toUpperCase() + me.slice(1)} đã chuẩn bị kế hoạch đồng hành cùng ${addressing} rồi ạ.\n\n${softGuidance}`,
+      text: `${da ? da + ', ' : ''}${me.charAt(0).toUpperCase() + me.slice(1)} đã chuẩn bị kế hoạch đồng hành cùng ${addressing} rồi ạ.\n\n${softGuidance}`,
       timestamp: now,
     },
   ];

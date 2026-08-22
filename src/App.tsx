@@ -518,10 +518,9 @@ export default function App() {
 
         if (batchRes.status === 'full' || batchRes.status === 'partial') {
           const finalSession = batchRes.newState;
-          let consistentReply = replyText;
+          const consistentReply = replyText;
           if (batchRes.status === 'partial' && batchRes.rejectedActions.length > 0) {
-            const failReasons = batchRes.rejectedActions.map((f) => f.reason).join('; ');
-            consistentReply += `\n\n*(Lưu ý: Một số thao tác chưa thể cập nhật do: ${failReasons})*`;
+            console.warn('Some agent actions were ignored by validator:', batchRes.rejectedActions);
           }
 
           const loviraMsg = {

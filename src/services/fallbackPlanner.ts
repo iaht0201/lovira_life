@@ -30,19 +30,12 @@ export function generateFallbackCustomSessionPlan(prompt: string): GeneratedSess
     })),
   }));
 
-  // Combine registry common facts with extracted prompt facts
-  const mergedFacts = [
-    ...(registry.commonFacts || []).map((f) => ({
-      type: f.type,
-      title: f.title,
-      value: f.value,
-    })),
-    ...knownFacts.map((f) => ({
-      type: f.type,
-      title: f.title,
-      value: f.value,
-    })),
-  ];
+  // Only include genuine facts extracted directly from prompt, zero assumptions
+  const planFacts = knownFacts.map((f) => ({
+    type: f.type,
+    title: f.title,
+    value: f.value,
+  }));
 
   // First recommended action
   const firstAction = tasks[0]?.subtasks?.[0]?.title || tasks[0]?.title || 'Bắt đầu chuẩn bị';
@@ -57,7 +50,7 @@ export function generateFallbackCustomSessionPlan(prompt: string): GeneratedSess
     tags: [],
     modules: registry.defaultModules,
     tasks,
-    importantFacts: mergedFacts,
+    importantFacts: planFacts,
     firstRecommendedAction: firstAction,
   };
 

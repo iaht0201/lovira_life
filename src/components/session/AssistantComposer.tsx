@@ -27,14 +27,14 @@ export const AssistantComposer: React.FC<AssistantComposerProps> = ({
   const dynamicReplies = lastAssistantMessage?.suggestedReplies;
 
   const defaultUniversalReplies = [
-    '👉 Giờ mình làm gì tiếp theo?',
-    '✅ Xong bước hiện tại rồi',
-    '❓ Nhờ Lovira tư vấn',
+    'Giờ làm gì tiếp theo?',
+    'Xong bước hiện tại rồi',
+    'Nhờ Lovira tư vấn',
   ];
 
   const quickPrompts = (dynamicReplies && dynamicReplies.length > 0)
-    ? dynamicReplies
-    : defaultUniversalReplies;
+    ? dynamicReplies.slice(0, 3)
+    : defaultUniversalReplies.slice(0, 3);
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -108,7 +108,7 @@ export const AssistantComposer: React.FC<AssistantComposerProps> = ({
               Hỏi hoặc dặn dò Lovira trong phiên này
             </h3>
             <p className="text-xs text-text-secondary">
-              Gõ hoặc nói câu lệnh để Lovira tự động cập nhật công việc & thông tin
+              Bạn có thể hỏi, trò chuyện hoặc nói cho Lovira biết điều vừa xảy ra.
             </p>
           </div>
         </div>
@@ -167,24 +167,24 @@ export const AssistantComposer: React.FC<AssistantComposerProps> = ({
         <div ref={messagesEndRef} />
       </div>
 
-      {/* Quick Command Chips */}
-      <div className="space-y-1.5">
-        <span className="text-[11px] font-bold text-text-secondary uppercase tracking-wider block">
-          Gợi ý câu lệnh nhanh:
-        </span>
-        <div className="flex flex-wrap gap-1.5">
+      {/* Suggested Quick Reply Chips */}
+      {quickPrompts.length > 0 && (
+        <div className="flex items-center gap-1.5 flex-wrap pt-0.5">
+          <span className="text-[11px] font-semibold text-text-secondary">
+            Gợi ý:
+          </span>
           {quickPrompts.map((prompt) => (
             <button
               key={prompt}
               onClick={() => handleQuickPrompt(prompt)}
               disabled={isLoading}
-              className="min-h-[36px] px-3 py-1 rounded-full bg-surface-raised border border-default hover:border-primary hover:bg-primary/10 text-text-primary text-xs font-semibold transition-all"
+              className="min-h-[34px] px-3 py-1 rounded-full bg-surface-raised border border-default hover:border-primary hover:bg-primary/10 text-text-primary text-xs font-medium transition-all"
             >
               {prompt}
             </button>
           ))}
         </div>
-      </div>
+      )}
 
       {/* Record Notice Popup */}
       {recordNotice && (

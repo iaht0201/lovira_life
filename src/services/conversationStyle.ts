@@ -39,7 +39,7 @@ export function deduceHonorifics(userProfile?: UserProfile | null, textContext?:
     : isYoungerSenior
     ? `Dạ tốt quá ${addressing} ơi!`
     : 'Tuyệt vời!';
-  const da = isElderly || isYoungerSenior ? 'Dạ' : 'Dạ';
+  const da = isElderly || isYoungerSenior ? 'Dạ' : '';
   const a = isElderly || isYoungerSenior ? ' ạ' : '';
 
   return {
@@ -61,7 +61,7 @@ export function formatSoftNextStepGuidance(
   honorifics: HonorificContext,
   goal?: string
 ): string {
-  const { addressing, a } = honorifics;
+  const { addressing, me, a } = honorifics;
   const title = nextAction.title;
   const titleLower = title.toLowerCase();
   const desc = nextAction.description || '';
@@ -123,8 +123,6 @@ export function formatSoftNextStepGuidance(
   }
 
   // 5. Default natural formulation
-  if (desc) {
-    return `Bước tiếp theo ${addressing} cần làm là: "${title}". (${desc}). Khi làm xong ${addressing} cứ báo nhé${a}!`;
-  }
-  return `Bước tiếp theo ${addressing} làm là: "${title}". Khi hoàn thành ${addressing} cứ nhắn cho Lovira biết nhé${a}!`;
+  const actionContent = desc ? `${title} (${desc})` : title;
+  return `Tiếp theo, ${addressing} thong thả làm phần này trước nhé${a}: ${actionContent}. Khi nào xong ${addressing} cứ báo cho ${me} biết nha!`;
 }

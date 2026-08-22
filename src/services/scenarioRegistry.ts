@@ -14,7 +14,7 @@ export interface ScenarioRegistryEntry {
     important?: boolean;
     subtasks?: { title: string; order: number }[];
   }[];
-  commonFacts?: {
+  suggestedRequirements?: {
     type: ImportantFactType;
     title: string;
     value: string;
@@ -38,8 +38,8 @@ export const SCENARIO_REGISTRY: Record<ScenarioFamily, ScenarioRegistryEntry> = 
       { title: 'Nhận đơn thuốc', description: 'Mua thuốc hoặc nhận thuốc BHYT theo đơn', order: 6 },
       { title: 'Lưu lịch tái khám', description: 'Ghi nhớ ngày và giờ tái khám do bác sĩ hẹn', order: 7 }
     ],
-    commonFacts: [
-      { type: 'requirement', title: 'Giấy tờ cần mang', value: 'CCCD gắn chip & Thẻ BHYT' }
+    suggestedRequirements: [
+      { type: 'requirement', title: 'Giấy tờ tham khảo', value: 'CCCD gắn chip & Thẻ BHYT' }
     ]
   },
   administrative: {
@@ -56,8 +56,8 @@ export const SCENARIO_REGISTRY: Record<ScenarioFamily, ScenarioRegistryEntry> = 
       { title: 'Nộp hồ sơ & Chờ đối chiếu', description: 'Gặp cán bộ tiếp nhận để kiểm tra giấy tờ', order: 4 },
       { title: 'Nhận giấy hẹn kết quả hoặc mã hồ sơ', description: 'Lưu mã tra cứu hoặc ngày trả kết quả', order: 5, important: true }
     ],
-    commonFacts: [
-      { type: 'requirement', title: 'Giấy tờ bắt buộc', value: 'CCCD bản gốc & Tờ khai theo mẫu' }
+    suggestedRequirements: [
+      { type: 'requirement', title: 'Giấy tờ tham khảo', value: 'CCCD bản gốc & Tờ khai theo mẫu' }
     ]
   },
   shopping: {

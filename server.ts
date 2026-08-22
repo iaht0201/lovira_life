@@ -84,21 +84,17 @@ async function startServer() {
 
       if (!ai || isDemoMode) {
         const honorifics = deduceHonorifics(userProfile, message);
-        const { addressing, me, da, a } = honorifics;
-        const resolvedStep = resolveCurrentStep(session);
-        const activeTask = resolvedStep?.subtask || resolvedStep?.task;
+        const { addressing, da } = honorifics;
 
-        let replyText = `${da}, ${me} đã nhận lời nhắn của ${addressing}.`;
-        if (activeTask) {
-          replyText += ` Bước hiện tại là: "${activeTask.title}". ${addressing.charAt(0).toUpperCase() + addressing.slice(1)} cứ thong thả làm, khi xong chỉ cần báo cho ${me} nhé${a}!`;
-        }
+        const prefix = da ? `${da}, ` : '';
+        const replyText = `${prefix}hiện Lovira đang ở chế độ ngoại tuyến nên chưa thể tư vấn chi tiết nội dung này cho ${addressing}. ${addressing.charAt(0).toUpperCase() + addressing.slice(1)} vẫn có thể xem hoặc cập nhật tiến độ các việc trong phiên nhé!`;
 
         return res.json({
           reply: replyText,
           speech: replyText,
           actions: [],
-          suggestedReplies: ['Xong bước này rồi', 'Cần làm gì tiếp theo?', 'Nhờ Lovira tư vấn'],
-          meta: { engine: 'local', model: 'fallback-demo' },
+          suggestedReplies: ['Giờ làm gì tiếp theo?', 'Xong bước hiện tại rồi'],
+          meta: { engine: 'local', model: 'offline-notice' },
         });
       }
 
@@ -108,91 +104,54 @@ async function startServer() {
         {
           functionDeclarations: [
             {
-              name: 'add_fact',
-              description: 'Thêm hoặc cập nhật một thông tin quan trọng vào phiên (giấy tờ, địa điểm, thời gian, người liên quan, dặn dò, cảnh báo)',
+              name: 'update_life_session',
+              description: 'Phát hành các hành động cập nhật trạng thái phiên (Tasks, Subtasks, Facts, Step tiếp theo) và câu trả lời hội thoại',
               parameters: {
                 type: Type.OBJECT,
                 properties: {
-                  category: {
+                  reply: {
                     type: Type.STRING,
-                    description: 'Phân loại: date, time, location, person, requirement, instruction, warning',
-                    enum: ['date', 'time', 'location', 'person', 'requirement', 'instruction', 'warning'],
+                    description: 'Câu trả lời tự nhiên, thân thiện, đúng danh xưng bằng tiếng Việt thuần túy (không dùng markdown asterisks)',
                   },
-                  title: { type: Type.STRING, description: 'Tiêu đề ngắn gọn của thông tin' },
-                  value: { type: Type.STRING, description: 'Nội dung chi tiết của thông tin' },
+                  speech: {
+                    type: Type.STRING,
+                    description: 'Lời đọc ngắn gọn cho giọng nói',
+                  },
+                  suggestedReplies: {
+                    type: Type.ARRAY,
+                    description: '2-3 gợi ý câu trả lời nhanh phù hợp ngữ cảnh để hiển thị dạng chip cho người dùng',
+                    items: { type: Type.STRING },
+                  },
+                  actions: {
+                    type: Type.ARRAY,
+                    description: 'Danh sách các hành động cập nhật trạng thái Todo / Facts / Next Action',
+                    items: {
+                      type: Type.OBJECT,
+                      properties: {
+                        type: {
+                          type: Type.STRING,
+                          description: 'Loại hành động: ADD_FACT, COMPLETE_TASK, ADD_TASK, ADD_SUBTASK, COMPLETE_SUBTASK, UPDATE_NEXT_ACTION, DELETE_FACT',
+                        },
+                        payload: {
+                          type: Type.OBJECT,
+                          properties: {
+                            category: { type: Type.STRING },
+                            title: { type: Type.STRING },
+                            value: { type: Type.STRING },
+                            factId: { type: Type.STRING },
+                            taskId: { type: Type.STRING },
+                            parentTaskId: { type: Type.STRING },
+                            subtaskId: { type: Type.STRING },
+                            description: { type: Type.STRING },
+                            important: { type: Type.BOOLEAN },
+                          },
+                        },
+                      },
+                      required: ['type', 'payload'],
+                    },
+                  },
                 },
-                required: ['category', 'title', 'value'],
-              },
-            },
-            {
-              name: 'complete_task',
-              description: 'Đánh dấu hoàn thành một nhiệm vụ trong danh sách',
-              parameters: {
-                type: Type.OBJECT,
-                properties: {
-                  taskId: { type: Type.STRING, description: 'Mã ID hoặc tiêu đề của nhiệm vụ cần hoàn thành' },
-                },
-                required: ['taskId'],
-              },
-            },
-            {
-              name: 'add_task',
-              description: 'Thêm một nhiệm vụ / việc cần làm mới vào phiên',
-              parameters: {
-                type: Type.OBJECT,
-                properties: {
-                  title: { type: Type.STRING, description: 'Tên việc cần làm' },
-                  description: { type: Type.STRING, description: 'Mô tả chi tiết việc cần làm' },
-                  important: { type: Type.BOOLEAN, description: 'Có phải việc quan trọng ưu tiên không' },
-                },
-                required: ['title'],
-              },
-            },
-            {
-              name: 'add_subtask',
-              description: 'Thêm một việc con/bước con vào công việc cha',
-              parameters: {
-                type: Type.OBJECT,
-                properties: {
-                  parentTaskId: { type: Type.STRING, description: 'Mã ID hoặc tên công việc cha' },
-                  title: { type: Type.STRING, description: 'Tên bước con cần làm' },
-                  description: { type: Type.STRING, description: 'Mô tả chi tiết bước con' },
-                },
-                required: ['parentTaskId', 'title'],
-              },
-            },
-            {
-              name: 'complete_subtask',
-              description: 'Đánh dấu hoàn thành một bước con trong công việc cha',
-              parameters: {
-                type: Type.OBJECT,
-                properties: {
-                  subtaskId: { type: Type.STRING, description: 'Mã ID hoặc tên bước con cần hoàn thành' },
-                },
-                required: ['subtaskId'],
-              },
-            },
-            {
-              name: 'update_next_action',
-              description: 'Cập nhật thẻ Bước tiếp theo đề xuất cho người dùng',
-              parameters: {
-                type: Type.OBJECT,
-                properties: {
-                  title: { type: Type.STRING, description: 'Tiêu đề hành động đề xuất tiếp theo' },
-                  description: { type: Type.STRING, description: 'Mô tả ngắn gọn hướng dẫn người dùng' },
-                },
-                required: ['title'],
-              },
-            },
-            {
-              name: 'delete_fact',
-              description: 'Xoá một thông tin khỏi phiên',
-              parameters: {
-                type: Type.OBJECT,
-                properties: {
-                  factId: { type: Type.STRING, description: 'Mã thông tin cần xoá' },
-                },
-                required: ['factId'],
+                required: ['reply', 'actions'],
               },
             },
           ],
@@ -214,73 +173,36 @@ async function startServer() {
       const candidate = response.candidates?.[0];
       const functionCalls = candidate?.content?.parts?.filter((p) => p.functionCall).map((p) => p.functionCall);
 
-      const actions: AgentAction[] = [];
+      let actions: AgentAction[] = [];
       let textReply = response.text || '';
+      let speechText: string | undefined = undefined;
+      let suggestedReplies: string[] | undefined = undefined;
 
       if (functionCalls && functionCalls.length > 0) {
         for (const fc of functionCalls) {
-          if (fc && fc.name) {
+          if (fc && fc.name === 'update_life_session') {
             const args = fc.args as any;
-            if (fc.name === 'add_fact') {
-              actions.push({
-                type: 'ADD_FACT',
-                payload: {
-                  category: args.category,
-                  title: args.title,
-                  value: args.value,
-                },
-              });
-            } else if (fc.name === 'complete_task') {
-              actions.push({
-                type: 'COMPLETE_TASK',
-                payload: { taskId: args.taskId },
-              });
-            } else if (fc.name === 'add_task') {
-              actions.push({
-                type: 'ADD_TASK',
-                payload: { title: args.title, description: args.description, important: args.important },
-              });
-            } else if (fc.name === 'add_subtask') {
-              actions.push({
-                type: 'ADD_SUBTASK',
-                payload: { parentTaskId: args.parentTaskId, title: args.title, description: args.description },
-              });
-            } else if (fc.name === 'complete_subtask') {
-              actions.push({
-                type: 'COMPLETE_SUBTASK',
-                payload: { subtaskId: args.subtaskId },
-              });
-            } else if (fc.name === 'update_next_action') {
-              actions.push({
-                type: 'UPDATE_NEXT_ACTION',
-                payload: { title: args.title, description: args.description },
-              });
-            } else if (fc.name === 'delete_fact') {
-              actions.push({
-                type: 'DELETE_FACT',
-                payload: { factId: args.factId },
-                requiresConfirmation: true,
-                confirmationPrompt: 'Lovira cần bạn xác nhận trước khi xoá thông tin này.',
-              });
-            }
+            if (args.reply) textReply = args.reply;
+            if (args.speech) speechText = args.speech;
+            if (Array.isArray(args.suggestedReplies)) suggestedReplies = args.suggestedReplies;
+            if (Array.isArray(args.actions)) actions = args.actions;
           }
         }
       }
 
       if (!textReply) {
-        if (actions.length > 0) {
-          textReply = 'Lovira đã cập nhật thông tin phiên theo yêu cầu của bạn!';
-        } else {
-          textReply = 'Lovira đã nhận nhắn gửi. Bạn cần mình hỗ trợ bước nào nữa không?';
-        }
+        const honorifics = deduceHonorifics(userProfile, message);
+        const { addressing, me, da, a } = honorifics;
+        textReply = `${da ? da + ', ' : ''}${me} đã ghi nhận lời nhắn của ${addressing}. ${addressing.charAt(0).toUpperCase() + addressing.slice(1)} cần ${me} hỗ trợ gì tiếp theo nhé${a}?`;
       }
 
       const cleanReply = textReply.replace(/\*\*/g, '').replace(/[*#]/g, '');
 
       const agentRes: LoviraAgentResponse = {
         reply: cleanReply,
-        speech: cleanReply,
+        speech: speechText ? speechText.replace(/\*\*/g, '').replace(/[*#]/g, '') : cleanReply,
         actions,
+        suggestedReplies,
         meta: {
           engine: 'gemini',
           model: 'gemini-2.5-flash',
