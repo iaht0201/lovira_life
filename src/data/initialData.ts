@@ -1,7 +1,7 @@
 import { LifeSession, ModelProfile } from '../types';
 
 export const MODEL_POOL: ModelProfile[] = [
-  { id: "gemini-3.7-flash", provider: "gemini", capability: "fast", supportsVision: true, supportsToolCalling: true },
+  { id: "gemini-2.5-flash", provider: "gemini", capability: "fast", supportsVision: true, supportsToolCalling: true },
   { id: "gemini-3.1-flash-lite", provider: "gemini", capability: "lite", supportsVision: true, supportsToolCalling: true },
   { id: "openai/gpt-oss-120b", provider: "groq", capability: "reasoning", supportsVision: false, supportsToolCalling: true },
   { id: "qwen/qwen3.6-27b", provider: "groq", capability: "conversation", supportsVision: false, supportsToolCalling: true },

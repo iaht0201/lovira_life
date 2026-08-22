@@ -20,6 +20,7 @@ import { indexedDbService } from './services/indexedDbService';
 import { SCENARIO_TEMPLATES } from './data/initialData';
 import { applyAgentActionBatch, calculateNextRecommendedAction, reconcileParentTaskStatus } from './services/actionEngine';
 import { parseLocalIntent } from './services/localIntentEngine';
+import { createLifeSessionFromPlan } from './services/sessionFactory';
 import { speakText } from './services/ttsService';
 
 import { Header } from './components/common/Header';
@@ -158,63 +159,10 @@ export default function App() {
         });
 
         const plan: GeneratedSessionPlan = await res.json();
-
-        const customTasks = (plan.tasks || []).map((t, i) => ({
-          id: `task-${i + 1}`,
-          title: t.title,
-          order: t.order || i + 1,
-          status: 'pending' as const,
-          important: t.important || false,
-        }));
-
-        const customFacts = (plan.importantFacts || []).map((f, i) => ({
-          id: `fact-${i + 1}`,
-          type: f.type,
-          title: f.title,
-          value: f.value,
-          createdAt: now,
-          updatedAt: now,
-        }));
-
-        const firstActionTitle = plan.firstRecommendedAction || customTasks[0]?.title || 'Chuẩn bị bước đầu tiên';
-
-        const newCustomSession: LifeSession = {
-          id: newId,
-          title: plan.title || `🌟 ${customGoal.slice(0, 25)}...`,
-          scenarioType: 'custom',
-          status: 'active',
-          goal: plan.goal || customGoal,
-          createdAt: now,
-          updatedAt: now,
-          currentStepId: customTasks[0]?.id || 'task-1',
-          importantFacts: customFacts,
-          tasks: customTasks,
-          resources: [],
-          messages: [
-            {
-              id: `msg-${Date.now()}`,
-              sender: 'lovira',
-              text: `Chào bạn nha! Mình đã lập xong kế hoạch cho mục tiêu: "${plan.goal}" rồi nè.\n\nMình đã sắp xếp ${customTasks.length} việc cần làm và các thông tin quan trọng. Bước đầu tiên tụi mình làm sẽ là: "${firstActionTitle}" nha!`,
-              timestamp: now,
-            },
-          ],
-          actionLog: [
-            {
-              id: `log-${Date.now()}`,
-              timestamp: now,
-              actionType: 'CREATE_SESSION_AI',
-              summary: `Lovira AI khởi tạo phiên tùy chỉnh: ${plan.title}`,
-              triggeredBy: 'system',
-            },
-          ],
-          nextRecommendedAction: {
-            title: firstActionTitle,
-            description: 'Được Lovira AI tự động gợi ý dựa trên mục tiêu của bạn',
-          },
-        };
+        const newCustomSession = createLifeSessionFromPlan(plan, customGoal, 'custom');
 
         saveUpdatedSession(newCustomSession);
-        storageService.setActiveSessionId(newId);
+        storageService.setActiveSessionId(newCustomSession.id);
         setActiveTab('session');
         showToast(`✨ Đã khởi tạo thành công phiên AI: "${newCustomSession.title}"`);
         if (accessibility.speakResponse) {

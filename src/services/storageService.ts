@@ -30,7 +30,7 @@ export const DEFAULT_ACCESSIBILITY: AccessibilitySettings = {
 export const DEFAULT_AI_SETTINGS: AISettings = {
   provider: 'demo',
   apiKey: '',
-  selectedModel: 'gemini-3.7-flash',
+  selectedModel: 'gemini-2.5-flash',
   demoMode: true,
 };
 

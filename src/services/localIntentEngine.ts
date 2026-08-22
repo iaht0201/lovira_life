@@ -1,6 +1,6 @@
 import { LifeSession, LoviraAgentResponse, AgentAction, GeneratedSessionPlan, UserProfile, LifeTask, ScenarioFamily } from '../types';
 import { buildAddressing } from '../utils/filterRelevantConditions';
-import { findBestMatchingTask } from './actionEngine';
+import { findBestMatchingTask, calculateNextRecommendedAction } from './actionEngine';
 import { routeScenario } from './scenarioRouter';
 import { SCENARIO_REGISTRY } from './scenarioRegistry';
 
@@ -316,13 +316,16 @@ export function parseLocalIntent(
     text === 'tiếp theo làm gì' ||
     text === 'tôi cần làm gì tiếp' ||
     text === 'giờ làm gì' ||
-    text === 'làm gì tiếp'
+    text === 'làm gì tiếp' ||
+    text.includes('giờ làm gì') ||
+    text.includes('tiếp theo làm gì')
   ) {
-    if (pendingTasks.length > 0) {
-      const topTask = pendingTasks[0];
+    const nextRec = calculateNextRecommendedAction(session);
+    if (nextRec.taskId) {
+      const parentCtx = nextRec.parentContext ? ` (thuộc "${nextRec.parentContext}")` : '';
       return {
-        reply: `Bây giờ bạn hãy ${topTask.title.toLowerCase()}.\nKhi lấy xong, hãy báo cho tôi.`,
-        speech: `Bây giờ bạn hãy ${topTask.title.toLowerCase()}.`,
+        reply: `Bước tiếp theo bạn cần làm là: "${nextRec.title}"${parentCtx}.\n\nKhi hoàn thành, bạn cứ nhắn báo cho Lovira nhé!`,
+        speech: `Bước tiếp theo bạn cần làm là: ${nextRec.title}.`,
         actions: [],
         meta: { engine: 'local', model: 'local-intent', processingTime: 5 },
       };
@@ -400,27 +403,58 @@ export function parseLocalIntent(
   }
 
   // 7. CASE 03, 04, 05 — STT & LOCATION & TASK COMPLETION COMBINATIONS
-  // e.g. "Tôi lấy số 45 rồi, họ bảo sang phòng 103."
-  // e.g. "Tôi lấy số 45 rồi."
-  // e.g. "Họ bảo tôi đến phòng 103."
-  const hasTakeNumber = text.includes('lấy số') || text.includes('bốc số') || text.includes('quét phiếu') || text.includes('lấy số 45');
+  // e.g. "601, Nội Khoa", "Tôi lấy số 45 rồi, họ bảo sang phòng 103.", "Tôi lấy số 45 rồi.", "Họ bảo tôi đến phòng 103."
+  const hasTakeNumber = text.includes('lấy số') || text.includes('bốc số') || text.includes('quét phiếu') || text.includes('lấy số 45') || text.includes('số thứ tự');
   const numberMatch = text.match(/\b(\d{1,4})\b/);
-  const roomMatch = text.match(/(?:phòng|quầy|khoa)\s*(\d+[a-zA-Z]?)/i);
+  
+  // Advanced room & department matching (supports "601, Nội Khoa", "Phòng 601 - Khoa Nội", "P601", "Quầy 3", "601")
+  const explicitRoomMatch = text.match(/(?:phòng|p\.?|quầy|cửa)\s*(\d+[a-zA-Z]?)(?:\s*[,.-]?\s*([a-zA-ZÀ-ỹ\s]+))?/i);
+  const numberFirstMatch = text.match(/^(?:bàn|bàn khám)?\s*(\d{3,4})\b(?:\s*[,.-]?\s*([a-zA-ZÀ-ỹ\s]+))?/i);
+  const deptMatch = text.match(/\b(khoa\s+[a-zA-ZÀ-ỹ\s]+|nội\s*khoa|ngoại\s*khoa|mắt|tai\s*mũi\s*họng|da\s*liễu|nhi|sản|tiêu\s*hóa|tim\s*mạch|thần\s*kinh|chấn\s*thương|x-quang|xét\s*nghiệm)\b/i);
 
-  if (hasTakeNumber || roomMatch) {
+  let detectedRoomNum = '';
+  let detectedDept = '';
+
+  if (explicitRoomMatch) {
+    detectedRoomNum = explicitRoomMatch[1];
+    if (explicitRoomMatch[2]) detectedDept = explicitRoomMatch[2].trim();
+  } else if (numberFirstMatch) {
+    detectedRoomNum = numberFirstMatch[1];
+    if (numberFirstMatch[2]) detectedDept = numberFirstMatch[2].trim();
+  }
+
+  if (!detectedDept && deptMatch) {
+    detectedDept = deptMatch[1].trim();
+  }
+
+  const roomMatch = explicitRoomMatch || numberFirstMatch || (deptMatch ? [text, '', detectedDept] : null);
+
+  if (hasTakeNumber || roomMatch || detectedRoomNum || detectedDept) {
     const actions: AgentAction[] = [];
     let numberVal = '';
     let roomVal = '';
 
-    // If queue number taken
-    if (hasTakeNumber) {
-      const getNumTask = session.tasks.find((t) => t.id === 'task-get-number' || t.title.toLowerCase().includes('lấy số') || t.title.toLowerCase().includes('quét phiếu'));
-      actions.push({
-        type: 'COMPLETE_TASK',
-        payload: { taskId: getNumTask ? getNumTask.id : 'task-get-number' },
-      });
+    if (detectedRoomNum && detectedDept) {
+      const cleanDept = detectedDept.charAt(0).toUpperCase() + detectedDept.slice(1);
+      roomVal = `Phòng ${detectedRoomNum} - ${cleanDept}`;
+    } else if (detectedRoomNum) {
+      roomVal = `Phòng ${detectedRoomNum}`;
+    } else if (detectedDept) {
+      const cleanDept = detectedDept.charAt(0).toUpperCase() + detectedDept.slice(1);
+      roomVal = cleanDept.toLowerCase().startsWith('khoa') ? cleanDept : `Khoa ${cleanDept}`;
+    }
 
-      if (numberMatch && (text.includes('số') || hasTakeNumber)) {
+    // If queue number taken or room assigned, complete ticket scan/number task if pending
+    if (hasTakeNumber || roomVal) {
+      const getNumTask = session.tasks.find((t) => t.status === 'pending' && (t.id === 'task-get-number' || t.title.toLowerCase().includes('lấy số') || t.title.toLowerCase().includes('quét phiếu')));
+      if (getNumTask) {
+        actions.push({
+          type: 'COMPLETE_TASK',
+          payload: { taskId: getNumTask.id },
+        });
+      }
+
+      if (hasTakeNumber && numberMatch && (text.includes('số') || hasTakeNumber)) {
         numberVal = numberMatch[1];
         actions.push({
           type: 'ADD_FACT',
@@ -435,8 +469,7 @@ export function parseLocalIntent(
     }
 
     // If room / location info provided
-    if (roomMatch) {
-      roomVal = `Phòng ${roomMatch[1]}`;
+    if (roomVal) {
       actions.push({
         type: 'ADD_FACT',
         payload: {
@@ -456,43 +489,79 @@ export function parseLocalIntent(
       });
     }
 
-    // Build precise reply text according to test case expectations
+    // Build precise reply text
     let reply = '';
     if (hasTakeNumber && numberVal && roomVal) {
-      reply = `Đã lưu số thứ tự ${numberVal} và ${roomVal.toLowerCase()}.\nTiếp theo, hãy đến ${roomVal.toLowerCase()}.`;
+      reply = `Đã lưu số thứ tự ${numberVal} và ${roomVal.toLowerCase()}.\n\n👉 Bước tiếp theo: Hãy đến ${roomVal.toLowerCase()}.`;
     } else if (hasTakeNumber && numberVal) {
-      reply = `Đã đánh dấu lấy số thứ tự là hoàn thành và lưu số ${numberVal}.\nTiếp theo, hãy kiểm tra phòng khám được chỉ định.`;
-    } else if (hasTakeNumber) {
-      reply = `Đã đánh dấu lấy số thứ tự là hoàn thành.\nTiếp theo, hãy kiểm tra phòng khám được chỉ định.`;
+      reply = `Đã đánh dấu lấy số thứ tự là hoàn thành và lưu số thứ tự ${numberVal}.\n\n👉 Bước tiếp theo: Hãy kiểm tra phòng khám được chỉ định.`;
     } else if (roomVal) {
-      reply = `Đã lưu ${roomVal.toLowerCase()}.\nTiếp theo, hãy đến ${roomVal.toLowerCase()}.`;
+      reply = `Đã lưu phòng khám: ${roomVal}.\n\n👉 Bước tiếp theo: Bạn hãy di chuyển đến ${roomVal} và chờ gọi số thứ tự nhé!`;
+    } else if (hasTakeNumber) {
+      reply = `Đã đánh dấu lấy số thứ tự là hoàn thành.\n\n👉 Bước tiếp theo: Hãy kiểm tra phòng khám được chỉ định.`;
     }
 
     if (actions.length > 0) {
       return {
         reply,
-        speech: reply.replace(/\n/g, ' '),
+        speech: reply.replace(/\n/g, ' ').replace(/👉/g, ''),
         actions,
         meta: { engine: 'local', model: 'local-intent', processingTime: 5 },
       };
     }
   }
 
-  // 8. CASE 06 — "Tôi tới rồi." / "Tôi đến rồi."
-  if (text === 'tôi tới rồi.' || text === 'tôi tới rồi' || text === 'tôi đến rồi' || text === 'tới rồi' || text === 'đến rồi') {
-    const goRoomTask = session.tasks.find((t) => t.id === 'task-go-room' || t.title.toLowerCase().includes('đến phòng') || t.title.toLowerCase().includes('đến nơi'));
-    const targetTaskId = goRoomTask ? goRoomTask.id : 'task-go-room';
-    return {
-      reply: 'Đã đánh dấu đến phòng khám là hoàn thành.\nTiếp theo, hãy chờ đến lượt và khám bác sĩ.',
-      speech: 'Đã đánh dấu đến phòng khám là hoàn thành. Tiếp theo, hãy khám bác sĩ.',
-      actions: [
+  // 8. CASE 06 — ARRIVAL & LOCATION TASK COMPLETION
+  // e.g. "Tôi đến nơi rồi", "Tôi tới công ty rồi", "Tôi đến phòng khám rồi", "Đã đến nơi", "Tôi tới rồi"
+  const isArrivalMsg =
+    text.includes('đến phòng') ||
+    text.includes('tới phòng') ||
+    text.includes('vào phòng') ||
+    text.includes('đến nơi') ||
+    text.includes('tới nơi') ||
+    text.includes('đã tới') ||
+    text.includes('đã đến') ||
+    text === 'tôi tới rồi.' ||
+    text === 'tôi tới rồi' ||
+    text === 'tôi đến rồi' ||
+    text === 'tới rồi' ||
+    text === 'đến rồi';
+
+  if (isArrivalMsg) {
+    // Find task for arriving/traveling
+    const arrivalTask = pendingTasks.find(
+      (t) =>
+        t.title.toLowerCase().includes('đến') ||
+        t.title.toLowerCase().includes('tới') ||
+        t.title.toLowerCase().includes('di chuyển') ||
+        t.title.toLowerCase().includes('đi')
+    ) || pendingTasks[0];
+
+    if (arrivalTask) {
+      const actions: AgentAction[] = [
         {
           type: 'COMPLETE_TASK',
-          payload: { taskId: targetTaskId },
+          payload: { taskId: arrivalTask.id },
         },
-      ],
-      meta: { engine: 'local', model: 'local-intent', processingTime: 5 },
-    };
+      ];
+
+      // Predict next session state to calculate next recommended action
+      const nextSessionState: LifeSession = JSON.parse(JSON.stringify(session));
+      const taskInNext = nextSessionState.tasks.find((t) => t.id === arrivalTask.id);
+      if (taskInNext) taskInNext.status = 'completed';
+      const nextRec = calculateNextRecommendedAction(nextSessionState);
+
+      const replyStr = nextRec.taskId
+        ? `Lovira đã ghi nhận bạn hoàn thành: "${arrivalTask.title}".\n\n👉 Bước tiếp theo: "${nextRec.title}".`
+        : `Lovira đã ghi nhận bạn hoàn thành: "${arrivalTask.title}". Tất cả công việc trong phiên đã hoàn thành rồi nè! 🎉`;
+
+      return {
+        reply: replyStr,
+        speech: replyStr.replace(/👉/g, '').replace(/\n/g, ' '),
+        actions,
+        meta: { engine: 'local', model: 'local-intent', processingTime: 5 },
+      };
+    }
   }
 
   // 9. CASE 20 — SEMANTIC COMPLETE TASK ("Tôi lấy máu xong rồi" / "Lấy máu xong rồi")
@@ -854,6 +923,25 @@ export function parseLocalIntent(
     return {
       reply: 'Thẻ BHYT giúp bạn được hưởng quyền lợi giảm trừ chi phí khám chữa bệnh và nhận thuốc theo danh mục do bệnh viện cấp phép.',
       speech: 'Thẻ BHYT giúp bạn được giảm chi phí khám chữa bệnh.',
+      actions: [],
+      meta: { engine: 'local', model: 'local-intent', processingTime: 5 },
+    };
+  }
+
+  // 21. USER CONFUSION / DISAGREEMENT ("? bạn không hiểu hả", "sao không hiểu")
+  if (
+    text.includes('không hiểu') ||
+    text.includes('chưa hiểu') ||
+    text.includes('hiểu không') ||
+    text.includes('sao lại') ||
+    text.includes('sao thế') ||
+    text.includes('hiểu chưa')
+  ) {
+    const locationFact = facts.find((f) => f.type === 'location' || f.title.toLowerCase().includes('phòng'));
+    const savedLoc = locationFact ? ` (Lovira đã ghi nhận: ${locationFact.value})` : '';
+    return {
+      reply: `Lovira xin lỗi bạn nhé! Lovira đã hiểu và ghi nhận rồi ạ${savedLoc}.\n\n👉 Bạn cần Lovira ghi nhớ thêm số thứ tự, đơn thuốc hay hướng dẫn bước tiếp theo không ạ?`,
+      speech: 'Lovira xin lỗi bạn nha. Lovira đã ghi nhận rồi ạ.',
       actions: [],
       meta: { engine: 'local', model: 'local-intent', processingTime: 5 },
     };

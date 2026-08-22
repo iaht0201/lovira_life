@@ -216,9 +216,10 @@ export interface LoviraAgentResponse {
 
 export interface GeneratedTask {
   title: string;
+  description?: string;
   order: number;
   important?: boolean;
-  subtasks?: { title: string; order: number }[];
+  subtasks?: { title: string; description?: string; order: number }[];
 }
 
 export interface GeneratedSessionPlan {
@@ -226,6 +227,7 @@ export interface GeneratedSessionPlan {
   goal: string;
   scenarioType: ScenarioType;
   scenarioFamily?: ScenarioFamily;
+  subtype?: string;
   modules?: LifeModule[];
   tasks: GeneratedTask[];
   importantFacts?: {

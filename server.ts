@@ -81,28 +81,96 @@ async function startServer() {
         const pendingTasks = (session.tasks || []).filter((t) => t.status === 'pending');
         const topTask = pendingTasks[0];
         const actions: AgentAction[] = [];
+        const msgLower = message.toLowerCase();
 
-        // Save input as an Important Fact so information is never lost
-        actions.push({
-          type: 'ADD_FACT',
-          payload: {
-            category: 'instruction',
-            title: 'Ghi nhận mới',
-            value: message,
-          },
-        });
+        // Check if message is a room/location/department
+        const numFirstMatch = message.match(/^(?:bàn|bàn khám)?\s*(\d{3,4})\b(?:\s*[,.-]?\s*([a-zA-ZÀ-ỹ\s]+))?/i);
+        const explicitRoomMatch = message.match(/(?:phòng|p\.?|quầy|cửa)\s*(\d+[a-zA-Z]?)(?:\s*[,.-]?\s*([a-zA-ZÀ-ỹ\s]+))?/i);
+        const deptMatch = message.match(/\b(khoa\s+[a-zA-ZÀ-ỹ\s]+|nội\s*khoa|ngoại\s*khoa|mắt|tai\s*mũi\s*họng|da\s*liễu|nhi|sản|tiêu\s*hóa|tim\s*mạch|thần\s*kinh|chấn\s*thương|x-quang|xét\s*nghiệm)\b/i);
+
+        let roomVal = '';
+        if (explicitRoomMatch) {
+          const roomNum = explicitRoomMatch[1];
+          const dept = explicitRoomMatch[2] ? explicitRoomMatch[2].trim() : '';
+          roomVal = dept ? `Phòng ${roomNum} - ${dept}` : `Phòng ${roomNum}`;
+        } else if (numFirstMatch) {
+          const roomNum = numFirstMatch[1];
+          const dept = numFirstMatch[2] ? numFirstMatch[2].trim() : '';
+          roomVal = dept ? `Phòng ${roomNum} - ${dept}` : `Phòng ${roomNum}`;
+        } else if (deptMatch) {
+          roomVal = deptMatch[1].trim();
+        }
+
+        if (roomVal) {
+          actions.push({
+            type: 'ADD_FACT',
+            payload: {
+              category: 'location',
+              title: 'Phòng khám',
+              value: roomVal,
+              source: 'chat',
+            },
+          });
+
+          actions.push({
+            type: 'UPDATE_NEXT_ACTION',
+            payload: {
+              title: `Đến ${roomVal.toLowerCase()}`,
+              description: `Di chuyển đến ${roomVal} và chờ gọi số`,
+            },
+          });
+
+          // Complete get number / ticket scanning task if pending
+          if (topTask && (topTask.id === 'task-get-number' || topTask.title.toLowerCase().includes('lấy số') || topTask.title.toLowerCase().includes('quét phiếu'))) {
+            actions.push({
+              type: 'COMPLETE_TASK',
+              payload: { taskId: topTask.id },
+            });
+          }
+
+          const replyText = `Lovira đã lưu thông tin phòng khám: ${roomVal}.\n\n👉 Bước tiếp theo: Bạn hãy di chuyển đến ${roomVal} và chờ đến lượt gọi số nhé!`;
+          return res.json({
+            reply: replyText,
+            speech: replyText.replace(/👉/g, '').replace(/\n/g, ' '),
+            actions,
+            meta: { engine: 'local', model: 'fallback-demo' },
+          });
+        }
+
+        // Only persist as fact if message contains real information (not simple conversational phrases)
+        const isConversational =
+          msgLower === 'cảm ơn' ||
+          msgLower === 'ok' ||
+          msgLower === 'được rồi' ||
+          msgLower.includes('giải thích') ||
+          msgLower.includes('lo quá') ||
+          msgLower.includes('làm gì') ||
+          msgLower.includes('tiếp theo');
+
+        if (!isConversational && message.trim().length > 6) {
+          actions.push({
+            type: 'ADD_FACT',
+            payload: {
+              category: 'note',
+              title: 'Ghi chú bổ sung',
+              value: message.trim(),
+            },
+          });
+        }
 
         // If message implies completion of a task, mark top task as completed
-        const msgLower = message.toLowerCase();
-        if (
+        const isCompletedSignal =
           topTask &&
           (msgLower.includes('xong') ||
             msgLower.includes('rồi') ||
-            msgLower.includes('phòng') ||
-            msgLower.includes('số') ||
             msgLower.includes('lấy') ||
-            msgLower.includes('nộp'))
-        ) {
+            msgLower.includes('nộp') ||
+            msgLower.includes('tới') ||
+            msgLower.includes('đến'));
+
+        let replyText = '';
+
+        if (isCompletedSignal && topTask) {
           actions.push({
             type: 'COMPLETE_TASK',
             payload: { taskId: topTask.id },
@@ -117,18 +185,18 @@ async function startServer() {
                 description: nextTask.description || 'Thực hiện bước tiếp theo trong danh sách',
               },
             });
+            replyText = `Lovira đã ghi nhận bạn hoàn thành: "${topTask.title}".\n\n👉 Bước tiếp theo: "${nextTask.title}".`;
+          } else {
+            replyText = `Lovira đã ghi nhận bạn hoàn thành: "${topTask.title}". Tất cả công việc trong phiên đã hoàn thành rồi nè!`;
           }
-        }
-
-        let replyText = '';
-        if (msgLower.includes('tiếp theo') || msgLower.includes('làm gì') || msgLower.includes('cần làm') || msgLower.includes('bước')) {
+        } else if (msgLower.includes('tiếp theo') || msgLower.includes('làm gì') || msgLower.includes('cần làm') || msgLower.includes('bước')) {
           replyText = topTask
             ? `Bước tiếp theo bạn cần thực hiện là: "${topTask.title}". Khi xong bạn cứ nhắn cho Lovira nha!`
             : `Bạn đã hoàn thành tất cả công việc trong phiên "${session.title}" rồi nè!`;
         } else {
           replyText = topTask
-            ? `Lovira đã cập nhật thông tin vào phiên rồi nha. Bước tiếp theo bạn hãy thực hiện: "${topTask.title}".`
-            : `Lovira đã cập nhật thông tin vào phiên rồi nha!`;
+            ? `Lovira đã ghi nhận: "${message}". Bước tiếp theo bạn hãy thực hiện: "${topTask.title}".`
+            : `Lovira đã ghi nhận thông tin: "${message}" vào phiên!`;
         }
 
         return res.json({
@@ -238,7 +306,7 @@ async function startServer() {
 
       const startTime = Date.now();
       const response = await ai.models.generateContent({
-        model: 'gemini-3.7-flash',
+        model: 'gemini-2.5-flash',
         contents: [
           { role: 'user', parts: [{ text: `${systemPrompt}\n\nTin nhắn của người dùng: "${message}"` }] },
         ],
@@ -320,7 +388,7 @@ async function startServer() {
         actions,
         meta: {
           engine: 'gemini',
-          model: 'gemini-3.7-flash',
+          model: 'gemini-2.5-flash',
           processingTime: Date.now() - startTime,
         },
       };
@@ -366,7 +434,7 @@ async function startServer() {
 
       const clarificationPrompt = buildClarificationPrompt(prompt);
       const response = await ai.models.generateContent({
-        model: 'gemini-3.7-flash',
+        model: 'gemini-2.5-flash',
         contents: [
           { role: 'user', parts: [{ text: clarificationPrompt }] },
         ],
@@ -445,7 +513,7 @@ Trả về DUY NHẤT JSON đúng schema đã cho:
 }`;
 
       const response = await ai.models.generateContent({
-        model: 'gemini-3.7-flash',
+        model: 'gemini-2.5-flash',
         contents: [
           { role: 'user', parts: [{ text: `${systemPrompt}\n\nNội dung mô tả của người dùng: "${prompt}"` }] },
         ],
@@ -518,7 +586,7 @@ Trích xuất thông tin quan trọng và trả về DUY NHẤT JSON đúng cấ
 }`;
 
       const response = await ai.models.generateContent({
-        model: 'gemini-3.7-flash',
+        model: 'gemini-2.5-flash',
         contents: [
           {
             parts: [
