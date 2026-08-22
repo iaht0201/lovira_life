@@ -27,6 +27,7 @@ export const GlobalVoiceButton: React.FC<GlobalVoiceButtonProps> = ({
 }) => {
   const [clickNotice, setClickNotice] = useState<string | null>(null);
   const lastClickRef = useRef<number>(0);
+  const lastTouchRef = useRef<number>(0);
 
   // Auto clear click notice
   useEffect(() => {
@@ -37,16 +38,8 @@ export const GlobalVoiceButton: React.FC<GlobalVoiceButtonProps> = ({
     }
   }, [errorMessage]);
 
-  const handleClick = (e: React.MouseEvent | React.KeyboardEvent) => {
-    e.preventDefault();
-    if (disabled) return;
-
-    const now = Date.now();
-    // Debounce fast double clicks (under 300ms)
-    if (now - lastClickRef.current < 300) {
-      return;
-    }
-    lastClickRef.current = now;
+  const triggerVoiceAction = () => {
+    if (disabled || status === 'processing') return;
 
     if (status === 'listening') {
       // Finalize and submit speech
@@ -58,6 +51,34 @@ export const GlobalVoiceButton: React.FC<GlobalVoiceButtonProps> = ({
     } else if (status === 'idle' || status === 'error') {
       onStartListening();
     }
+  };
+
+  const handleClick = (e: React.MouseEvent | React.KeyboardEvent) => {
+    e.preventDefault();
+    if (disabled) return;
+
+    const now = Date.now();
+    // Prevent accidental rapid duplicate triggers under 200ms
+    if (now - lastClickRef.current < 200) {
+      return;
+    }
+    lastClickRef.current = now;
+    triggerVoiceAction();
+  };
+
+  // Support explicit double click / double tap as a dual activation path
+  const handleDoubleClick = (e: React.MouseEvent) => {
+    e.preventDefault();
+    triggerVoiceAction();
+  };
+
+  const handleTouchEnd = () => {
+    const now = Date.now();
+    // If second tap occurs within 350ms, ensure responsive double-tap activation
+    if (now - lastTouchRef.current < 350) {
+      triggerVoiceAction();
+    }
+    lastTouchRef.current = now;
   };
 
   const getStatusDescription = () => {
@@ -155,6 +176,8 @@ export const GlobalVoiceButton: React.FC<GlobalVoiceButtonProps> = ({
           id="global-voice-action-btn"
           type="button"
           onClick={handleClick}
+          onDoubleClick={handleDoubleClick}
+          onTouchEnd={handleTouchEnd}
           disabled={disabled || status === 'processing'}
           aria-label={getStatusDescription()}
           title={getStatusDescription()}

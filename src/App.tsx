@@ -685,17 +685,12 @@ export default function App() {
         const appActions: AppAction[] = data.appActions || [];
         const suggestedReplies: string[] | undefined = data.suggestedReplies;
 
-        // 1. Process App Actions (e.g. user says "Về trang chủ", "Mở cài đặt", "Mở camera")
-        if (appActions.length > 0) {
-          for (const appAct of appActions) {
-            await executeValidatedAppAction(appAct, appContext, runtimeContext);
-          }
-        }
-
-        // 2. Process Session Structured Actions
         const sensitiveAction = actions.find((a) => a.requiresConfirmation);
 
-        const applyActionsAndSave = (actionsToApply: AgentAction[]) => {
+        const applyActionsAndSave = async (
+          actionsToApply: AgentAction[],
+          appActionsToApply: AppAction[]
+        ) => {
           const batchTrigger = inputMode === 'voice' ? 'voice' : 'chat';
           const batchRes = applyAgentActionBatch(sessionWithUserMsg, actionsToApply, batchTrigger);
 
@@ -728,6 +723,13 @@ export default function App() {
             finalSession.messages.push(loviraMsg);
             saveUpdatedSession(finalSession);
 
+            // 3. Process App Actions AFTER session actions are reconciled and persisted
+            if (appActionsToApply.length > 0) {
+              for (const appAct of appActionsToApply) {
+                await executeValidatedAppAction(appAct, appContext, runtimeContext);
+              }
+            }
+
             if (batchRes.status === 'partial') {
               const failMsg = batchRes.rejectedActions.map((f) => f.reason).join(', ');
               showToast(`⚠️ Lovira đã áp dụng một phần (${batchRes.appliedActions.length}/${actionsToApply.length}): ${failMsg}`);
@@ -746,6 +748,14 @@ export default function App() {
             }
           } else {
             showToast(`⚠️ Lovira chưa thể cập nhật: ${batchRes.rejectedReason || 'Hành động không hợp lệ'}`);
+
+            // Still process non-conflicting app actions if session batch had no mutating actions
+            if (actionsToApply.length === 0 && appActionsToApply.length > 0) {
+              for (const appAct of appActionsToApply) {
+                await executeValidatedAppAction(appAct, appContext, runtimeContext);
+              }
+            }
+
             if (inputMode === 'voice' || accessibility.speakResponse) {
               speakWithVoiceStatus(replyText);
             } else {
@@ -759,14 +769,14 @@ export default function App() {
             isOpen: true,
             title: 'Xác nhận thao tác nhạy cảm từ Lovira',
             message: sensitiveAction.confirmationPrompt || 'Lovira đề xuất thực hiện thay đổi quan trọng này. Bạn có đồng ý không?',
-            onConfirm: () => {
-              applyActionsAndSave(actions);
+            onConfirm: async () => {
+              await applyActionsAndSave(actions, appActions);
               setConfirmModal((prev) => ({ ...prev, isOpen: false }));
             },
           });
           setVoiceStatus('idle');
         } else {
-          applyActionsAndSave(actions);
+          await applyActionsAndSave(actions, appActions);
         }
       } catch (e) {
         console.warn('Backend chat unreachable, trying offline local fallback:', e);

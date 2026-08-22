@@ -40,12 +40,16 @@ export function validateAppAction(
       const sessionTitle = rawTitle ? rawTitle.toLowerCase() : '';
       const sessions = context.availableSessions || [];
 
-      // 1. Direct ID match
+      // 1. Direct ID match (if explicit sessionId is provided, it MUST exist)
       if (sessionId) {
         const found = sessions.find((s) => s.id === sessionId);
-        if (found) {
-          return { valid: true, action, resolvedSessionId: found.id };
+        if (!found) {
+          return {
+            valid: false,
+            reason: 'Không tìm thấy phiên với ID này.',
+          };
         }
+        return { valid: true, action, resolvedSessionId: found.id };
       }
 
       // 2. Title/keyword match in available sessions
@@ -122,7 +126,17 @@ export function validateAppAction(
         case 'speakResponse':
         case 'vslEnabled':
         case 'reducedMotion': {
-          const boolVal = value === true || value === 'true' || value === 1;
+          let boolVal: boolean;
+          if (value === true || value === 'true' || value === 1 || value === '1') {
+            boolVal = true;
+          } else if (value === false || value === 'false' || value === 0 || value === '0') {
+            boolVal = false;
+          } else {
+            return {
+              valid: false,
+              reason: `Giá trị cho cài đặt "${setting}" phải là bật (true/1) hoặc tắt (false/0).`,
+            };
+          }
           return { valid: true, action: { ...action, payload: { setting, value: boolVal } } };
         }
         case 'theme': {
