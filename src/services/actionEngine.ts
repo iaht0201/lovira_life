@@ -32,14 +32,33 @@ export function findBestMatchingTask(
   const q = query.trim().toLowerCase();
 
   // 1. Direct ID match
-  const taskById = session.tasks.find((t) => t.id === query);
+  const taskById = session.tasks.find((t) => t.id === query || t.id.toLowerCase() === q);
   if (taskById) return { task: taskById };
 
   for (const t of session.tasks) {
     if (t.subtasks) {
-      const sub = t.subtasks.find((st) => st.id === query);
+      const sub = t.subtasks.find((st) => st.id === query || st.id.toLowerCase() === q);
       if (sub) return { subtask: sub, parentTask: t };
     }
+  }
+
+  // 1.5 Special keyword markers referring to current/active/next step
+  const currentMarkers = [
+    'current',
+    'active',
+    'this',
+    'bước này',
+    'bước hiện tại',
+    'việc này',
+    'hiện tại',
+    'đang làm',
+    'next',
+    'tiếp theo',
+    'kế tiếp',
+  ];
+  if (currentMarkers.includes(q)) {
+    const current = resolveCurrentStep(session);
+    if (current && (current.task || current.subtask)) return current;
   }
 
   // 2. Substring match in active/pending subtasks first
@@ -63,8 +82,8 @@ export function findBestMatchingTask(
   );
   if (pendingParent) return { task: pendingParent };
 
-  // 4. Keyword token match for common actions (e.g., "máu" -> "Xét nghiệm máu")
-  const words = q.split(/\s+/).filter((w) => w.length >= 3);
+  // 4. Keyword token match for common actions (e.g., "cửa hàng" -> "Di chuyển đến cửa hàng")
+  const words = q.split(/[\s,./-]+/).filter((w) => w.length >= 2);
   if (words.length > 0) {
     for (const t of session.tasks) {
       if (t.status === 'completed') continue;
@@ -83,7 +102,7 @@ export function findBestMatchingTask(
     }
   }
 
-  // 5. Fallback match anywhere
+  // 5. Fallback match anywhere in completed tasks
   for (const t of session.tasks) {
     if (t.subtasks) {
       const sub = t.subtasks.find(
@@ -95,6 +114,12 @@ export function findBestMatchingTask(
     if (t.title.toLowerCase().includes(q) || q.includes(t.title.toLowerCase())) {
       return { task: t };
     }
+  }
+
+  // 6. Smart Fallback to current step if there's an ongoing task
+  const currentFallback = resolveCurrentStep(session);
+  if (currentFallback && (currentFallback.task || currentFallback.subtask)) {
+    return currentFallback;
   }
 
   return {};

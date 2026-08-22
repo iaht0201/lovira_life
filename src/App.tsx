@@ -525,15 +525,16 @@ export default function App() {
 
           if (batchRes.status === 'partial' && batchRes.rejectedActions.length > 0) {
             console.warn('Some agent actions were ignored by validator:', batchRes.rejectedActions);
-            const honorifics = deduceHonorifics(userProfile, userText);
-            consistentReply = buildPartialSuccessReply(
-              batchRes.appliedActions,
-              batchRes.rejectedActions,
-              replyText,
-              honorifics
-            );
-            // Reconcile chips to safe, non-assumptive suggestions
-            finalSuggestedReplies = ['Kiểm tra lại bước hiện tại', 'Giờ tôi cần làm gì?'];
+            // If AI didn't provide a conversational reply, fallback to state-consistent reply
+            if (!replyText || !replyText.trim()) {
+              const honorifics = deduceHonorifics(userProfile, userText);
+              consistentReply = buildPartialSuccessReply(
+                batchRes.appliedActions,
+                batchRes.rejectedActions,
+                replyText,
+                honorifics
+              );
+            }
           }
 
           const loviraMsg = {
