@@ -34,10 +34,17 @@ export function getRelevantConditions(
   const isMedicalOrHealth =
     scenarioType === 'medical' ||
     scenarioFamily === 'healthcare' ||
-    scenarioFamily === 'safety' ||
     subtype.includes('medical') ||
     subtype.includes('kham_benh') ||
-    subtype.includes('tiem_chung');
+    subtype.includes('tiem_chung') ||
+    (scenarioFamily === 'safety' &&
+      (subtype.includes('medical') ||
+        subtype.includes('health') ||
+        subtype.includes('cap_cuu') ||
+        subtype.includes('nga') ||
+        subtype.includes('fall') ||
+        subtype.includes('injury') ||
+        subtype.includes('tai_nan')));
 
   if (isMedicalOrHealth) {
     return allConditions;
@@ -45,7 +52,6 @@ export function getRelevantConditions(
 
   if (
     scenarioFamily === 'mobility' ||
-    scenarioType === 'movement' ||
     subtype.includes('di_chuyen') ||
     subtype.includes('xe_bus')
   ) {

@@ -21,22 +21,15 @@ export type GuidanceIntent =
   | 'complete'
   | 'generic';
 
-// Reliable user self-reference patterns in the current message
+// Reliable user self-reference patterns in the current message (verb / self-state following pronoun)
 const selfRefPatterns: { regex: RegExp; pronoun: string }[] = [
-  { regex: /\bchú\s+(chưa|mua|đang|đã|sẽ|muốn|đi|có|làm|bận|nhờ|thấy|không|tới)\b/i, pronoun: 'chú' },
-  { regex: /^chú\b/i, pronoun: 'chú' },
-  { regex: /\bbác\s+(chưa|mua|đang|đã|sẽ|muốn|đi|có|làm|bận|nhờ|thấy|không|tới)\b/i, pronoun: 'bác' },
-  { regex: /^bác\b/i, pronoun: 'bác' },
-  { regex: /\bông\s+(chưa|mua|đang|đã|sẽ|muốn|đi|có|làm|bận|nhờ|thấy|không|tới)\b/i, pronoun: 'ông' },
-  { regex: /^ông\b/i, pronoun: 'ông' },
-  { regex: /\bbà\s+(chưa|mua|đang|đã|sẽ|muốn|đi|có|làm|bận|nhờ|thấy|không|tới)\b/i, pronoun: 'bà' },
-  { regex: /^bà\b/i, pronoun: 'bà' },
-  { regex: /\bcô\s+(chưa|mua|đang|đã|sẽ|muốn|đi|có|làm|bận|nhờ|thấy|không|tới)\b/i, pronoun: 'cô' },
-  { regex: /^cô\b/i, pronoun: 'cô' },
-  { regex: /\banh\s+(chưa|mua|đang|đã|sẽ|muốn|đi|có|làm|bận|nhờ|thấy|không|tới)\b/i, pronoun: 'anh' },
-  { regex: /^anh\b/i, pronoun: 'anh' },
-  { regex: /\bchị\s+(chưa|mua|đang|đã|sẽ|muốn|đi|có|làm|bận|nhờ|thấy|không|tới)\b/i, pronoun: 'chị' },
-  { regex: /^chị\b/i, pronoun: 'chị' },
+  { regex: /\bchú\s+(chưa|mua|đang|đã|sẽ|muốn|đi|có|làm|bận|nhờ|thấy|không|tới|cần|định|tự)\b/i, pronoun: 'chú' },
+  { regex: /\bbác\s+(chưa|mua|đang|đã|sẽ|muốn|đi|có|làm|bận|nhờ|thấy|không|tới|cần|định|tự)\b/i, pronoun: 'bác' },
+  { regex: /\bông\s+(chưa|mua|đang|đã|sẽ|muốn|đi|có|làm|bận|nhờ|thấy|không|tới|cần|định|tự)\b/i, pronoun: 'ông' },
+  { regex: /\bbà\s+(chưa|mua|đang|đã|sẽ|muốn|đi|có|làm|bận|nhờ|thấy|không|tới|cần|định|tự)\b/i, pronoun: 'bà' },
+  { regex: /\bcô\s+(chưa|mua|đang|đã|sẽ|muốn|đi|có|làm|bận|nhờ|thấy|không|tới|cần|định|tự)\b/i, pronoun: 'cô' },
+  { regex: /\banh\s+(chưa|mua|đang|đã|sẽ|muốn|đi|có|làm|bận|nhờ|thấy|không|tới|cần|định|tự)\b/i, pronoun: 'anh' },
+  { regex: /\bchị\s+(chưa|mua|đang|đã|sẽ|muốn|đi|có|làm|bận|nhờ|thấy|không|tới|cần|định|tự)\b/i, pronoun: 'chị' },
 ];
 
 /**
@@ -224,29 +217,30 @@ export function formatSoftNextStepGuidance(
 
   const capAddressing = addressing.charAt(0).toUpperCase() + addressing.slice(1);
 
+  const extra = desc ? ` (${desc})` : '';
+
   switch (intent) {
     case 'prepare':
-      return `${capAddressing} kiểm tra lại các đồ dùng hoặc giấy tờ cần thiết trước khi bắt đầu nhé${a}!`;
+      return `Tiếp theo, ${addressing} chuẩn bị phần "${title}" trước nhé${a}.${extra}`;
 
     case 'move':
-      return `Bây giờ ${addressing} thong thả di chuyển đến nơi nhé${a}, đi đường ${addressing} đi cẩn thận nha!`;
+      return `Bây giờ ${addressing} thong thả thực hiện bước "${title}" nhé${a}.${extra}`;
 
     case 'wait':
-      return `${capAddressing} lại quầy lấy số thứ tự hoặc ngồi nghỉ ngơi một chút trong lúc chờ lượt nhé${a}!`;
+      return `${capAddressing} chờ theo bước "${title}" nhé${a}.${extra}`;
 
     case 'verify':
-      return `Tiếp theo là phần kiểm tra: ${title}${desc ? ` (${desc})` : ''}. ${capAddressing} cứ thong thả thực hiện nhé${a}!`;
+      return `Tiếp theo là phần kiểm tra: "${title}"${extra}. ${capAddressing} cứ thong thả thực hiện nhé${a}!`;
 
     case 'submit':
-      return `${capAddressing} tiến hành ${title.toLowerCase()} theo hướng dẫn nhé${a}. Xong ${addressing} nhớ kiểm tra lại đồ đạc nha!`;
+      return `${capAddressing} thực hiện "${title}" theo hướng dẫn nhé${a}.${extra}`;
 
     case 'complete':
-      return `Phần việc tiếp theo: ${title}. Khi hoàn thành ${addressing} cứ báo cho ${me} biết nhé${a}!`;
+      return `Phần việc tiếp theo: "${title}"${extra}. Khi hoàn thành ${addressing} cứ báo cho ${me} biết nhé${a}!`;
 
     case 'generic':
     default: {
-      const actionContent = desc ? `${title} (${desc})` : title;
-      return `Tiếp theo, ${addressing} thong thả làm phần này trước nhé${a}: ${actionContent}. Khi nào xong ${addressing} cứ báo cho ${me} biết nha!`;
+      return `Tiếp theo, ${addressing} thong thả làm phần "${title}" trước nhé${a}.${extra} Khi nào xong ${addressing} cứ báo cho ${me} biết nha!`;
     }
   }
 }
