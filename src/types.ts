@@ -104,6 +104,7 @@ export interface SessionMessage {
   text: string;
   timestamp: string;
   actionsApplied?: AgentAction[];
+  suggestedReplies?: string[];
 }
 
 export interface SessionActionLogEntry {
@@ -205,6 +206,7 @@ export interface LoviraAgentResponse {
   reply: string;
   speech?: string;
   actions: AgentAction[];
+  suggestedReplies?: string[];
   nextRecommendedAction?: RecommendedAction;
   warnings?: string[];
   meta?: {

@@ -35,6 +35,11 @@ export async function callGroqAgent(
               type: 'string',
               description: 'Lời đọc ngắn gọn cho giọng nói',
             },
+            suggestedReplies: {
+              type: 'array',
+              description: '2-3 gợi ý câu trả lời nhanh phù hợp ngữ cảnh để hiển thị dạng chip cho người dùng',
+              items: { type: 'string' },
+            },
             actions: {
               type: 'array',
               description: 'Danh sách các hành động cập nhật trạng thái',
@@ -124,6 +129,7 @@ export async function callGroqAgent(
     let reply = choice?.message?.content || '';
     let actions: AgentAction[] = [];
     let speech: string | undefined = undefined;
+    let suggestedReplies: string[] | undefined = undefined;
 
     if (toolCall && toolCall.function?.name === 'update_life_session') {
       try {
@@ -131,6 +137,7 @@ export async function callGroqAgent(
         if (parsed.reply) reply = parsed.reply;
         if (parsed.speech) speech = parsed.speech;
         if (Array.isArray(parsed.actions)) actions = parsed.actions;
+        if (Array.isArray(parsed.suggestedReplies)) suggestedReplies = parsed.suggestedReplies;
       } catch (err) {
         console.warn('Groq arguments parse error:', err);
       }
@@ -146,6 +153,7 @@ export async function callGroqAgent(
       reply: reply.replace(/\*\*/g, '').replace(/[*#]/g, ''),
       speech: (speech || reply).replace(/[*#]/g, ''),
       actions,
+      suggestedReplies,
       meta: {
         engine: 'groq',
         model,

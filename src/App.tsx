@@ -25,6 +25,7 @@ import {
   calculateNextRecommendedAction,
   reconcileParentTaskStatus,
   reconcileSessionDerivedState,
+  resolveCurrentStep,
 } from './services/actionEngine';
 import { parseLocalIntent } from './services/localIntentEngine';
 import { createLifeSessionFromPlan } from './services/sessionFactory';
@@ -440,13 +441,15 @@ export default function App() {
   // 10. Complete Current Task (Next Recommended Action button)
   const handleCompleteCurrentTask = () => {
     if (!activeSession) return;
-    const pendingTasks = activeSession.tasks
-      .filter((t) => t.status === 'pending')
-      .sort((a, b) => a.order - b.order);
+    const resolvedStep = resolveCurrentStep(activeSession);
+    if (!resolvedStep) return;
 
-    if (pendingTasks.length > 0) {
-      handleToggleTask(pendingTasks[0].id);
-      showToast(`Đã đánh dấu hoàn thành: "${pendingTasks[0].title}"`);
+    if (resolvedStep.subtask && resolvedStep.parentTask) {
+      handleToggleSubtask(resolvedStep.parentTask.id, resolvedStep.subtask.id);
+      showToast(`Đã đánh dấu hoàn thành: "${resolvedStep.subtask.title}"`);
+    } else if (resolvedStep.task) {
+      handleToggleTask(resolvedStep.task.id);
+      showToast(`Đã đánh dấu hoàn thành: "${resolvedStep.task.title}"`);
     }
   };
 
@@ -485,43 +488,7 @@ export default function App() {
     setIsLoading(true);
 
     try {
-      // 1. Try fast Local Intent Matcher first
-      const localResult = parseLocalIntent(userText, sessionWithUserMsg, userProfile);
-
-      if (localResult && localResult.actions) {
-        // Execute local matched actions
-        const batchRes = applyAgentActionBatch(sessionWithUserMsg, localResult.actions, 'chat');
-        const finalSession = batchRes.newState;
-
-        const loviraMsg = {
-          id: `msg-${Date.now() + 1}`,
-          sender: 'lovira' as const,
-          text: localResult.reply,
-          timestamp: new Date().toISOString(),
-          actionsApplied: localResult.actions,
-        };
-
-        finalSession.messages.push(loviraMsg);
-        saveUpdatedSession(finalSession);
-
-        if (batchRes.logSummaries.length > 0) {
-          showToast(batchRes.logSummaries.join(' • '));
-        }
-
-        if (accessibility.speakResponse) {
-          speakText(localResult.speech || localResult.reply);
-        }
-
-        // Check for special local action triggers
-        if (localResult.actions.some((a) => a.type === 'OPEN_CAMERA')) {
-          setCameraModalOpen(true);
-        }
-
-        setIsLoading(false);
-        return;
-      }
-
-      // 2. Call AI Router / Backend (/api/chat)
+      // 1. Send directly to /api/chat (Backend routes through deterministic local router, Groq, or Gemini)
       const res = await fetch('/api/chat', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -534,9 +501,14 @@ export default function App() {
         }),
       });
 
+      if (!res.ok) {
+        throw new Error(`Server returned ${res.status}`);
+      }
+
       const data = await res.json();
       const replyText = data.reply || 'Lovira đã nhận thông tin của bạn.';
       const actions: AgentAction[] = data.actions || [];
+      const suggestedReplies: string[] | undefined = data.suggestedReplies;
 
       // Check for confirmation requirement in actions
       const sensitiveAction = actions.find((a) => a.requiresConfirmation);
@@ -558,6 +530,7 @@ export default function App() {
             text: consistentReply,
             timestamp: new Date().toISOString(),
             actionsApplied: batchRes.appliedActions,
+            suggestedReplies,
           };
 
           finalSession.messages.push(loviraMsg);
@@ -596,8 +569,36 @@ export default function App() {
         applyActionsAndSave(actions);
       }
     } catch (e) {
-      console.error('Chat error:', e);
-      showToast('Không thể kết nối với Lovira. Vui lòng kiểm tra lại mạng.');
+      console.warn('Backend chat unreachable, trying offline local intent fallback:', e);
+
+      // Offline client-side fallback
+      const localResult = parseLocalIntent(userText, sessionWithUserMsg, userProfile);
+      if (localResult) {
+        const batchRes = applyAgentActionBatch(sessionWithUserMsg, localResult.actions, 'chat');
+        const finalSession = batchRes.newState;
+
+        const loviraMsg = {
+          id: `msg-${Date.now() + 1}`,
+          sender: 'lovira' as const,
+          text: localResult.reply,
+          timestamp: new Date().toISOString(),
+          actionsApplied: localResult.actions,
+          suggestedReplies: localResult.suggestedReplies,
+        };
+
+        finalSession.messages.push(loviraMsg);
+        saveUpdatedSession(finalSession);
+
+        if (batchRes.logSummaries.length > 0) {
+          showToast(batchRes.logSummaries.join(' • '));
+        }
+
+        if (accessibility.speakResponse) {
+          speakText(localResult.speech || localResult.reply);
+        }
+      } else {
+        showToast('Không có kết nối mạng. Lovira vẫn lưu trữ cục bộ an toàn!');
+      }
     } finally {
       setIsLoading(false);
     }

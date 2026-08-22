@@ -4,7 +4,9 @@ import { fileURLToPath } from 'url';
 import { createServer as createViteServer } from 'vite';
 import { GoogleGenAI, Type } from '@google/genai';
 import { LifeSession, LoviraAgentResponse, AgentAction, GeneratedSessionPlan } from './src/types.js';
-import { parseLocalIntent, generateFallbackCustomSessionPlan } from './src/services/localIntentEngine.js';
+import { parseLocalIntent } from './src/services/localIntentEngine.js';
+import { generateFallbackCustomSessionPlan } from './src/services/fallbackPlanner.js';
+import { deduceHonorifics, formatSoftNextStepGuidance } from './src/services/conversationStyle.js';
 import { buildClarificationPrompt } from './src/services/ai/prompts/clarificationPrompt.js';
 import { buildSessionContextPrompt } from './src/services/ai/SessionContextBuilder.js';
 import { callGroqAgent } from './src/services/ai/GroqProvider.js';
@@ -58,13 +60,13 @@ async function startServer() {
         return res.status(400).json({ error: 'Thiếu dữ liệu session hoặc message' });
       }
 
-      // Fast check local intent first
-      const localResult = parseLocalIntent(message, session);
+      // 1. Fast check local deterministic commands
+      const localResult = parseLocalIntent(message, session, userProfile);
       if (localResult) {
         return res.json(localResult);
       }
 
-      // Try Groq Provider if GROQ_API_KEY is available and provider is groq or unset
+      // 2. Try Groq Provider if GROQ_API_KEY is available
       const groqKey = process.env.GROQ_API_KEY;
       if (groqKey && provider !== 'gemini' && !isDemoMode) {
         const selectedModel = selectGroqModel(message, session);
@@ -77,121 +79,25 @@ async function startServer() {
         }
       }
 
-      // Gemini Provider
+      // 3. Gemini Provider
       const ai = getGeminiClient();
 
       if (!ai || isDemoMode) {
+        const honorifics = deduceHonorifics(userProfile, message);
+        const { addressing, me, da, a } = honorifics;
         const resolvedStep = resolveCurrentStep(session);
         const activeTask = resolvedStep?.subtask || resolvedStep?.task;
-        const actions: AgentAction[] = [];
-        const msgLower = message.toLowerCase();
 
-        // Check if message is a room/location/department
-        const numFirstMatch = message.match(/^(?:bàn|bàn khám)?\s*(\d{3,4})\b(?:\s*[,.-]?\s*([a-zA-ZÀ-ỹ\s]+))?/i);
-        const explicitRoomMatch = message.match(/(?:phòng|p\.?|quầy|cửa)\s*(\d+[a-zA-Z]?)(?:\s*[,.-]?\s*([a-zA-ZÀ-ỹ\s]+))?/i);
-        const deptMatch = message.match(/\b(khoa\s+[a-zA-ZÀ-ỹ\s]+|nội\s*khoa|ngoại\s*khoa|mắt|tai\s*mũi\s*họng|da\s*liễu|nhi|sản|tiêu\s*hóa|tim\s*mạch|thần\s*kinh|chấn\s*thương|x-quang|xét\s*nghiệm)\b/i);
-
-        let roomVal = '';
-        if (explicitRoomMatch) {
-          const roomNum = explicitRoomMatch[1];
-          const dept = explicitRoomMatch[2] ? explicitRoomMatch[2].trim() : '';
-          roomVal = dept ? `Phòng ${roomNum} - ${dept}` : `Phòng ${roomNum}`;
-        } else if (numFirstMatch) {
-          const roomNum = numFirstMatch[1];
-          const dept = numFirstMatch[2] ? numFirstMatch[2].trim() : '';
-          roomVal = dept ? `Phòng ${roomNum} - ${dept}` : `Phòng ${roomNum}`;
-        } else if (deptMatch) {
-          roomVal = deptMatch[1].trim();
-        }
-
-        if (roomVal) {
-          actions.push({
-            type: 'ADD_FACT',
-            payload: {
-              category: 'location',
-              title: 'Phòng làm việc / Khám',
-              value: roomVal,
-            },
-          });
-
-          actions.push({
-            type: 'UPDATE_NEXT_ACTION',
-            payload: {
-              title: `Đến ${roomVal.toLowerCase()}`,
-              description: `Di chuyển đến ${roomVal} và thực hiện công việc`,
-            },
-          });
-
-          const replyText = `Lovira đã lưu thông tin phòng: ${roomVal}.\n\n👉 Bước tiếp theo: Bạn hãy di chuyển đến ${roomVal} nhé!`;
-          return res.json({
-            reply: replyText,
-            speech: replyText.replace(/👉/g, '').replace(/\n/g, ' '),
-            actions,
-            meta: { engine: 'local', model: 'fallback-demo' },
-          });
-        }
-
-        // Only persist as fact if user explicitly instructs to save or mentions real entity
-        if (
-          msgLower.startsWith('lưu lại:') ||
-          msgLower.startsWith('ghi nhớ:') ||
-          msgLower.startsWith('lưu thông tin:') ||
-          msgLower.startsWith('lưu:')
-        ) {
-          const cleanVal = message.replace(/^(lưu lại|ghi nhớ|lưu thông tin|lưu):?\s*/i, '').trim();
-          if (cleanVal) {
-            actions.push({
-              type: 'ADD_FACT',
-              payload: {
-                category: 'note',
-                title: 'Ghi chú đã lưu',
-                value: cleanVal,
-              },
-            });
-          }
-        }
-
-        // Completion intent
-        const isCompletedSignal =
-          activeTask &&
-          (msgLower === 'xong rồi' ||
-            msgLower === 'xong' ||
-            msgLower === 'đã xong' ||
-            msgLower === 'hoàn thành' ||
-            msgLower.startsWith('xong rồi'));
-
-        let replyText = '';
-
-        if (isCompletedSignal && activeTask) {
-          actions.push({
-            type: resolvedStep?.subtask ? 'COMPLETE_SUBTASK' : 'COMPLETE_TASK',
-            payload: {
-              taskId: resolvedStep?.task?.id || activeTask.id,
-              subtaskId: resolvedStep?.subtask?.id,
-            },
-          });
-
-          const { newState } = applyAgentActionBatch(session, actions);
-          const nextRec = newState.nextRecommendedAction;
-          if (nextRec && nextRec.title && nextRec.title !== 'Hoàn thành tất cả công việc trong phiên! 🎉') {
-            replyText = `Lovira đã ghi nhận bạn hoàn thành: "${activeTask.title}".\n\n👉 Bước tiếp theo: "${nextRec.title}".`;
-          } else {
-            replyText = `Tuyệt vời! Bạn đã hoàn thành tất cả công việc trong phiên "${session.title}" rồi! 🎉`;
-          }
-        } else if (msgLower.includes('tiếp theo') || msgLower.includes('làm gì') || msgLower.includes('cần làm')) {
-          replyText = activeTask
-            ? `Bước tiếp theo bạn cần thực hiện là: "${activeTask.title}". Khi xong bạn cứ nhắn cho Lovira nha!`
-            : `Bạn đã hoàn thành tất cả công việc trong phiên "${session.title}" rồi nè!`;
-        } else {
-          replyText = activeTask
-            ? `Lovira đã ghi nhận: "${message}". Bước hiện tại của bạn là: "${activeTask.title}".`
-            : `Lovira đã nhận tin nhắn của bạn. Bạn cần hỗ trợ gì tiếp theo nè?`;
+        let replyText = `${da}, ${me} đã nhận lời nhắn của ${addressing}.`;
+        if (activeTask) {
+          replyText += ` Bước hiện tại là: "${activeTask.title}". ${addressing.charAt(0).toUpperCase() + addressing.slice(1)} cứ thong thả làm, khi xong chỉ cần báo cho ${me} nhé${a}!`;
         }
 
         return res.json({
           reply: replyText,
           speech: replyText,
-          actions,
+          actions: [],
+          suggestedReplies: ['Xong bước này rồi', 'Cần làm gì tiếp theo?', 'Nhờ Lovira tư vấn'],
           meta: { engine: 'local', model: 'fallback-demo' },
         });
       }

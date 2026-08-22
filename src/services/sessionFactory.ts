@@ -9,7 +9,7 @@ import {
 import { calculateNextRecommendedAction } from './actionEngine';
 import { ScenarioRoutingResult } from './scenarioRouter';
 import { normalizeGeneratedLifePlan } from './planValidator';
-import { deduceHonorifics, formatSoftNextStepGuidance } from './localIntentEngine';
+import { deduceHonorifics, formatSoftNextStepGuidance } from './conversationStyle';
 
 /**
  * Creates a complete, fully-hydrated LifeSession from a GeneratedSessionPlan
@@ -99,7 +99,7 @@ export function createLifeSessionFromPlan(
   // Dynamically calculate recommended next action so it incorporates subtasks and tasks cleanly
   session.nextRecommendedAction = calculateNextRecommendedAction(session);
 
-  const honorifics = deduceHonorifics(null, session, originalUserRequest);
+  const honorifics = deduceHonorifics(null, originalUserRequest);
   const { addressing, me, da, a } = honorifics;
 
   const firstAction = session.nextRecommendedAction || {

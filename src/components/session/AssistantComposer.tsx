@@ -16,30 +16,25 @@ export const AssistantComposer: React.FC<AssistantComposerProps> = ({
   onSendMessage,
   onOpenCamera,
   isLoading = false,
-  scenarioType = 'custom',
 }) => {
   const [input, setInput] = useState('');
   const [isRecording, setIsRecording] = useState(false);
   const [recordNotice, setRecordNotice] = useState<string | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
-  const defaultQuickPrompts = [
+  // Dynamic suggested replies from the latest assistant message
+  const lastAssistantMessage = [...messages].reverse().find((m) => m.sender === 'lovira' || m.sender === 'system');
+  const dynamicReplies = lastAssistantMessage?.suggestedReplies;
+
+  const defaultUniversalReplies = [
     '👉 Giờ mình làm gì tiếp theo?',
-    '🔍 Tôi cần rà soát gì cho phiên này?',
-    '📋 Kiểm tra lại công việc & giấy tờ',
-    '✅ Mình vừa xong bước hiện tại rồi nè',
-    '➕ Thêm CCCD vào danh sách',
+    '✅ Xong bước hiện tại rồi',
+    '❓ Nhờ Lovira tư vấn',
   ];
 
-  const medicalQuickPrompts = [
-    '👉 Giờ mình làm gì tiếp theo?',
-    '🔍 Tôi cần rà soát gì?',
-    '✅ Tôi lấy số thứ tự xong rồi nè',
-    '🏥 Thêm thông tin phòng khám',
-    '➕ Thêm thẻ BHYT vào hồ sơ',
-  ];
-
-  const quickPrompts = scenarioType === 'medical' ? medicalQuickPrompts : defaultQuickPrompts;
+  const quickPrompts = (dynamicReplies && dynamicReplies.length > 0)
+    ? dynamicReplies
+    : defaultUniversalReplies;
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -226,7 +221,7 @@ export const AssistantComposer: React.FC<AssistantComposerProps> = ({
           type="text"
           value={input}
           onChange={(e) => setInput(e.target.value)}
-          placeholder="Hỏi bất kỳ điều gì về phiên này (VD: Thêm BHYT, Phòng 103...)"
+          placeholder="Hỏi hoặc nói cho Lovira biết điều bạn cần..."
           className="flex-1 min-h-[44px] px-4 py-2.5 rounded-xl border border-default bg-surface text-text-primary text-xs md:text-sm focus:outline-hidden focus:ring-2 focus:ring-primary"
         />
 
