@@ -521,6 +521,8 @@ export default function App() {
           const finalSession = batchRes.newState;
           let consistentReply = replyText;
 
+          let finalSuggestedReplies = suggestedReplies;
+
           if (batchRes.status === 'partial' && batchRes.rejectedActions.length > 0) {
             console.warn('Some agent actions were ignored by validator:', batchRes.rejectedActions);
             const honorifics = deduceHonorifics(userProfile, userText);
@@ -530,6 +532,8 @@ export default function App() {
               replyText,
               honorifics
             );
+            // Reconcile chips to safe, non-assumptive suggestions
+            finalSuggestedReplies = ['Kiểm tra lại bước hiện tại', 'Giờ tôi cần làm gì?'];
           }
 
           const loviraMsg = {
@@ -538,7 +542,7 @@ export default function App() {
             text: consistentReply,
             timestamp: new Date().toISOString(),
             actionsApplied: batchRes.appliedActions,
-            suggestedReplies,
+            suggestedReplies: finalSuggestedReplies,
           };
 
           finalSession.messages.push(loviraMsg);
