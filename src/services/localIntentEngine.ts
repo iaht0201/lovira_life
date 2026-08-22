@@ -3,6 +3,7 @@ import {
   AgentAction,
   GeneratedSessionPlan,
   ImportantFactType,
+  UserProfile,
 } from '../types';
 import { SCENARIO_REGISTRY } from './scenarioRegistry';
 import { routeScenario, extractKnownFacts } from './scenarioRouter';
@@ -13,6 +14,7 @@ import {
   resolveCompletionTarget,
 } from './actionEngine';
 import { normalizeGeneratedLifePlan } from './planValidator';
+import { buildAddressing } from '../utils/filterRelevantConditions';
 
 export interface LocalIntentResult {
   reply: string;
@@ -20,6 +22,7 @@ export interface LocalIntentResult {
   actions: AgentAction[];
   confidence: number;
 }
+
 
 /**
  * Universal fallback plan generator for completely offline or demo scenarios
@@ -217,7 +220,7 @@ export function generateFallbackCustomSessionPlan(prompt: string): GeneratedSess
 export function parseLocalIntent(
   userInput: string,
   session: LifeSession,
-  _userProfile?: any
+  userProfile?: UserProfile | null
 ): LocalIntentResult | null {
   if (!userInput || !userInput.trim() || !session) return null;
 
@@ -226,10 +229,19 @@ export function parseLocalIntent(
   const resolvedStep = resolveCurrentStep(session);
   const currentTaskOrSub = resolvedStep?.subtask || resolvedStep?.task;
 
+  const addressing = buildAddressing(userProfile) || 'bạn';
+  const pronoun = userProfile?.pronounStyle;
+  const isElderly = pronoun === 'ong' || pronoun === 'ba' || addressing.startsWith('bác') || addressing.startsWith('ông') || addressing.startsWith('bà') || addressing.startsWith('cô') || addressing.startsWith('chú');
+  const isYoungerSenior = pronoun === 'anh' || pronoun === 'chi' || addressing.startsWith('anh') || addressing.startsWith('chị');
+
+  const da = isElderly ? `Dạ thưa ${addressing}` : isYoungerSenior ? `Dạ ${addressing}` : 'Dạ';
+  const me = isElderly ? 'con' : isYoungerSenior ? 'em' : 'mình';
+  const a = isElderly ? 'ạ' : '';
+
   // 1. Pause / Resume / Complete session
   if (tLower.includes('tạm dừng phiên') || tLower.includes('nghỉ tay') || tLower === 'tạm dừng') {
     return {
-      reply: 'Mình đã tạm dừng phiên hỗ trợ rồi nha. Khi nào bạn muốn tiếp tục, chỉ cần nhắn "tiếp tục" cho mình nhé!',
+      reply: `${da}, ${me} đã tạm dừng phiên hỗ trợ rồi nha. Khi nào ${addressing} muốn tiếp tục, chỉ cần nhắn "tiếp tục" cho ${me} nhé${a}!`,
       actions: [{ type: 'PAUSE_SESSION', payload: {} }],
       confidence: 0.95,
     };
@@ -237,7 +249,7 @@ export function parseLocalIntent(
 
   if (tLower.includes('tiếp tục phiên') || tLower === 'tiếp tục' || tLower === 'làm tiếp') {
     return {
-      reply: 'Tuyệt vời! Tụi mình tiếp tục công việc nhé. Bước hiện tại của bạn là: "' + (session.nextRecommendedAction?.title || 'xem lại danh sách') + '".',
+      reply: `${da}, ${me} cùng ${addressing} tiếp tục công việc nhé${a}. Bước hiện tại của ${addressing} là: "` + (session.nextRecommendedAction?.title || 'xem lại danh sách') + `".`,
       actions: [{ type: 'RESUME_SESSION', payload: {} }],
       confidence: 0.95,
     };
@@ -245,7 +257,7 @@ export function parseLocalIntent(
 
   if (tLower.includes('hoàn thành phiên') || tLower.includes('xong hết rồi') || tLower.includes('kết thúc phiên')) {
     return {
-      reply: 'Chúc mừng bạn đã hoàn thành trọn vẹn phiên hôm nay! 🎉 Mình đã đánh dấu phiên này hoàn thành rồi nha.',
+      reply: `Chúc mừng ${addressing} đã hoàn thành trọn vẹn phiên hôm nay! 🎉 ${da}, ${me} đã đánh dấu phiên này hoàn thành rồi ${a}.`,
       actions: [{ type: 'COMPLETE_SESSION', payload: {} }],
       confidence: 0.95,
     };
@@ -264,15 +276,15 @@ export function parseLocalIntent(
     const nextAction = calculateNextRecommendedAction(session);
     if (!nextAction || !nextAction.title) {
       return {
-        reply: 'Tất cả các công việc trong phiên đã hoàn thành rồi bạn ơi! 🎉 Bạn có cần mình hỗ trợ thêm điều gì không?',
+        reply: `${da}, tất cả các công việc trong phiên đã hoàn thành rồi ${addressing} ơi! 🎉 ${addressing} có cần ${me} hỗ trợ thêm điều gì không ${a}?`,
         actions: [],
         confidence: 0.95,
       };
     }
 
     const reply = nextAction.description
-      ? `Bước tiếp theo bạn cần làm là: "${nextAction.title}".\n(${nextAction.description})\n\nKhi làm xong bạn báo mình nha!`
-      : `Bước tiếp theo bạn cần làm là: "${nextAction.title}".\n\nKhi hoàn thành bạn cứ nhắn "xong rồi" cho mình nhé!`;
+      ? `${da}, bước tiếp theo ${addressing} cần làm là: "${nextAction.title}".\n(${nextAction.description})\n\nKhi làm xong ${addressing} báo ${me} nha${a}!`
+      : `${da}, bước tiếp theo ${addressing} cần làm là: "${nextAction.title}".\n\nKhi hoàn thành ${addressing} cứ nhắn "xong rồi" cho ${me} nhé${a}!`;
 
     return {
       reply,
@@ -292,13 +304,13 @@ export function parseLocalIntent(
   ) {
     if (currentTaskOrSub) {
       return {
-        reply: `Đừng lo lắng bạn nhé, mình đồng hành cùng bạn mà! Bây giờ bạn chỉ cần tập trung làm DUY NHẤT một việc này thôi nè:\n\n👉 "${currentTaskOrSub.title}"\n\nLàm xong bước này rồi tụi mình tính tiếp, không cần nghĩ nhiều đâu nha!`,
+        reply: `${da} đừng lo lắng ${a}, có ${me} đồng hành cùng ${addressing} mà! Bây giờ ${addressing} chỉ cần tập trung làm DUY NHẤT một việc này thôi nhé:\n\n👉 "${currentTaskOrSub.title}"\n\nLàm xong bước này rồi ${me} cùng ${addressing} tính tiếp, không cần lo nghĩ nhiều đâu ${a}!`,
         actions: [],
         confidence: 0.95,
       };
     }
     return {
-      reply: 'Đừng lo lắng bạn nhé, mình sẽ cùng bạn giải quyết từng việc một. Hãy làm xong bước đầu tiên trước nha!',
+      reply: `${da} đừng lo lắng ${a}, ${me} sẽ cùng ${addressing} giải quyết từng việc một. ${addressing} cứ thong thả làm xong bước đầu tiên trước nhé!`,
       actions: [],
       confidence: 0.9,
     };
@@ -323,7 +335,7 @@ export function parseLocalIntent(
       if (candidates.length > 0) {
         const taskListStr = candidates.map((t, idx) => `${idx + 1}. ${t.title}`).join('\n');
         return {
-          reply: `Bạn vừa hoàn thành công việc nào vậy nè? Nhắn tên hoặc số thứ tự công việc cho mình để mình đánh dấu nhé:\n\n${taskListStr}`,
+          reply: `${da}, ${addressing} vừa hoàn thành công việc nào vậy ${a}? Nhắn tên hoặc số thứ tự công việc cho ${me} để ${me} đánh dấu nhé:\n\n${taskListStr}`,
           actions: [],
           confidence: 0.95,
         };
@@ -343,8 +355,9 @@ export function parseLocalIntent(
         },
       ];
 
+      const compliment = isElderly ? `Dạ mừng quá ${addressing} ơi!` : isYoungerSenior ? `Dạ tuyệt vời ${addressing} ơi!` : 'Giỏi quá!';
       return {
-        reply: `Giỏi quá! Mình đã đánh dấu hoàn thành bước: "${target.title}" rồi nha. Tụi mình chuyển sang bước tiếp theo nhé!`,
+        reply: `${compliment} ${me.charAt(0).toUpperCase() + me.slice(1)} đã đánh dấu hoàn thành bước: "${target.title}" rồi nha ${a}. Giờ tụi mình chuyển sang bước tiếp theo nhé!`,
         actions,
         confidence: 0.95,
       };
@@ -354,14 +367,14 @@ export function parseLocalIntent(
     if (pending.length > 0) {
       const taskListStr = pending.map((t, idx) => `${idx + 1}. ${t.title}`).join('\n');
       return {
-        reply: `Bạn vừa hoàn thành công việc nào vậy nè? Nhắn tên công việc cho mình để mình đánh dấu nhé:\n\n${taskListStr}`,
+        reply: `${da}, ${addressing} vừa hoàn thành công việc nào vậy ${a}? Nhắn tên công việc cho ${me} để ${me} đánh dấu nhé:\n\n${taskListStr}`,
         actions: [],
         confidence: 0.9,
       };
     }
 
     return {
-      reply: 'Tuyệt vời! Tất cả các công việc trong phiên đều đã hoàn thành rồi bạn ơi! 🎉',
+      reply: `Tuyệt vời! Tất cả các công việc trong phiên đều đã hoàn thành rồi ${addressing} ơi! 🎉`,
       actions: [],
       confidence: 0.9,
     };
@@ -394,7 +407,7 @@ export function parseLocalIntent(
     // Check if current active step is a movement task
     if (currentTaskOrSub && isMovementTitle(currentTaskOrSub.title) && currentTaskOrSub.status !== 'completed') {
       return {
-        reply: `Bạn đã đến nơi an toàn rồi, mừng quá! Mình đánh dấu hoàn thành bước "${currentTaskOrSub.title}" rồi nha. Bây giờ bạn vào việc tiếp theo nhé!`,
+        reply: `${da}, ${addressing} đã đến nơi an toàn rồi, mừng quá ${a}! ${me.charAt(0).toUpperCase() + me.slice(1)} đánh dấu hoàn thành bước "${currentTaskOrSub.title}" rồi nha. Bây giờ ${addressing} vào việc tiếp theo nhé!`,
         actions: [
           {
             type: resolvedStep?.subtask ? 'COMPLETE_SUBTASK' : 'COMPLETE_TASK',
@@ -428,7 +441,7 @@ export function parseLocalIntent(
       const candidate = movementCandidates[0];
       const targetItem = candidate.subtask || candidate.task;
       return {
-        reply: `Bạn đã đến nơi an toàn rồi, mừng quá! Mình đánh dấu hoàn thành bước "${targetItem.title}" rồi nha. Bây giờ bạn vào việc tiếp theo nhé!`,
+        reply: `${da}, ${addressing} đã đến nơi an toàn rồi, mừng quá ${a}! ${me.charAt(0).toUpperCase() + me.slice(1)} đánh dấu hoàn thành bước "${targetItem.title}" rồi nha. Bây giờ ${addressing} vào việc tiếp theo nhé!`,
         actions: [
           {
             type: candidate.subtask ? 'COMPLETE_SUBTASK' : 'COMPLETE_TASK',
@@ -443,18 +456,19 @@ export function parseLocalIntent(
     } else if (movementCandidates.length > 1) {
       const listStr = movementCandidates.map((m, idx) => `${idx + 1}. ${(m.subtask || m.task).title}`).join('\n');
       return {
-        reply: `Mừng bạn đã đến nơi! Bạn vừa đến địa điểm nào trong các bước sau nè?\n\n${listStr}`,
+        reply: `${da}, mừng ${addressing} đã đến nơi ${a}! ${addressing} vừa đến địa điểm nào trong các bước sau nè?\n\n${listStr}`,
         actions: [],
         confidence: 0.95,
       };
     }
 
     return {
-      reply: 'Mừng bạn đã đến nơi an toàn nhé! Bây giờ bạn xem bước tiếp theo cần làm gì trong danh sách hoặc bảo mình nha.',
+      reply: `${da}, mừng ${addressing} đã đến nơi an toàn nhé ${a}! Bây giờ ${addressing} xem bước tiếp theo cần làm gì trong danh sách hoặc bảo ${me} nha.`,
       actions: [],
       confidence: 0.9,
     };
   }
+
 
   // 6. Fact Questions (Universal fact lookup)
   // "Phòng mấy?"
