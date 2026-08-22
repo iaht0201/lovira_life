@@ -191,7 +191,23 @@ class StorageService {
   getAISettings(): AISettings {
     try {
       const raw = localStorage.getItem(KEY_SETTINGS);
-      return raw ? { ...DEFAULT_AI_SETTINGS, ...JSON.parse(raw) } : DEFAULT_AI_SETTINGS;
+      if (!raw) return DEFAULT_AI_SETTINGS;
+      const parsed = JSON.parse(raw);
+      
+      // Auto-migrate legacy demo mode or unconfigured settings to Groq openai/gpt-oss-20b
+      if (parsed.provider === 'demo' || parsed.demoMode === true || !parsed.selectedModel) {
+        const migrated: AISettings = {
+          ...DEFAULT_AI_SETTINGS,
+          ...parsed,
+          provider: 'groq',
+          selectedModel: parsed.selectedModel || 'openai/gpt-oss-20b',
+          demoMode: false,
+        };
+        localStorage.setItem(KEY_SETTINGS, JSON.stringify(migrated));
+        return migrated;
+      }
+
+      return { ...DEFAULT_AI_SETTINGS, ...parsed };
     } catch {
       return DEFAULT_AI_SETTINGS;
     }

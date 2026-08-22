@@ -10,6 +10,7 @@ import {
   ScenarioType,
   ImportantFactType,
   AccessibilitySettings,
+  AccessibilityContext,
   AISettings,
   AgentAction,
   GeneratedSessionPlan,
@@ -165,7 +166,11 @@ export default function App() {
         });
 
         const plan: GeneratedSessionPlan = await res.json();
-        const newCustomSession = createLifeSessionFromPlan(plan, customGoal, 'custom');
+        const accessibilityCtx: AccessibilityContext | undefined = {
+          preferredInteraction: accessibility.speakResponse ? 'voice' : 'text',
+          oneStepMode: accessibility.reducedMotion,
+        };
+        const newCustomSession = createLifeSessionFromPlan(plan, customGoal, 'custom', accessibilityCtx);
 
         saveUpdatedSession(newCustomSession);
         storageService.setActiveSessionId(newCustomSession.id);
@@ -541,10 +546,16 @@ export default function App() {
 
         if (batchRes.status === 'full' || batchRes.status === 'partial') {
           const finalSession = batchRes.newState;
+          let consistentReply = replyText;
+          if (batchRes.status === 'partial' && batchRes.rejectedActions.length > 0) {
+            const failReasons = batchRes.rejectedActions.map((f) => f.reason).join('; ');
+            consistentReply += `\n\n*(Lưu ý: Một số thao tác chưa thể cập nhật do: ${failReasons})*`;
+          }
+
           const loviraMsg = {
             id: `msg-${Date.now()}`,
             sender: 'lovira' as const,
-            text: replyText,
+            text: consistentReply,
             timestamp: new Date().toISOString(),
             actionsApplied: batchRes.appliedActions,
           };
@@ -560,7 +571,7 @@ export default function App() {
           }
 
           if (accessibility.speakResponse) {
-            speakText(data.speech || replyText);
+            speakText(data.speech || consistentReply);
           }
 
           if (actionsToApply.some((a) => a.type === 'OPEN_CAMERA')) {

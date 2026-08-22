@@ -10,6 +10,7 @@ import {
   findBestMatchingTask,
   resolveCurrentStep,
   calculateNextRecommendedAction,
+  resolveCompletionTarget,
 } from './actionEngine';
 import { normalizeGeneratedLifePlan } from './planValidator';
 
@@ -311,27 +312,45 @@ export function parseLocalIntent(
     tLower === 'hoàn thành rồi' ||
     tLower === 'làm xong rồi' ||
     tLower.startsWith('xong rồi ') ||
-    tLower.startsWith('đã làm xong')
+    tLower.startsWith('đã làm xong') ||
+    tLower.startsWith('xong bước') ||
+    tLower.startsWith('hoàn thành bước')
   ) {
-    if (currentTaskOrSub) {
+    const compResult = resolveCompletionTarget(session, text);
+
+    if (compResult.isAmbiguous) {
+      const candidates = compResult.candidateTasks || session.tasks.filter((t) => t.status !== 'completed');
+      if (candidates.length > 0) {
+        const taskListStr = candidates.map((t, idx) => `${idx + 1}. ${t.title}`).join('\n');
+        return {
+          reply: `Bạn vừa hoàn thành công việc nào vậy nè? Nhắn tên hoặc số thứ tự công việc cho mình để mình đánh dấu nhé:\n\n${taskListStr}`,
+          actions: [],
+          confidence: 0.95,
+        };
+      }
+    }
+
+    const target = compResult.subtask || compResult.task;
+    if (target) {
+      const parentId = compResult.parentTask?.id || (compResult.task ? compResult.task.id : target.id);
       const actions: AgentAction[] = [
         {
-          type: resolvedStep?.subtask ? 'COMPLETE_SUBTASK' : 'COMPLETE_TASK',
+          type: compResult.subtask ? 'COMPLETE_SUBTASK' : 'COMPLETE_TASK',
           payload: {
-            taskId: resolvedStep?.task?.id || currentTaskOrSub.id,
-            subtaskId: resolvedStep?.subtask?.id,
+            taskId: parentId,
+            subtaskId: compResult.subtask?.id,
           },
         },
       ];
 
       return {
-        reply: `Giỏi quá! Mình đã đánh dấu hoàn thành bước: "${currentTaskOrSub.title}" rồi nha. Tụi mình chuyển sang bước tiếp theo nhé!`,
+        reply: `Giỏi quá! Mình đã đánh dấu hoàn thành bước: "${target.title}" rồi nha. Tụi mình chuyển sang bước tiếp theo nhé!`,
         actions,
         confidence: 0.95,
       };
     }
 
-    const pending = session.tasks.filter((t) => t.status === 'pending');
+    const pending = session.tasks.filter((t) => t.status !== 'completed' && t.status !== 'skipped');
     if (pending.length > 0) {
       const taskListStr = pending.map((t, idx) => `${idx + 1}. ${t.title}`).join('\n');
       return {
@@ -357,25 +376,75 @@ export function parseLocalIntent(
     tLower === 'tới rồi' ||
     tLower === 'đến rồi'
   ) {
-    // Find travel or arrival task specifically
-    const arrivalTask = session.tasks.find(
-      (t) =>
-        t.status !== 'completed' &&
-        (t.title.toLowerCase().includes('đến') ||
-          t.title.toLowerCase().includes('tới') ||
-          t.title.toLowerCase().includes('di chuyển') ||
-          t.title.toLowerCase().includes('xuất phát'))
-    );
+    const isMovementTitle = (title: string) => {
+      const tl = title.toLowerCase();
+      return (
+        tl.includes('đến') ||
+        tl.includes('tới') ||
+        tl.includes('di chuyển') ||
+        tl.includes('xuất phát') ||
+        tl.includes('ra') ||
+        tl.includes('vào') ||
+        tl.includes('ghé') ||
+        tl.includes('sang') ||
+        tl.includes('đi')
+      );
+    };
 
-    if (arrivalTask) {
+    // Check if current active step is a movement task
+    if (currentTaskOrSub && isMovementTitle(currentTaskOrSub.title) && currentTaskOrSub.status !== 'completed') {
       return {
-        reply: `Bạn đã đến nơi an toàn rồi, mừng quá! Mình đánh dấu hoàn thành bước "${arrivalTask.title}" rồi nha. Bây giờ bạn vào việc tiếp theo nhé!`,
+        reply: `Bạn đã đến nơi an toàn rồi, mừng quá! Mình đánh dấu hoàn thành bước "${currentTaskOrSub.title}" rồi nha. Bây giờ bạn vào việc tiếp theo nhé!`,
         actions: [
           {
-            type: 'COMPLETE_TASK',
-            payload: { taskId: arrivalTask.id },
+            type: resolvedStep?.subtask ? 'COMPLETE_SUBTASK' : 'COMPLETE_TASK',
+            payload: {
+              taskId: resolvedStep?.task?.id || currentTaskOrSub.id,
+              subtaskId: resolvedStep?.subtask?.id,
+            },
           },
         ],
+        confidence: 0.95,
+      };
+    }
+
+    // Otherwise find all pending movement tasks
+    const movementCandidates: { task: any; subtask?: any }[] = [];
+    for (const t of session.tasks) {
+      if (t.status === 'completed' || t.status === 'skipped') continue;
+      if (t.subtasks) {
+        for (const st of t.subtasks) {
+          if (st.status !== 'completed' && isMovementTitle(st.title)) {
+            movementCandidates.push({ task: t, subtask: st });
+          }
+        }
+      }
+      if (isMovementTitle(t.title)) {
+        movementCandidates.push({ task: t });
+      }
+    }
+
+    if (movementCandidates.length === 1) {
+      const candidate = movementCandidates[0];
+      const targetItem = candidate.subtask || candidate.task;
+      return {
+        reply: `Bạn đã đến nơi an toàn rồi, mừng quá! Mình đánh dấu hoàn thành bước "${targetItem.title}" rồi nha. Bây giờ bạn vào việc tiếp theo nhé!`,
+        actions: [
+          {
+            type: candidate.subtask ? 'COMPLETE_SUBTASK' : 'COMPLETE_TASK',
+            payload: {
+              taskId: candidate.task.id,
+              subtaskId: candidate.subtask?.id,
+            },
+          },
+        ],
+        confidence: 0.95,
+      };
+    } else if (movementCandidates.length > 1) {
+      const listStr = movementCandidates.map((m, idx) => `${idx + 1}. ${(m.subtask || m.task).title}`).join('\n');
+      return {
+        reply: `Mừng bạn đã đến nơi! Bạn vừa đến địa điểm nào trong các bước sau nè?\n\n${listStr}`,
+        actions: [],
         confidence: 0.95,
       };
     }

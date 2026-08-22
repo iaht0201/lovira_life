@@ -73,7 +73,7 @@ export function createLifeSessionFromPlan(
     scenarioFamily: plan.scenarioFamily || routingObj?.family || 'custom',
     subtype: plan.subtype || routingObj?.subtype,
     modules: plan.modules || routingObj?.modules,
-    tags: routingObj?.secondaryFamilies ? [...routingObj.secondaryFamilies] : undefined,
+    tags: plan.tags || (plan.secondaryFamilies ? [...plan.secondaryFamilies] : (routingObj?.secondaryFamilies ? [...routingObj.secondaryFamilies] : undefined)),
     status: 'active',
     goal: plan.goal || originalUserRequest,
     createdAt: now,

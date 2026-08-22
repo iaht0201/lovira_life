@@ -168,12 +168,33 @@ export function normalizeGeneratedLifePlan(
     (typeof rawPlan?.firstRecommendedAction === 'string' && rawPlan.firstRecommendedAction.trim()) ||
     'Bắt đầu bước đầu tiên';
 
+  const secondaryFamilies: ScenarioFamily[] | undefined =
+    Array.isArray(rawPlan?.secondaryFamilies) && rawPlan.secondaryFamilies.length > 0
+      ? rawPlan.secondaryFamilies
+      : routing?.secondaryFamilies && routing.secondaryFamilies.length > 0
+      ? routing.secondaryFamilies
+      : undefined;
+
+  // Build tags combining explicit tags and secondary families
+  const tagsSet = new Set<string>();
+  if (Array.isArray(rawPlan?.tags)) {
+    rawPlan.tags.forEach((tg: any) => {
+      if (typeof tg === 'string' && tg.trim()) tagsSet.add(tg.trim().toLowerCase());
+    });
+  }
+  if (secondaryFamilies) {
+    secondaryFamilies.forEach((sf) => tagsSet.add(sf));
+  }
+  const tags = tagsSet.size > 0 ? Array.from(tagsSet) : undefined;
+
   return {
     title,
     goal,
     scenarioType,
     scenarioFamily: family,
+    secondaryFamilies,
     subtype,
+    tags,
     modules,
     tasks: normalizedTasks,
     importantFacts: normalizedFacts,

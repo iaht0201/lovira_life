@@ -407,35 +407,27 @@ async function startServer() {
         return res.json({ isSpecificEnough: true });
       }
 
-      const pLower = prompt.trim().toLowerCase();
+      const pTrimmed = prompt.trim();
+      const pLower = pTrimmed.toLowerCase();
 
-      // Clear common life scenarios are already actionable
-      if (
-        pLower.includes('phỏng vấn') ||
-        pLower.includes('bảo hành') ||
-        pLower.includes('sân bay') ||
-        pLower.includes('đón mẹ') ||
-        pLower.includes('khám') ||
-        pLower.includes('bệnh') ||
-        pLower.includes('cccd') ||
-        pLower.includes('hộ chiếu') ||
-        pLower.includes('siêu thị') ||
-        pLower.includes('ngân hàng') ||
-        pLower.includes('làm thẻ') ||
-        pLower.includes('chuyển nhà') ||
-        pLower.includes('mất ví') ||
-        pLower.includes('gửi bưu kiện') ||
-        pLower.includes('gửi hàng') ||
-        pLower.includes('bưu điện') ||
-        pLower.includes('sửa máy') ||
-        pLower.includes('sửa laptop') ||
-        pLower.includes('sửa điện thoại') ||
-        pLower.includes('đi chợ') ||
-        pLower.includes('mua sắm') ||
-        pLower.includes('nộp cv') ||
-        pLower.includes('xin việc')
-      ) {
-        return res.json({ isSpecificEnough: true });
+      // Clear ambiguous short phrases that definitely need more detail
+      const vaguePatterns = [
+        /^giúp\s*(tôi|mình|em|anh|chị)?$/i,
+        /^làm việc$/i,
+        /^tư vấn$/i,
+        /^lên lịch$/i,
+        /^kế hoạch$/i,
+        /^không biết làm gì$/i,
+        /^chỉ (tôi|mình|em) với$/i,
+        /^giúp với$/i,
+      ];
+
+      if (vaguePatterns.some((pattern) => pattern.test(pTrimmed)) || pTrimmed.length < 10) {
+        return res.json({
+          isSpecificEnough: false,
+          missingInfo: ['mục tiêu hoặc địa điểm cụ thể'],
+          clarifyingQuestion: 'Bạn muốn Lovira hỗ trợ bạn làm việc gì cụ thể (ví dụ: đi khám bệnh, làm thủ tục, phỏng vấn, mua sắm...)?',
+        });
       }
 
       const groqKey = process.env.GROQ_API_KEY;
@@ -473,20 +465,20 @@ async function startServer() {
       }
 
       if (ai && !isDemoMode) {
-        const clarificationPrompt = buildClarificationPrompt(prompt);
-        const response = await ai.models.generateContent({
-          model: 'gemini-2.5-flash',
-          contents: [
-            { role: 'user', parts: [{ text: clarificationPrompt }] },
-          ],
-          config: {
-            responseMimeType: 'application/json',
-            temperature: 0.1,
-          },
-        });
-
-        const text = response.text || '';
         try {
+          const clarificationPrompt = buildClarificationPrompt(prompt);
+          const response = await ai.models.generateContent({
+            model: 'gemini-2.5-flash',
+            contents: [
+              { role: 'user', parts: [{ text: clarificationPrompt }] },
+            ],
+            config: {
+              responseMimeType: 'application/json',
+              temperature: 0.1,
+            },
+          });
+
+          const text = response.text || '';
           const result = JSON.parse(text);
           return res.json({
             isSpecificEnough: !!result.isSpecificEnough,
@@ -494,18 +486,20 @@ async function startServer() {
             clarifyingQuestion: result.clarifyingQuestion || '',
           });
         } catch (err) {
-          return res.json({ isSpecificEnough: true });
+          console.warn('Gemini clarification check error:', err);
         }
       }
 
-      if (pLower.length < 15) {
-        return res.json({
-          isSpecificEnough: false,
-          missingInfo: ['chi tiết việc cần làm'],
-          clarifyingQuestion: 'Bạn có thể chia sẻ thêm về thời gian, địa điểm hoặc chi tiết việc cần làm được không?',
-        });
+      // If prompt has reasonable length (>= 12 chars), treat as specific enough to avoid interrupting user flow
+      if (pTrimmed.length >= 12) {
+        return res.json({ isSpecificEnough: true });
       }
-      return res.json({ isSpecificEnough: true });
+
+      return res.json({
+        isSpecificEnough: false,
+        missingInfo: ['chi tiết việc cần làm'],
+        clarifyingQuestion: 'Bạn có thể chia sẻ thêm về thời gian, địa điểm hoặc chi tiết việc cần làm được không?',
+      });
     } catch (e) {
       console.error('API check-clarification error:', e);
       return res.json({ isSpecificEnough: true });
@@ -549,6 +543,8 @@ Quy tắc:
   "goal": "Mục tiêu đầy đủ",
   "scenarioType": "custom",
   "scenarioFamily": "${routing.family}",
+  "secondaryFamilies": [],
+  "tags": [],
   "tasks": [
     {
       "title": "Tên công việc chính",
@@ -578,7 +574,12 @@ Quy tắc:
             const parsed = JSON.parse(cleanJson);
             if (parsed && Array.isArray(parsed.tasks) && parsed.tasks.length > 0) {
               const normalized = normalizeGeneratedLifePlan(parsed, prompt, routing);
-              return res.json(normalized);
+              const validation = validateGeneratedLifePlan(normalized);
+              if (validation.valid) {
+                return res.json(normalized);
+              } else {
+                console.warn('Groq generated plan failed validation:', validation.errors);
+              }
             }
           }
         } catch (e) {
@@ -599,10 +600,12 @@ Tránh các task chung chung vô nghĩa. Mọi việc phải cụ thể.
 
 Trả về DUY NHẤT JSON đúng schema:
 {
-  "title": "Tiêu đề ngắn gọn",
+  "title": "Tiêu đề ngắn gọn kèm icon",
   "goal": "Mục tiêu phiên đầy đủ",
   "scenarioType": "custom",
   "scenarioFamily": "${routing.family}",
+  "secondaryFamilies": [],
+  "tags": [],
   "tasks": [
     {
       "title": "Tên công việc cha",
@@ -619,22 +622,27 @@ Trả về DUY NHẤT JSON đúng schema:
   "firstRecommendedAction": "Tên bước con 1"
 }`;
 
-        const response = await ai.models.generateContent({
-          model: 'gemini-2.5-flash',
-          contents: [
-            { role: 'user', parts: [{ text: `${systemPrompt}\n\nNội dung mô tả của người dùng: "${prompt}"` }] },
-          ],
-          config: {
-            responseMimeType: 'application/json',
-            temperature: 0.2,
-          },
-        });
-
-        const text = response.text || '';
         try {
+          const response = await ai.models.generateContent({
+            model: 'gemini-2.5-flash',
+            contents: [
+              { role: 'user', parts: [{ text: `${systemPrompt}\n\nNội dung mô tả của người dùng: "${prompt}"` }] },
+            ],
+            config: {
+              responseMimeType: 'application/json',
+              temperature: 0.2,
+            },
+          });
+
+          const text = response.text || '';
           const jsonPlan = JSON.parse(text);
           const normalized = normalizeGeneratedLifePlan(jsonPlan, prompt, routing);
-          return res.json(normalized);
+          const validation = validateGeneratedLifePlan(normalized);
+          if (validation.valid) {
+            return res.json(normalized);
+          } else {
+            console.warn('Gemini plan failed validation:', validation.errors);
+          }
         } catch (e) {
           console.warn('Gemini JSON parse failed, using fallback:', e);
         }

@@ -227,7 +227,9 @@ export interface GeneratedSessionPlan {
   goal: string;
   scenarioType: ScenarioType;
   scenarioFamily?: ScenarioFamily;
+  secondaryFamilies?: ScenarioFamily[];
   subtype?: string;
+  tags?: string[];
   modules?: LifeModule[];
   tasks: GeneratedTask[];
   importantFacts?: {

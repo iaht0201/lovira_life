@@ -101,6 +101,123 @@ export function findBestMatchingTask(
 }
 
 /**
+ * Result structure when resolving a completion target
+ */
+export interface CompletionTargetResult {
+  task?: LifeTask;
+  subtask?: LifeTask;
+  parentTask?: LifeTask;
+  isAmbiguous?: boolean;
+  candidateTasks?: LifeTask[];
+}
+
+/**
+ * Resolves which task the user wants to complete.
+ * Prioritizes:
+ * 1. Explicit semantic match from userInput
+ * 2. Uncompleted currentStepId
+ * 3. Uncompleted nextRecommendedAction.taskId
+ * 4. Single active task/subtask (if > 1, marks isAmbiguous: true)
+ * 5. Single pending task (if > 1 without active context, marks isAmbiguous: true)
+ */
+export function resolveCompletionTarget(
+  session: LifeSession,
+  userInput?: string
+): CompletionTargetResult {
+  if (!session || !session.tasks || session.tasks.length === 0) {
+    return {};
+  }
+
+  // 1. Try explicit matching from userInput if specified
+  if (userInput && userInput.trim().length > 3) {
+    const cleanQuery = userInput
+      .replace(/^(xong|hoàn thành|đã làm xong|đã xong|vừa xong|xong rồi|ok xong)\s*/i, '')
+      .replace(/^(bước|nhiệm vụ|công việc|việc|task)\s*/i, '')
+      .trim();
+
+    if (cleanQuery.length >= 2) {
+      const match = findBestMatchingTask(session, cleanQuery);
+      if (match.task || match.subtask) {
+        return match;
+      }
+    }
+  }
+
+  // 2. Try session.currentStepId if not completed
+  if (session.currentStepId) {
+    const match = findBestMatchingTask(session, session.currentStepId);
+    const target = match.subtask || match.task;
+    if (target && target.status !== 'completed' && target.status !== 'skipped') {
+      return match;
+    }
+  }
+
+  // 3. Try session.nextRecommendedAction.taskId if not completed
+  if (session.nextRecommendedAction?.taskId) {
+    const match = findBestMatchingTask(session, session.nextRecommendedAction.taskId);
+    const target = match.subtask || match.task;
+    if (target && target.status !== 'completed' && target.status !== 'skipped') {
+      return match;
+    }
+  }
+
+  // 4. Check active/in_progress tasks
+  const activeTasks: { task?: LifeTask; subtask?: LifeTask; parentTask?: LifeTask }[] = [];
+  for (const t of session.tasks) {
+    if (t.subtasks) {
+      for (const st of t.subtasks) {
+        if (st.status === 'active') {
+          activeTasks.push({ subtask: st, parentTask: t });
+        }
+      }
+    }
+    if (t.status === 'active') {
+      activeTasks.push({ task: t });
+    }
+  }
+
+  if (activeTasks.length === 1) {
+    return activeTasks[0];
+  } else if (activeTasks.length > 1) {
+    return {
+      isAmbiguous: true,
+      candidateTasks: activeTasks.map((at) => at.subtask || at.task!),
+    };
+  }
+
+  // 5. Check pending tasks
+  const pendingTasks = session.tasks.filter(
+    (t) => t.status !== 'completed' && t.status !== 'skipped'
+  );
+
+  if (pendingTasks.length === 0) {
+    return {};
+  }
+
+  if (pendingTasks.length === 1) {
+    const single = pendingTasks[0];
+    if (single.subtasks && single.subtasks.length > 0) {
+      const pendingSub = single.subtasks.filter((st) => st.status !== 'completed');
+      if (pendingSub.length === 1) {
+        return { subtask: pendingSub[0], parentTask: single };
+      } else if (pendingSub.length > 1) {
+        return {
+          isAmbiguous: true,
+          candidateTasks: pendingSub,
+        };
+      }
+    }
+    return { task: single };
+  }
+
+  // More than 1 pending task and no explicit active step -> ambiguous
+  return {
+    isAmbiguous: true,
+    candidateTasks: pendingTasks,
+  };
+}
+
+/**
  * Resolves current active step from session based on hierarchy priority:
  * 1. currentStepId (task or subtask)
  * 2. nextRecommendedAction.taskId
