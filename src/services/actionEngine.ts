@@ -1,9 +1,18 @@
-import { LifeSession, AgentAction, SessionActionLogEntry, LifeTask, ImportantFact, RecommendedAction } from '../types';
+import {
+  LifeSession,
+  AgentAction,
+  SessionActionLogEntry,
+  LifeTask,
+  ImportantFact,
+  RecommendedAction,
+} from '../types';
 
 export function reconcileParentTaskStatus(task: LifeTask): LifeTask {
   if (!task.subtasks || task.subtasks.length === 0) return task;
 
-  const allSubtasksDone = task.subtasks.every((st) => st.status === 'completed' || st.status === 'skipped');
+  const allSubtasksDone = task.subtasks.every(
+    (st) => st.status === 'completed' || st.status === 'skipped'
+  );
   const anyInProgress = task.subtasks.some((st) => st.status !== 'pending');
 
   return {
@@ -38,7 +47,9 @@ export function findBestMatchingTask(
     if (t.status === 'completed') continue;
     if (t.subtasks) {
       const pendingSub = t.subtasks.find(
-        (st) => st.status !== 'completed' && (st.title.toLowerCase().includes(q) || q.includes(st.title.toLowerCase()))
+        (st) =>
+          st.status !== 'completed' &&
+          (st.title.toLowerCase().includes(q) || q.includes(st.title.toLowerCase()))
       );
       if (pendingSub) return { subtask: pendingSub, parentTask: t };
     }
@@ -46,7 +57,9 @@ export function findBestMatchingTask(
 
   // 3. Substring match in active/pending parent tasks
   const pendingParent = session.tasks.find(
-    (t) => t.status !== 'completed' && (t.title.toLowerCase().includes(q) || q.includes(t.title.toLowerCase()))
+    (t) =>
+      t.status !== 'completed' &&
+      (t.title.toLowerCase().includes(q) || q.includes(t.title.toLowerCase()))
   );
   if (pendingParent) return { task: pendingParent };
 
@@ -73,7 +86,10 @@ export function findBestMatchingTask(
   // 5. Fallback match anywhere
   for (const t of session.tasks) {
     if (t.subtasks) {
-      const sub = t.subtasks.find((st) => st.title.toLowerCase().includes(q) || q.includes(st.title.toLowerCase()));
+      const sub = t.subtasks.find(
+        (st) =>
+          st.title.toLowerCase().includes(q) || q.includes(st.title.toLowerCase())
+      );
       if (sub) return { subtask: sub, parentTask: t };
     }
     if (t.title.toLowerCase().includes(q) || q.includes(t.title.toLowerCase())) {
@@ -82,6 +98,121 @@ export function findBestMatchingTask(
   }
 
   return {};
+}
+
+/**
+ * Resolves current active step from session based on hierarchy priority:
+ * 1. currentStepId (task or subtask)
+ * 2. nextRecommendedAction.taskId
+ * 3. single active task/subtask
+ * 4. deterministic first pending task/subtask
+ */
+export function resolveCurrentStep(
+  session: LifeSession
+): { task?: LifeTask; subtask?: LifeTask; parentTask?: LifeTask } | null {
+  if (!session || !session.tasks || session.tasks.length === 0) return null;
+
+  // 1. Match currentStepId
+  if (session.currentStepId) {
+    const matched = findBestMatchingTask(session, session.currentStepId);
+    if (matched.task || matched.subtask) return matched;
+  }
+
+  // 2. Match nextRecommendedAction.taskId
+  if (session.nextRecommendedAction?.taskId) {
+    const matched = findBestMatchingTask(session, session.nextRecommendedAction.taskId);
+    if (matched.task || matched.subtask) return matched;
+  }
+
+  // 3. Find any active task/subtask
+  for (const t of session.tasks) {
+    if (t.subtasks) {
+      const activeSub = t.subtasks.find((st) => st.status === 'active');
+      if (activeSub) return { subtask: activeSub, parentTask: t };
+    }
+    if (t.status === 'active') return { task: t };
+  }
+
+  // 4. Fallback to first pending task or its first subtask
+  const sortedPending = session.tasks
+    .filter((t) => t.status !== 'completed' && t.status !== 'skipped')
+    .sort((a, b) => a.order - b.order);
+
+  const firstPending = sortedPending[0];
+  if (firstPending) {
+    if (firstPending.subtasks && firstPending.subtasks.length > 0) {
+      const firstSub = firstPending.subtasks
+        .filter((st) => st.status !== 'completed' && st.status !== 'skipped')
+        .sort((a, b) => a.order - b.order)[0];
+      if (firstSub) return { subtask: firstSub, parentTask: firstPending };
+    }
+    return { task: firstPending };
+  }
+
+  return null;
+}
+
+/**
+ * Calculates next recommended action based on task status ordering and subtask hierarchy
+ */
+export function calculateNextRecommendedAction(session: LifeSession): RecommendedAction {
+  const activeParent = session.tasks
+    .filter((t) => t.status !== 'completed' && t.status !== 'skipped')
+    .sort((a, b) => a.order - b.order)[0];
+
+  if (!activeParent) {
+    return {
+      title: 'Hoàn thành tất cả công việc trong phiên! 🎉',
+      description: 'Bạn đã thực hiện xong mọi công việc cần làm.',
+    };
+  }
+
+  if (activeParent.subtasks && activeParent.subtasks.length > 0) {
+    const nextSubtask = activeParent.subtasks
+      .filter((st) => st.status !== 'completed' && st.status !== 'skipped')
+      .sort((a, b) => a.order - b.order)[0];
+
+    if (nextSubtask) {
+      return {
+        title: nextSubtask.title,
+        description: nextSubtask.description || `Bước con thuộc công việc "${activeParent.title}"`,
+        taskId: nextSubtask.id,
+        parentContext: activeParent.title,
+      };
+    }
+  }
+
+  return {
+    title: activeParent.title,
+    description: activeParent.description || `Bước thứ ${activeParent.order} trong buổi hỗ trợ`,
+    taskId: activeParent.id,
+  };
+}
+
+/**
+ * Reconciles all derived session states:
+ * - Subtask statuses & parent status
+ * - Calculates nextRecommendedAction
+ * - Sets currentStepId to next recommended step
+ */
+export function reconcileSessionDerivedState(session: LifeSession): LifeSession {
+  const reconciledTasks = session.tasks.map((t) => reconcileParentTaskStatus(t));
+  const updated: LifeSession = {
+    ...session,
+    tasks: reconciledTasks,
+  };
+
+  const nextRec = calculateNextRecommendedAction(updated);
+  updated.nextRecommendedAction = nextRec;
+
+  if (nextRec.taskId) {
+    updated.currentStepId = nextRec.taskId;
+  } else {
+    const pendingFirst = reconciledTasks.find((t) => t.status !== 'completed' && t.status !== 'skipped');
+    updated.currentStepId = pendingFirst?.subtasks?.[0]?.id || pendingFirst?.id;
+  }
+
+  return updated;
 }
 
 export function validateAgentAction(
@@ -143,6 +274,12 @@ export function validateAgentAction(
       return { valid: true };
     }
 
+    case 'REORDER_TASK':
+      if (!payload.taskId || typeof payload.order !== 'number') {
+        return { valid: false, reason: 'Lệnh đổi thứ tự thiếu mã nhiệm vụ hoặc thứ tự mới' };
+      }
+      return { valid: true };
+
     case 'ADD_SUBTASK': {
       if (!payload.parentTaskId) {
         return { valid: false, reason: 'Thiếu mã việc cha (parentTaskId)' };
@@ -196,43 +333,6 @@ export function validateAgentAction(
 }
 
 /**
- * Calculates next recommended action based on task status ordering and subtask hierarchy
- */
-export function calculateNextRecommendedAction(session: LifeSession): RecommendedAction {
-  const activeParent = session.tasks
-    .filter((t) => t.status !== 'completed' && t.status !== 'skipped')
-    .sort((a, b) => a.order - b.order)[0];
-
-  if (!activeParent) {
-    return {
-      title: 'Hoàn thành tất cả công việc trong phiên! 🎉',
-      description: 'Bạn đã thực hiện xong mọi công việc cần làm.',
-    };
-  }
-
-  if (activeParent.subtasks && activeParent.subtasks.length > 0) {
-    const nextSubtask = activeParent.subtasks
-      .filter((st) => st.status !== 'completed' && st.status !== 'skipped')
-      .sort((a, b) => a.order - b.order)[0];
-
-    if (nextSubtask) {
-      return {
-        title: nextSubtask.title,
-        description: nextSubtask.description || `Bước con thuộc công việc "${activeParent.title}"`,
-        taskId: nextSubtask.id,
-        parentContext: activeParent.title,
-      };
-    }
-  }
-
-  return {
-    title: activeParent.title,
-    description: activeParent.description || `Bước thứ ${activeParent.order} trong buổi hỗ trợ`,
-    taskId: activeParent.id,
-  };
-}
-
-/**
  * Executes a single action on state
  */
 export function applySingleAgentAction(
@@ -249,18 +349,16 @@ export function applySingleAgentAction(
   switch (type) {
     case 'ADD_FACT': {
       const category = payload.category || 'instruction';
-      const title = payload.title || 'Thông tin mới';
-      const value = payload.value || '';
+      const title = (payload.title || 'Thông tin mới').trim();
+      const value = (payload.value || '').trim();
 
-      // Deduplication check: if adding location or same title fact, update existing
+      // Fact Deduplication: distinguish between different distinct locations, but update identical titles
       let existingFact: ImportantFact | undefined;
-      if (category === 'location' || title.toLowerCase().includes('phòng') || title.toLowerCase().includes('địa điểm')) {
+      const titleLower = title.toLowerCase();
+
+      if (titleLower) {
         existingFact = newState.importantFacts.find(
-          (f) => f.type === 'location' || f.title.toLowerCase().includes('phòng') || f.title.toLowerCase().includes('địa điểm')
-        );
-      } else if (title) {
-        existingFact = newState.importantFacts.find(
-          (f) => f.title.toLowerCase().trim() === title.toLowerCase().trim()
+          (f) => f.title.toLowerCase().trim() === titleLower
         );
       }
 
@@ -310,8 +408,8 @@ export function applySingleAgentAction(
       const newOrder = newState.tasks.length > 0 ? Math.max(...newState.tasks.map((t) => t.order)) + 1 : 1;
       const newTask: LifeTask = {
         id: `task-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`,
-        title: payload.title || 'Nhiệm vụ mới',
-        description: payload.description,
+        title: (payload.title || 'Nhiệm vụ mới').trim(),
+        description: payload.description?.trim(),
         order: payload.order || newOrder,
         status: 'pending',
         important: payload.important || false,
@@ -356,8 +454,8 @@ export function applySingleAgentAction(
       const matched = findBestMatchingTask(newState, payload.taskId || '');
       const task = matched.task || matched.subtask;
       if (task) {
-        if (payload.title) task.title = payload.title;
-        if (payload.description) task.description = payload.description;
+        if (payload.title) task.title = payload.title.trim();
+        if (payload.description) task.description = payload.description.trim();
         logSummary = `Đã cập nhật nhiệm vụ: "${task.title}"`;
       }
       break;
@@ -377,6 +475,16 @@ export function applySingleAgentAction(
       break;
     }
 
+    case 'REORDER_TASK': {
+      const matched = findBestMatchingTask(newState, payload.taskId || '');
+      if (matched.task && typeof payload.order === 'number') {
+        matched.task.order = payload.order;
+        newState.tasks.sort((a, b) => a.order - b.order);
+        logSummary = `Đã sắp xếp lại thứ tự công việc: "${matched.task.title}"`;
+      }
+      break;
+    }
+
     case 'ADD_SUBTASK': {
       const matched = findBestMatchingTask(newState, payload.parentTaskId || '');
       const parent = matched.task || matched.parentTask;
@@ -385,8 +493,8 @@ export function applySingleAgentAction(
         const newSubOrder = parent.subtasks.length > 0 ? Math.max(...parent.subtasks.map((st) => st.order)) + 1 : 1;
         const newSubtask: LifeTask = {
           id: `subtask-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`,
-          title: payload.title || 'Việc con mới',
-          description: payload.description,
+          title: (payload.title || 'Việc con mới').trim(),
+          description: payload.description?.trim(),
           order: payload.order || newSubOrder,
           status: 'pending',
           parentTaskId: parent.id,
@@ -412,8 +520,8 @@ export function applySingleAgentAction(
 
     case 'UPDATE_NEXT_ACTION': {
       newState.nextRecommendedAction = {
-        title: payload.title || '',
-        description: payload.description || 'Được cập nhật bởi Lovira',
+        title: (payload.title || '').trim(),
+        description: payload.description?.trim() || 'Được cập nhật bởi Lovira',
       };
       logSummary = `Đã cập nhật bước tiếp theo: "${payload.title}"`;
       break;
@@ -421,7 +529,7 @@ export function applySingleAgentAction(
 
     case 'CHANGE_GOAL': {
       if (payload.goal) {
-        newState.goal = payload.goal;
+        newState.goal = payload.goal.trim();
         logSummary = `Đã cập nhật mục tiêu phiên: "${payload.goal}"`;
       }
       break;
@@ -447,6 +555,11 @@ export function applySingleAgentAction(
 
     case 'ADD_RESOURCE': {
       logSummary = `Đã thêm tài nguyên mới vào phiên`;
+      break;
+    }
+
+    case 'UPDATE_SESSION': {
+      logSummary = `Đã cập nhật thông tin phiên`;
       break;
     }
 
@@ -481,6 +594,7 @@ export function applyAgentActionBatch(
   success: boolean;
   newState: LifeSession;
   appliedActions: AgentAction[];
+  rejectedActions: { action: AgentAction; reason: string }[];
   rejectedReason?: string;
   logSummaries: string[];
 } {
@@ -489,18 +603,21 @@ export function applyAgentActionBatch(
       success: true,
       newState: state,
       appliedActions: [],
+      rejectedActions: [],
       logSummaries: [],
     };
   }
 
   let currentState: LifeSession = JSON.parse(JSON.stringify(state));
   const appliedActions: AgentAction[] = [];
+  const rejectedActions: { action: AgentAction; reason: string }[] = [];
   const logSummaries: string[] = [];
 
   for (const action of actions) {
     const val = validateAgentAction(currentState, action);
     if (!val.valid) {
       console.warn(`Action validation skipped: ${val.reason}`, action);
+      rejectedActions.push({ action, reason: val.reason || 'Validation failed' });
       continue;
     }
 
@@ -510,20 +627,23 @@ export function applyAgentActionBatch(
     if (logSummary) logSummaries.push(logSummary);
   }
 
-  // Recalculate next recommended action if tasks changed and no explicit UPDATE_NEXT_ACTION was issued
-  const hasExplicitNext = appliedActions.some((a) => a.type === 'UPDATE_NEXT_ACTION');
-  const hasTaskMutation = appliedActions.some((a) =>
-    ['COMPLETE_TASK', 'ADD_TASK', 'DELETE_TASK', 'ADD_SUBTASK', 'COMPLETE_SUBTASK', 'SKIP_TASK'].includes(a.type)
-  );
+  // Reconcile all derived state (parent task status, currentStepId, nextRecommendedAction)
+  const finalState = reconcileSessionDerivedState(currentState);
 
-  if (hasTaskMutation && !hasExplicitNext) {
-    currentState.nextRecommendedAction = calculateNextRecommendedAction(currentState);
+  // If there was an explicit next action provided in the action batch, preserve it
+  const explicitNext = appliedActions.find((a) => a.type === 'UPDATE_NEXT_ACTION');
+  if (explicitNext && explicitNext.payload.title) {
+    finalState.nextRecommendedAction = {
+      title: explicitNext.payload.title,
+      description: explicitNext.payload.description || 'Được chỉ định trực tiếp bởi Lovira',
+    };
   }
 
   return {
     success: true,
-    newState: currentState,
+    newState: finalState,
     appliedActions,
+    rejectedActions,
     logSummaries,
   };
 }

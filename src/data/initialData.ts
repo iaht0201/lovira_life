@@ -10,8 +10,11 @@ export const MODEL_POOL: ModelProfile[] = [
 
 export const DEMO_MEDICAL_SESSION: LifeSession = {
   id: "session-medical-2208",
-  title: "🏥 Đi khám bệnh — 22/08",
+  title: "🏥 Đi khám bệnh",
   scenarioType: "medical",
+  scenarioFamily: "healthcare",
+  subtype: "general_medical",
+  modules: ["appointment", "documents", "navigation", "queue", "instructions", "followUp"],
   status: "active",
   goal: "Hoàn thành buổi khám, biết đúng phòng khám, ghi nhớ lời dặn của bác sĩ và lịch tái khám.",
   createdAt: new Date().toISOString(),
@@ -164,7 +167,7 @@ export const SCENARIO_TEMPLATES = [
   {
     type: "custom" as const,
     title: "🌟 Phiên tùy chỉnh",
-    subtitle: "Mô tả việc bạn cần làm (VD: Ra ngân hàng đổi thẻ, Đi nhận lương hưu, Tải app)",
+    subtitle: "Mô tả bất kỳ việc gì bạn cần làm (Phỏng vấn, bảo hành, du lịch, ngân hàng, sinh hoạt...)",
     icon: "Sparkles",
     defaultGoal: "",
     defaultTasks: [],

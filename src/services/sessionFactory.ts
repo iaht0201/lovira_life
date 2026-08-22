@@ -1,16 +1,32 @@
-import { LifeSession, GeneratedSessionPlan, ScenarioType, LifeTask, ImportantFact } from '../types';
+import {
+  LifeSession,
+  GeneratedSessionPlan,
+  ScenarioType,
+  LifeTask,
+  ImportantFact,
+  AccessibilityContext,
+} from '../types';
 import { calculateNextRecommendedAction } from './actionEngine';
+import { ScenarioRoutingResult } from './scenarioRouter';
+import { normalizeGeneratedLifePlan } from './planValidator';
 
 /**
  * Creates a complete, fully-hydrated LifeSession from a GeneratedSessionPlan
  * Preserves subtasks, scenarioFamily, subtype, modules, and calculates valid nextRecommendedAction.
  */
 export function createLifeSessionFromPlan(
-  plan: GeneratedSessionPlan,
-  customGoal: string,
-  sessionType: ScenarioType = 'custom'
+  rawPlan: GeneratedSessionPlan,
+  originalUserRequest: string,
+  routing?: ScenarioRoutingResult | ScenarioType,
+  accessibilityContext?: AccessibilityContext
 ): LifeSession {
   const now = new Date().toISOString();
+  const routingObj: ScenarioRoutingResult | undefined =
+    typeof routing === 'object' && routing !== null ? routing : undefined;
+  const sessionType: ScenarioType =
+    typeof routing === 'string' ? routing : (rawPlan.scenarioType || 'custom');
+
+  const plan = normalizeGeneratedLifePlan(rawPlan, originalUserRequest, routingObj);
   const newId = `session-${sessionType}-${Date.now()}`;
 
   const tasks: LifeTask[] = (plan.tasks || []).map((t, i) => {
@@ -48,20 +64,23 @@ export function createLifeSessionFromPlan(
     updatedAt: now,
   }));
 
+  const firstStepId = tasks[0]?.subtasks?.[0]?.id || tasks[0]?.id || 'task-1';
+
   const session: LifeSession = {
     id: newId,
-    title: plan.title || `🌟 ${customGoal.slice(0, 25)}...`,
+    title: plan.title,
     scenarioType: sessionType,
-    scenarioFamily: plan.scenarioFamily || 'work',
-    subtype: plan.subtype,
-    modules: plan.modules,
+    scenarioFamily: plan.scenarioFamily || routingObj?.family || 'custom',
+    subtype: plan.subtype || routingObj?.subtype,
+    modules: plan.modules || routingObj?.modules,
+    tags: routingObj?.secondaryFamilies ? [...routingObj.secondaryFamilies] : undefined,
     status: 'active',
-    goal: plan.goal || customGoal,
+    goal: plan.goal || originalUserRequest,
     createdAt: now,
     updatedAt: now,
-    currentStepId: tasks[0]?.subtasks?.[0]?.id || tasks[0]?.id || 'task-1',
+    currentStepId: firstStepId,
     importantFacts: facts,
-    tasks: tasks,
+    tasks,
     resources: [],
     messages: [],
     actionLog: [
@@ -69,10 +88,11 @@ export function createLifeSessionFromPlan(
         id: `log-${Date.now()}`,
         timestamp: now,
         actionType: 'CREATE_SESSION_AI',
-        summary: `Lovira AI khởi tạo phiên: ${plan.title || customGoal}`,
+        summary: `Lovira AI khởi tạo phiên: ${plan.title}`,
         triggeredBy: 'system',
       },
     ],
+    accessibilityContext,
   };
 
   // Dynamically calculate recommended next action so it incorporates subtasks and tasks cleanly
@@ -82,13 +102,13 @@ export function createLifeSessionFromPlan(
     session.nextRecommendedAction?.title ||
     plan.firstRecommendedAction ||
     tasks[0]?.title ||
-    'Chuẩn bị bước đầu tiên';
+    'Bắt đầu bước đầu tiên';
 
   session.messages = [
     {
       id: `msg-${Date.now()}`,
       sender: 'lovira',
-      text: `Chào bạn nha! Mình đã lập xong kế hoạch cho mục tiêu: "${session.goal}" rồi nè.\n\nMình đã sắp xếp ${tasks.length} việc cần làm và các thông tin quan trọng. Bước đầu tiên tụi mình làm sẽ là: "${firstActionTitle}" nha!`,
+      text: `Chào bạn nha! Mình đã lập kế hoạch cho mục tiêu: "${session.goal}".\n\nBước đầu tiên tụi mình làm sẽ là: "${firstActionTitle}". Nếu bạn có thêm thông tin chi tiết về thời gian hoặc địa điểm, cứ nhắn cho mình bất cứ lúc nào nhé!`,
       timestamp: now,
     },
   ];

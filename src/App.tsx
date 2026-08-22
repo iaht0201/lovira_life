@@ -14,6 +14,7 @@ import {
   AgentAction,
   GeneratedSessionPlan,
   UserProfile,
+  ScenarioFamily,
 } from './types';
 import { storageService, BriefSessionHeader } from './services/storageService';
 import { indexedDbService } from './services/indexedDbService';
@@ -179,11 +180,17 @@ export default function App() {
 
     // Default template handling for standard scenarios
     const tmpl = SCENARIO_TEMPLATES.find((t) => t.type === type) || SCENARIO_TEMPLATES[0];
+    let family: ScenarioFamily = 'custom';
+    if (type === 'medical') family = 'healthcare';
+    else if (type === 'administrative') family = 'administrative';
+    else if (type === 'shopping') family = 'shopping';
+    else if (type === 'document') family = 'documents';
 
     const newSession: LifeSession = {
       id: newId,
       title: tmpl.title,
       scenarioType: type,
+      scenarioFamily: family,
       status: 'active',
       goal: tmpl.defaultGoal,
       createdAt: now,

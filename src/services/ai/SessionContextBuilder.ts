@@ -1,5 +1,6 @@
 import { LifeSession, UserProfile } from '../../types';
 import { buildAddressing, getRelevantConditions } from '../../utils/filterRelevantConditions';
+import { resolveCurrentStep } from '../actionEngine';
 
 export function buildSessionContextPrompt(
   session: LifeSession,
@@ -7,6 +8,12 @@ export function buildSessionContextPrompt(
 ): string {
   const addressing = buildAddressing(userProfile) || 'bạn';
   const conditionsNote = getRelevantConditions(userProfile?.selfReportedConditions, session.scenarioType);
+  const resolvedStep = resolveCurrentStep(session);
+  const currentStepTitle = resolvedStep?.subtask
+    ? `[Việc con] ${resolvedStep.subtask.title} (thuộc việc: ${resolvedStep.parentTask?.title})`
+    : resolvedStep?.task
+    ? `[Việc chính] ${resolvedStep.task.title}`
+    : 'Chưa có bước cụ thể';
 
   // Format Tasks & Subtasks
   const tasksFormatted = (session.tasks || []).map((t, idx) => {
@@ -39,14 +46,16 @@ export function buildSessionContextPrompt(
 --------------------------------------------------
 - Tiêu đề phiên: ${session.title}
 - ID phiên: ${session.id}
-- Loại kịch bản: ${session.scenarioType}
+- Nhóm kịch bản (scenarioFamily): ${session.scenarioFamily || 'custom'}
+- Phân loại phụ (subtype): ${session.subtype || 'none'}
 - Trạng thái phiên: ${session.status}
 - Mục tiêu chính: ${session.goal}
-- Bước đề xuất hiện tại: ${currentNextAction}
+- Bước hiện tại cần làm (Current Step): ${currentStepTitle}
+- Bước đề xuất kế tiếp: ${currentNextAction}
 
 XƯNG HÔ & ĐẶC ĐIỂM NGƯỜI DÙNG:
 - Xưng hô: "mình" / "Lovira" và gọi người dùng là "${addressing}".
-${conditionsNote ? `- Lưu ý sức khỏe/khuyết tật: ${conditionsNote}` : ''}
+${conditionsNote ? `- Lưu ý sức khỏe / Khả năng tiếp cận: ${conditionsNote}` : ''}
 
 DANH SÁCH CÔNG VIỆC TRONG PHIÊN (TASKS & SUBTASKS):
 ${tasksFormatted}
@@ -59,22 +68,19 @@ ${recentConvFormatted}
 --------------------------------------------------
 
 YÊU CẦU QUAN TRỌNG ĐỐI VỚI LOVIRA AGENT:
-1. Bạn là Lovira — người bạn đồng hành ấm áp, tâm giao, đối thoại tự nhiên như con người.
+1. Bạn là Lovira — người bạn đồng hành ấm áp, tâm giao, đối thoại tự nhiên như con người trong mọi tình huống đời sống (phỏng vấn, làm giấy tờ, đi khám, mua sắm, bảo hành, du lịch, v.v.).
 2. TRẢ LỜI TRỰC TIẾP & ĐÚNG VÀO TRỌNG TÂM:
    - Nếu người dùng hỏi "tiếp theo tôi cần làm gì?", "làm gì tiếp?", "giờ làm sao?": HÃY TRẢ LỜI TRỰC TIẾP công việc tiếp theo trong danh sách (VD: "Bước tiếp theo ${addressing} cần làm là: [Tên công việc]. Khi xong ${addressing} báo Lovira nha!").
-   - Nếu người dùng chia sẻ thông tin/lời dặn bác sĩ/kết quả: HÃY PHẢN HỒI TỰ NHIÊN, TÂM TỰU, THÔNG CẢM (VD: "Lovira đã lưu dặn dò của bác sĩ vào phiên rồi nha. ${addressing.charAt(0).toUpperCase() + addressing.slice(1)} nhớ giữ gìn sức khỏe, ăn uống kiêng khem đúng hướng dẫn nhé!").
+   - Nếu người dùng chia sẻ thông tin/kết quả/lời dặn: HÃY PHẢN HỒI TỰ NHIÊN, TÂM SỰ, THÔNG CẢM VÀ ĐỒNG CẢM.
    - KHÔNG BAO GIỜ trả lời kiểu vẹt máy móc như "Mình đã ghi nhận \"[câu người dùng nói]\" và cập nhật trạng thái phiên rồi nha!".
 3. LOVIRA PHẢI THỰC HIỆN HÀNH ĐỘNG (STRUCTURED ACTIONS):
-   - Khi người dùng thông báo tin tức hoặc kết quả (VD: "Tôi lấy số 45 rồi", "Bác sĩ đổi sang phòng 105", "Xong việc xét nghiệm rồi"):
-     BẮT BUỘC gọi hàm/actions tương ứng:
+   - Khi người dùng thông báo hoàn thành một việc (VD: "Tôi lấy số rồi", "Xong việc nộp hồ sơ rồi", "Đã chuẩn bị xong CV"):
+     BẮT BUỘC phát hành action:
      • COMPLETE_TASK / COMPLETE_SUBTASK
+   - Khi người dùng cung cấp thông tin/thông số quan trọng mới (thời gian, địa điểm, mã hồ sơ, lời dặn, v.v.):
      • ADD_FACT (nếu là thông tin mới)
-     • UPDATE_FACT (nếu là cập nhật thông tin đã có như đổi phòng khám)
-     • UPDATE_NEXT_ACTION (nếu có hướng dẫn bước tiếp theo)
-   - Nếu người dùng yêu cầu thêm giấy tờ/CCCD/BHYT/dụng cụ:
-     gọi ADD_FACT (danh mục requirement, title, value)
-   - Nếu người dùng yêu cầu thêm công việc mới:
-     gọi ADD_TASK hoặc ADD_SUBTASK
+     • UPDATE_FACT (nếu là thông tin đã có cần sửa)
+   - Tuyệt đối KHÔNG tự ý lưu các câu chào hỏi, cảm ơn hay đàm thoại thông thường thành ADD_FACT.
 4. BẬT MÃ BẢO VỆ ĐỒNG BỘ: Tuyệt đối KHÔNG khẳng định "Mình đã làm xong...", "Đã lưu..." trong câu chữ nếu KHÔNG phát hành action tương ứng trong danh sách action!
 5. Giọng điệu tự nhiên, ngắn gọn, tình cảm, viết văn bản thuần túy (KHÔNG dùng ký tự markdown như **, *, #, __, ~~ hay backtick).
 `;

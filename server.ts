@@ -9,6 +9,9 @@ import { buildClarificationPrompt } from './src/services/ai/prompts/clarificatio
 import { buildSessionContextPrompt } from './src/services/ai/SessionContextBuilder.js';
 import { callGroqAgent } from './src/services/ai/GroqProvider.js';
 import { selectGroqModel } from './src/services/ai/AIRouter.js';
+import { routeScenario, extractKnownFacts } from './src/services/scenarioRouter.js';
+import { normalizeGeneratedLifePlan } from './src/services/planValidator.js';
+import { resolveCurrentStep, calculateNextRecommendedAction } from './src/services/actionEngine.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -55,13 +58,13 @@ async function startServer() {
         return res.status(400).json({ error: 'Thiếu dữ liệu session hoặc message' });
       }
 
-      // Fast check local intent
-      const localResult = parseLocalIntent(message, session, userProfile);
+      // Fast check local intent first
+      const localResult = parseLocalIntent(message, session);
       if (localResult) {
         return res.json(localResult);
       }
 
-      // Try Groq Provider if GROQ_API_KEY is available and allowed
+      // Try Groq Provider if GROQ_API_KEY is available and provider is groq or unset
       const groqKey = process.env.GROQ_API_KEY;
       if (groqKey && provider !== 'gemini' && !isDemoMode) {
         const selectedModel = selectGroqModel(message, session);
@@ -78,8 +81,8 @@ async function startServer() {
       const ai = getGeminiClient();
 
       if (!ai || isDemoMode) {
-        const pendingTasks = (session.tasks || []).filter((t) => t.status === 'pending');
-        const topTask = pendingTasks[0];
+        const resolvedStep = resolveCurrentStep(session);
+        const activeTask = resolvedStep?.subtask || resolvedStep?.task;
         const actions: AgentAction[] = [];
         const msgLower = message.toLowerCase();
 
@@ -106,9 +109,8 @@ async function startServer() {
             type: 'ADD_FACT',
             payload: {
               category: 'location',
-              title: 'Phòng khám',
+              title: 'Phòng làm việc / Khám',
               value: roomVal,
-              source: 'chat',
             },
           });
 
@@ -116,19 +118,11 @@ async function startServer() {
             type: 'UPDATE_NEXT_ACTION',
             payload: {
               title: `Đến ${roomVal.toLowerCase()}`,
-              description: `Di chuyển đến ${roomVal} và chờ gọi số`,
+              description: `Di chuyển đến ${roomVal} và thực hiện công việc`,
             },
           });
 
-          // Complete get number / ticket scanning task if pending
-          if (topTask && (topTask.id === 'task-get-number' || topTask.title.toLowerCase().includes('lấy số') || topTask.title.toLowerCase().includes('quét phiếu'))) {
-            actions.push({
-              type: 'COMPLETE_TASK',
-              payload: { taskId: topTask.id },
-            });
-          }
-
-          const replyText = `Lovira đã lưu thông tin phòng khám: ${roomVal}.\n\n👉 Bước tiếp theo: Bạn hãy di chuyển đến ${roomVal} và chờ đến lượt gọi số nhé!`;
+          const replyText = `Lovira đã lưu thông tin phòng: ${roomVal}.\n\n👉 Bước tiếp theo: Bạn hãy di chuyển đến ${roomVal} nhé!`;
           return res.json({
             reply: replyText,
             speech: replyText.replace(/👉/g, '').replace(/\n/g, ' '),
@@ -140,6 +134,7 @@ async function startServer() {
         // Only persist as fact if message contains real information (not simple conversational phrases)
         const isConversational =
           msgLower === 'cảm ơn' ||
+          msgLower === 'cảm ơn bạn' ||
           msgLower === 'ok' ||
           msgLower === 'được rồi' ||
           msgLower.includes('giải thích') ||
@@ -158,44 +153,35 @@ async function startServer() {
           });
         }
 
-        // If message implies completion of a task, mark top task as completed
+        // Completion intent
         const isCompletedSignal =
-          topTask &&
-          (msgLower.includes('xong') ||
-            msgLower.includes('rồi') ||
-            msgLower.includes('lấy') ||
-            msgLower.includes('nộp') ||
-            msgLower.includes('tới') ||
-            msgLower.includes('đến'));
+          activeTask &&
+          (msgLower === 'xong rồi' ||
+            msgLower === 'xong' ||
+            msgLower === 'đã xong' ||
+            msgLower === 'hoàn thành' ||
+            msgLower.startsWith('xong rồi'));
 
         let replyText = '';
 
-        if (isCompletedSignal && topTask) {
+        if (isCompletedSignal && activeTask) {
           actions.push({
-            type: 'COMPLETE_TASK',
-            payload: { taskId: topTask.id },
+            type: resolvedStep?.subtask ? 'COMPLETE_SUBTASK' : 'COMPLETE_TASK',
+            payload: {
+              taskId: resolvedStep?.task?.id || activeTask.id,
+              subtaskId: resolvedStep?.subtask?.id,
+            },
           });
 
-          const nextTask = pendingTasks[1];
-          if (nextTask) {
-            actions.push({
-              type: 'UPDATE_NEXT_ACTION',
-              payload: {
-                title: nextTask.title,
-                description: nextTask.description || 'Thực hiện bước tiếp theo trong danh sách',
-              },
-            });
-            replyText = `Lovira đã ghi nhận bạn hoàn thành: "${topTask.title}".\n\n👉 Bước tiếp theo: "${nextTask.title}".`;
-          } else {
-            replyText = `Lovira đã ghi nhận bạn hoàn thành: "${topTask.title}". Tất cả công việc trong phiên đã hoàn thành rồi nè!`;
-          }
-        } else if (msgLower.includes('tiếp theo') || msgLower.includes('làm gì') || msgLower.includes('cần làm') || msgLower.includes('bước')) {
-          replyText = topTask
-            ? `Bước tiếp theo bạn cần thực hiện là: "${topTask.title}". Khi xong bạn cứ nhắn cho Lovira nha!`
+          const nextRec = calculateNextRecommendedAction(session);
+          replyText = `Lovira đã ghi nhận bạn hoàn thành: "${activeTask.title}".\n\n👉 Bước tiếp theo: "${nextRec.title}".`;
+        } else if (msgLower.includes('tiếp theo') || msgLower.includes('làm gì') || msgLower.includes('cần làm')) {
+          replyText = activeTask
+            ? `Bước tiếp theo bạn cần thực hiện là: "${activeTask.title}". Khi xong bạn cứ nhắn cho Lovira nha!`
             : `Bạn đã hoàn thành tất cả công việc trong phiên "${session.title}" rồi nè!`;
         } else {
-          replyText = topTask
-            ? `Lovira đã ghi nhận: "${message}". Bước tiếp theo bạn hãy thực hiện: "${topTask.title}".`
+          replyText = activeTask
+            ? `Lovira đã ghi nhận: "${message}". Bước hiện tại của bạn là: "${activeTask.title}".`
             : `Lovira đã ghi nhận thông tin: "${message}" vào phiên!`;
         }
 
@@ -231,11 +217,11 @@ async function startServer() {
             },
             {
               name: 'complete_task',
-              description: 'Đánh dấu hoàn thành một nhiệm vụ hoặc bước con trong danh sách',
+              description: 'Đánh dấu hoàn thành một nhiệm vụ trong danh sách',
               parameters: {
                 type: Type.OBJECT,
                 properties: {
-                  taskId: { type: Type.STRING, description: 'Mã ID hoặc tiêu đề của nhiệm vụ/bước con cần hoàn thành' },
+                  taskId: { type: Type.STRING, description: 'Mã ID hoặc tiêu đề của nhiệm vụ cần hoàn thành' },
                 },
                 required: ['taskId'],
               },
@@ -418,43 +404,94 @@ async function startServer() {
         return res.json({ isSpecificEnough: true });
       }
 
+      const pLower = prompt.trim().toLowerCase();
+
+      // Clear common life scenarios are already actionable
+      if (
+        pLower.includes('phỏng vấn') ||
+        pLower.includes('bảo hành') ||
+        pLower.includes('sân bay') ||
+        pLower.includes('khám') ||
+        pLower.includes('bệnh') ||
+        pLower.includes('cccd') ||
+        pLower.includes('hộ chiếu') ||
+        pLower.includes('siêu thị') ||
+        pLower.includes('ngân hàng') ||
+        pLower.includes('làm thẻ') ||
+        pLower.includes('chuyển nhà') ||
+        pLower.includes('mất ví')
+      ) {
+        return res.json({ isSpecificEnough: true });
+      }
+
+      const groqKey = process.env.GROQ_API_KEY;
       const ai = getGeminiClient();
 
-      if (!ai || isDemoMode) {
-        const pLower = prompt.trim().toLowerCase();
-        if (pLower.length < 25 && !pLower.includes('lúc') && !pLower.includes('tại') && !pLower.includes('bằng')) {
-          return res.json({
-            isSpecificEnough: false,
-            missingInfo: ['thời gian/địa điểm/hình thức'],
-            clarifyingQuestion: 'Bạn có thể chia sẻ thêm về thời gian, địa điểm hoặc hình thức thực hiện cụ thể được không?',
+      if (groqKey && !isDemoMode) {
+        try {
+          const clarificationPrompt = buildClarificationPrompt(prompt);
+          const groqRes = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              Authorization: `Bearer ${groqKey}`,
+            },
+            body: JSON.stringify({
+              model: 'groq/compound-mini',
+              messages: [{ role: 'user', content: clarificationPrompt }],
+              temperature: 0.1,
+            }),
           });
+          if (groqRes.ok) {
+            const data = await groqRes.json();
+            const textContent = data.choices?.[0]?.message?.content || '';
+            const cleanJson = textContent.replace(/```json/g, '').replace(/```/g, '').trim();
+            const result = JSON.parse(cleanJson);
+            return res.json({
+              isSpecificEnough: !!result.isSpecificEnough,
+              missingInfo: result.missingInfo || [],
+              clarifyingQuestion: result.clarifyingQuestion || '',
+            });
+          }
+        } catch (e) {
+          console.warn('Groq clarification check failed:', e);
         }
-        return res.json({ isSpecificEnough: true });
       }
 
-      const clarificationPrompt = buildClarificationPrompt(prompt);
-      const response = await ai.models.generateContent({
-        model: 'gemini-2.5-flash',
-        contents: [
-          { role: 'user', parts: [{ text: clarificationPrompt }] },
-        ],
-        config: {
-          responseMimeType: 'application/json',
-          temperature: 0.1,
-        },
-      });
-
-      const text = response.text || '';
-      try {
-        const result = JSON.parse(text);
-        return res.json({
-          isSpecificEnough: !!result.isSpecificEnough,
-          missingInfo: result.missingInfo || [],
-          clarifyingQuestion: result.clarifyingQuestion || '',
+      if (ai && !isDemoMode) {
+        const clarificationPrompt = buildClarificationPrompt(prompt);
+        const response = await ai.models.generateContent({
+          model: 'gemini-2.5-flash',
+          contents: [
+            { role: 'user', parts: [{ text: clarificationPrompt }] },
+          ],
+          config: {
+            responseMimeType: 'application/json',
+            temperature: 0.1,
+          },
         });
-      } catch (err) {
-        return res.json({ isSpecificEnough: true });
+
+        const text = response.text || '';
+        try {
+          const result = JSON.parse(text);
+          return res.json({
+            isSpecificEnough: !!result.isSpecificEnough,
+            missingInfo: result.missingInfo || [],
+            clarifyingQuestion: result.clarifyingQuestion || '',
+          });
+        } catch (err) {
+          return res.json({ isSpecificEnough: true });
+        }
       }
+
+      if (pLower.length < 15) {
+        return res.json({
+          isSpecificEnough: false,
+          missingInfo: ['chi tiết việc cần làm'],
+          clarifyingQuestion: 'Bạn có thể chia sẻ thêm về thời gian, địa điểm hoặc chi tiết việc cần làm được không?',
+        });
+      }
+      return res.json({ isSpecificEnough: true });
     } catch (e) {
       console.error('API check-clarification error:', e);
       return res.json({ isSpecificEnough: true });
@@ -470,68 +507,128 @@ async function startServer() {
         return res.status(400).json({ error: 'Thiếu mô tả mục tiêu (prompt)' });
       }
 
+      const routing = routeScenario(prompt);
+      const groqKey = process.env.GROQ_API_KEY;
       const ai = getGeminiClient();
 
-      if (!ai || isDemoMode) {
-        const fallback = generateFallbackCustomSessionPlan(prompt);
-        return res.json(fallback);
-      }
-
-      const systemPrompt = `Bạn là Lovira. Người dùng vừa mô tả một mục tiêu họ cần hoàn thành.
-Hãy tạo một kế hoạch phiên hỗ trợ gồm:
-- Tiêu đề ngắn gọn, dễ hiểu
-- Mục tiêu phiên đầy đủ
-- Danh sách 3-6 công việc chính (tasks).
-
-QUY TẮC TẠO TASK & SUBTASK:
-1. KHÔNG tạo các task/subtask mang tính meta-generic như "Rà soát yêu cầu", "Lập danh sách ưu tiên".
-2. Mọi task/subtask phải là HÀNH ĐỘNG CỤ THỂ, thật sự có thể bắt tay vào làm ngay.
-3. Chỉ chia nhỏ thành subtasks khi task đó gồm nhiều hành động cụ thể khác loại.
-4. Trích xuất Important Facts từ mô tả (thời gian, địa điểm, giấy tờ bắt buộc, lưu ý khẩn cấp).
-
-Trả về DUY NHẤT JSON đúng schema đã cho:
+      // Priority 1: Groq if GROQ_API_KEY is configured
+      if (groqKey && !isDemoMode) {
+        try {
+          const groqRes = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              Authorization: `Bearer ${groqKey}`,
+            },
+            body: JSON.stringify({
+              model: 'openai/gpt-oss-20b',
+              messages: [
+                {
+                  role: 'system',
+                  content: `Bạn là Lovira Life Planner. Hãy lập kế hoạch cho mục tiêu của người dùng.
+Quy tắc:
+1. Nhiệm vụ (tasks) và bước con (subtasks) phải là HÀNH ĐỘNG CỤ THỂ THỰC TẾ, không dùng câu chung chung như "Rà soát yêu cầu".
+2. Trích xuất Important Facts từ thông tin người dùng nêu (thời gian, địa điểm, giấy tờ, người liên quan). Tuyệt đối không bịa thông tin không có trong yêu cầu.
+3. Trả về DUY NHẤT JSON đúng schema sau (không bọc markdown):
 {
-  "title": "Tiêu đề ngắn gọn phiên hỗ trợ",
-  "goal": "Mục tiêu phiên đầy đủ",
+  "title": "Tiêu đề ngắn gọn kèm icon",
+  "goal": "Mục tiêu đầy đủ",
   "scenarioType": "custom",
+  "scenarioFamily": "${routing.family}",
   "tasks": [
     {
-      "title": "Tên công việc cha 1",
+      "title": "Tên công việc chính",
       "order": 1,
       "important": true,
       "subtasks": [
-        { "title": "Tên bước con 1", "order": 1 },
-        { "title": "Tên bước con 2", "order": 2 }
+        { "title": "Tên bước con", "order": 1 }
       ]
-    },
-    { "title": "Tên công việc 2 (đơn lẻ)", "order": 2, "important": false }
+    }
+  ],
+  "importantFacts": [
+    { "type": "requirement", "title": "Tiêu đề", "value": "Nội dung" }
+  ],
+  "firstRecommendedAction": "Tên bước con đầu tiên hoặc công việc đầu tiên"
+}`,
+                },
+                { role: 'user', content: prompt },
+              ],
+              temperature: 0.2,
+            }),
+          });
+
+          if (groqRes.ok) {
+            const data = await groqRes.json();
+            const textContent = data.choices?.[0]?.message?.content || '';
+            const cleanJson = textContent.replace(/```json/g, '').replace(/```/g, '').trim();
+            const parsed = JSON.parse(cleanJson);
+            if (parsed && Array.isArray(parsed.tasks) && parsed.tasks.length > 0) {
+              const normalized = normalizeGeneratedLifePlan(parsed, prompt, routing);
+              return res.json(normalized);
+            }
+          }
+        } catch (e) {
+          console.warn('Groq plan generation failed, falling back to Gemini/Local:', e);
+        }
+      }
+
+      // Priority 2: Gemini if GEMINI_API_KEY is available
+      if (ai && !isDemoMode) {
+        const systemPrompt = `Bạn là Lovira. Người dùng vừa mô tả một mục tiêu họ cần hoàn thành.
+Hãy tạo một kế hoạch phiên hỗ trợ gồm:
+- Tiêu đề ngắn gọn, dễ hiểu kèm icon
+- Mục tiêu phiên đầy đủ
+- Danh sách 3-6 công việc chính (tasks), có thể chia subtasks cho các bước phức tạp.
+- Trích xuất Important Facts (thời gian, địa điểm, giấy tờ liên quan).
+
+Tránh các task chung chung vô nghĩa. Mọi việc phải cụ thể.
+
+Trả về DUY NHẤT JSON đúng schema:
+{
+  "title": "Tiêu đề ngắn gọn",
+  "goal": "Mục tiêu phiên đầy đủ",
+  "scenarioType": "custom",
+  "scenarioFamily": "${routing.family}",
+  "tasks": [
+    {
+      "title": "Tên công việc cha",
+      "order": 1,
+      "important": true,
+      "subtasks": [
+        { "title": "Tên bước con 1", "order": 1 }
+      ]
+    }
   ],
   "importantFacts": [
     { "type": "requirement", "title": "Tên giấy tờ/thông tin", "value": "Nội dung chi tiết" }
   ],
-  "firstRecommendedAction": "Tên bước con 1 (hoặc công việc 1 nếu không có bước con)"
+  "firstRecommendedAction": "Tên bước con 1"
 }`;
 
-      const response = await ai.models.generateContent({
-        model: 'gemini-2.5-flash',
-        contents: [
-          { role: 'user', parts: [{ text: `${systemPrompt}\n\nNội dung mô tả của người dùng: "${prompt}"` }] },
-        ],
-        config: {
-          responseMimeType: 'application/json',
-          temperature: 0.2,
-        },
-      });
+        const response = await ai.models.generateContent({
+          model: 'gemini-2.5-flash',
+          contents: [
+            { role: 'user', parts: [{ text: `${systemPrompt}\n\nNội dung mô tả của người dùng: "${prompt}"` }] },
+          ],
+          config: {
+            responseMimeType: 'application/json',
+            temperature: 0.2,
+          },
+        });
 
-      const text = response.text || '';
-      try {
-        const jsonPlan = JSON.parse(text) as GeneratedSessionPlan;
-        return res.json(jsonPlan);
-      } catch (e) {
-        console.warn('Gemini JSON parse failed, using fallback:', e);
-        const fallback = generateFallbackCustomSessionPlan(prompt);
-        return res.json(fallback);
+        const text = response.text || '';
+        try {
+          const jsonPlan = JSON.parse(text);
+          const normalized = normalizeGeneratedLifePlan(jsonPlan, prompt, routing);
+          return res.json(normalized);
+        } catch (e) {
+          console.warn('Gemini JSON parse failed, using fallback:', e);
+        }
       }
+
+      // Priority 3: Fallback planner
+      const fallback = generateFallbackCustomSessionPlan(prompt);
+      return res.json(fallback);
     } catch (e) {
       console.error('API generate-session error:', e);
       const { prompt } = req.body;

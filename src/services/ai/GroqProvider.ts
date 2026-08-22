@@ -23,7 +23,7 @@ export async function callGroqAgent(
       type: 'function',
       function: {
         name: 'update_life_session',
-        description: 'Phát hành các hành động cập nhật trạng thái phiên (Tasks, Facts, Step tiếp theo)',
+        description: 'Phát hành các hành động cập nhật trạng thái phiên (Tasks, Subtasks, Facts, Step tiếp theo)',
         parameters: {
           type: 'object',
           properties: {
@@ -52,6 +52,7 @@ export async function callGroqAgent(
                       'COMPLETE_TASK',
                       'SKIP_TASK',
                       'DELETE_TASK',
+                      'REORDER_TASK',
                       'ADD_SUBTASK',
                       'COMPLETE_SUBTASK',
                       'UPDATE_NEXT_ACTION',
@@ -59,6 +60,8 @@ export async function callGroqAgent(
                       'PAUSE_SESSION',
                       'RESUME_SESSION',
                       'COMPLETE_SESSION',
+                      'ADD_RESOURCE',
+                      'UPDATE_SESSION',
                       'OPEN_CAMERA',
                     ],
                   },
@@ -74,6 +77,7 @@ export async function callGroqAgent(
                       subtaskId: { type: 'string' },
                       description: { type: 'string' },
                       important: { type: 'boolean' },
+                      order: { type: 'number' },
                       goal: { type: 'string' },
                     },
                   },

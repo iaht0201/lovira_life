@@ -256,9 +256,9 @@ export const LifeDashboard: React.FC<LifeDashboardProps> = ({
       <section className="space-y-4">
         <div className="flex items-center justify-between">
           <h3 className="text-xl font-extrabold text-text-primary">
-            Chọn kịch bản hỗ trợ
+            Mẫu gợi ý nhanh
           </h3>
-          <span className="text-xs text-text-secondary">Mẫu có sẵn hỗ trợ tức thì</span>
+          <span className="text-xs text-text-secondary">Chọn mẫu sẵn hoặc tạo phiên bất kỳ</span>
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">

@@ -1,5 +1,6 @@
-import { LifeSession, AccessibilitySettings, AISettings, UserProfile, DEFAULT_USER_PROFILE } from '../types';
+import { LifeSession, AccessibilitySettings, AISettings, UserProfile, ScenarioFamily } from '../types';
 import { DEMO_MEDICAL_SESSION } from '../data/initialData';
+import { calculateNextRecommendedAction, resolveCurrentStep } from './actionEngine';
 
 const KEY_SESSIONS_LIST = 'lovira_sessions';
 const KEY_SESSION_PREFIX = 'lovira_session_';
@@ -34,6 +35,48 @@ export const DEFAULT_AI_SETTINGS: AISettings = {
   demoMode: true,
 };
 
+/**
+ * Migration helper to ensure loaded sessions are backwards-compatible and well-formed
+ */
+export function migrateSession(raw: any): LifeSession {
+  if (!raw || typeof raw !== 'object') return DEMO_MEDICAL_SESSION;
+
+  let family: ScenarioFamily = raw.scenarioFamily || 'custom';
+  if (!raw.scenarioFamily) {
+    if (raw.scenarioType === 'medical') family = 'healthcare';
+    else if (raw.scenarioType === 'administrative') family = 'administrative';
+    else if (raw.scenarioType === 'shopping') family = 'shopping';
+    else if (raw.scenarioType === 'document') family = 'documents';
+  }
+
+  const tasks = Array.isArray(raw.tasks) ? raw.tasks : [];
+  const importantFacts = Array.isArray(raw.importantFacts) ? raw.importantFacts : [];
+  const resources = Array.isArray(raw.resources) ? raw.resources : [];
+  const messages = Array.isArray(raw.messages) ? raw.messages : [];
+  const actionLog = Array.isArray(raw.actionLog) ? raw.actionLog : [];
+
+  const session: LifeSession = {
+    ...raw,
+    scenarioFamily: family,
+    tasks,
+    importantFacts,
+    resources,
+    messages,
+    actionLog,
+  };
+
+  if (!session.nextRecommendedAction) {
+    session.nextRecommendedAction = calculateNextRecommendedAction(session);
+  }
+
+  if (!session.currentStepId) {
+    const resolved = resolveCurrentStep(session);
+    session.currentStepId = resolved?.subtask?.id || resolved?.task?.id || tasks[0]?.id || 'task-1';
+  }
+
+  return session;
+}
+
 class StorageService {
   /**
    * Initializes storage with demo data if empty and increments app launch counter
@@ -59,7 +102,9 @@ class StorageService {
   getSession(id: string): LifeSession | null {
     try {
       const raw = localStorage.getItem(`${KEY_SESSION_PREFIX}${id}`);
-      return raw ? JSON.parse(raw) : null;
+      if (!raw) return null;
+      const parsed = JSON.parse(raw);
+      return migrateSession(parsed);
     } catch {
       return null;
     }
@@ -67,18 +112,20 @@ class StorageService {
 
   saveSession(session: LifeSession): void {
     try {
+      const migrated = migrateSession(session);
+
       // 1. Save detailed session
-      localStorage.setItem(`${KEY_SESSION_PREFIX}${session.id}`, JSON.stringify(session));
+      localStorage.setItem(`${KEY_SESSION_PREFIX}${migrated.id}`, JSON.stringify(migrated));
 
       // 2. Update brief sessions list
       const list = this.getSessionsList();
-      const existingIdx = list.findIndex(item => item.id === session.id);
+      const existingIdx = list.findIndex((item) => item.id === migrated.id);
       const brief: BriefSessionHeader = {
-        id: session.id,
-        title: session.title,
-        status: session.status,
-        scenarioType: session.scenarioType,
-        updatedAt: session.updatedAt,
+        id: migrated.id,
+        title: migrated.title,
+        status: migrated.status,
+        scenarioType: migrated.scenarioType,
+        updatedAt: migrated.updatedAt,
       };
 
       if (existingIdx >= 0) {
@@ -96,7 +143,7 @@ class StorageService {
   deleteSession(id: string): void {
     try {
       localStorage.removeItem(`${KEY_SESSION_PREFIX}${id}`);
-      const list = this.getSessionsList().filter(s => s.id !== id);
+      const list = this.getSessionsList().filter((s) => s.id !== id);
       localStorage.setItem(KEY_SESSIONS_LIST, JSON.stringify(list));
 
       if (this.getActiveSessionId() === id) {
