@@ -12,6 +12,7 @@ import {
   resolveCurrentStep,
   calculateNextRecommendedAction,
   resolveCompletionTarget,
+  applyAgentActionBatch,
 } from './actionEngine';
 import { normalizeGeneratedLifePlan } from './planValidator';
 import { buildAddressing } from '../utils/filterRelevantConditions';
@@ -184,7 +185,226 @@ export function generateFallbackCustomSessionPlan(prompt: string): GeneratedSess
     return normalizeGeneratedLifePlan(plan, prompt, routing);
   }
 
-  // 4. Mặc định theo Scenario Registry
+  // 4. Ngân hàng & Làm thẻ (Finance / Banking)
+  if (routing.family === 'finance' || pLower.includes('ngân hàng') || pLower.includes('làm thẻ') || pLower.includes('mở tài khoản')) {
+    const plan: GeneratedSessionPlan = {
+      title: '💳 Đi làm thủ tục ngân hàng / làm thẻ',
+      goal: prompt,
+      scenarioType: 'custom',
+      scenarioFamily: 'finance',
+      subtype: 'bank_card',
+      modules: ['documents', 'queue', 'followUp'],
+      tasks: [
+        {
+          title: 'Chuẩn bị CCCD/CMND bản gốc',
+          description: 'Đảm bảo mang theo Căn cước công dân bản gốc còn hạn sử dụng',
+          order: 1,
+          important: true,
+          subtasks: [
+            { title: 'Kiểm tra CCCD bản chính trong ví', order: 1 },
+            { title: 'Mang theo điện thoại cá nhân để nhận mã OTP', order: 2 },
+          ],
+        },
+        {
+          title: 'Đến chi nhánh / quầy giao dịch ngân hàng',
+          description: 'Đến đúng địa điểm ngân hàng trong giờ hành chính',
+          order: 2,
+          important: true,
+        },
+        {
+          title: 'Bốc số thứ tự & Đợi gọi quầy giao dịch',
+          description: 'Lấy số tại cây tự động hoặc nhờ bảo vệ hỗ trợ bốc số',
+          order: 3,
+        },
+        {
+          title: 'Khai mẫu đơn / đăng ký làm thẻ với giao dịch viên',
+          description: 'Điền thông tin vào mẫu đăng ký và đối chiếu thông tin cá nhân',
+          order: 4,
+          important: true,
+        },
+        {
+          title: 'Nhận giấy hẹn lấy thẻ hoặc kích hoạt dịch vụ',
+          description: 'Lưu lại giấy hẹn trả thẻ hoặc hướng dẫn đăng ký app ngân hàng',
+          order: 5,
+          important: true,
+        },
+      ],
+      importantFacts: knownFacts.map((f) => ({
+        type: f.type,
+        title: f.title,
+        value: f.value,
+      })),
+      firstRecommendedAction: 'Kiểm tra CCCD bản chính trong ví',
+    };
+
+    return normalizeGeneratedLifePlan(plan, prompt, routing);
+  }
+
+  // 5. Lấy / Làm lại thẻ CCCD (ID Card Pickup & Renewal)
+  if (routing.subtype === 'id_card' || pLower.includes('cccd') || pLower.includes('căn cước')) {
+    const isPickup = pLower.includes('lấy') || pLower.includes('nhận');
+    const title = isPickup ? '🪪 Đi nhận / lấy thẻ CCCD mới' : '🪪 Đi làm lại / cấp đổi thẻ CCCD';
+
+    const plan: GeneratedSessionPlan = {
+      title,
+      goal: prompt,
+      scenarioType: 'custom',
+      scenarioFamily: 'administrative',
+      subtype: 'id_card',
+      modules: ['documents', 'appointment', 'notes', 'followUp'],
+      tasks: isPickup
+        ? [
+            {
+              title: 'Kiểm tra giấy hẹn lấy CCCD & Giấy tờ cá nhân',
+              description: 'Mang theo giấy hẹn trả kết quả (hoặc thông báo VNeID) và giấy tờ cá nhân',
+              order: 1,
+              important: true,
+              subtasks: [
+                { title: 'Kiểm tra giấy hẹn lấy thẻ CCCD trong hồ sơ', order: 1 },
+                { title: 'Mang theo thông tin VNeID hoặc giấy tờ cá nhân', order: 2 },
+              ],
+            },
+            {
+              title: 'Di chuyển đến trụ sở Công an / Trung tâm Phục vụ hành chính công',
+              description: 'Đến đúng địa điểm hẹn trong giờ hành chính',
+              order: 2,
+              important: true,
+            },
+            {
+              title: 'Xuất trình giấy hẹn & Nhận thẻ CCCD mới tại quầy',
+              description: 'Kiểm tra kỹ thông tin trên thẻ CCCD mới trước khi rời quầy',
+              order: 3,
+              important: true,
+            },
+          ]
+        : [
+            {
+              title: 'Kiểm tra hồ sơ & Giấy tờ cần thiết khi làm lại CCCD',
+              description: 'Chuẩn bị mã định danh cá nhân / giấy tờ xác minh',
+              order: 1,
+              important: true,
+            },
+            {
+              title: 'Di chuyển đến Cơ quan Công an cấp quận/huyện',
+              description: 'Đến bộ phận Cấp CCCD trong giờ làm việc',
+              order: 2,
+              important: true,
+            },
+            {
+              title: 'Lấy số, thu nhận vân tay, chụp ảnh & Nhận giấy hẹn',
+              description: 'Hoàn tất thủ tục làm lại thẻ và giữ giấy hẹn',
+              order: 3,
+              important: true,
+            },
+          ],
+      importantFacts: knownFacts.map((f) => ({
+        type: f.type,
+        title: f.title,
+        value: f.value,
+      })),
+      firstRecommendedAction: isPickup ? 'Kiểm tra giấy hẹn lấy thẻ CCCD trong hồ sơ' : 'Kiểm tra hồ sơ & Giấy tờ cần thiết khi làm lại CCCD',
+    };
+
+    return normalizeGeneratedLifePlan(plan, prompt, routing);
+  }
+
+  // 6. Công chứng & Thủ tục hành chính (Administrative / Notary)
+  if (pLower.includes('công chứng') || pLower.includes('chứng thực') || pLower.includes('sao y') || (routing.family === 'administrative' && !pLower.includes('cccd'))) {
+    const plan: GeneratedSessionPlan = {
+      title: '🏛️ Đi công chứng & làm thủ tục hành chính',
+      goal: prompt,
+      scenarioType: 'custom',
+      scenarioFamily: 'administrative',
+      subtype: 'notary',
+      modules: ['documents', 'queue', 'deadline', 'followUp'],
+      tasks: [
+        {
+          title: 'Chuẩn bị bản chính & các bản phô-tô cần công chứng',
+          description: 'Soạn sẵn CCCD/CMND bản gốc và các giấy tờ cần chứng thực',
+          order: 1,
+          important: true,
+          subtasks: [
+            { title: 'Kiểm tra bản chính CCCD và giấy tờ cần công chứng', order: 1 },
+            { title: 'Chuẩn bị sẵn các bản phô-tô (nếu có)', order: 2 },
+          ],
+        },
+        {
+          title: 'Đến Văn phòng công chứng / Bộ phận 1 cửa UBND',
+          description: 'Đến địa điểm công chứng trong giờ làm việc hành chính',
+          order: 2,
+          important: true,
+        },
+        {
+          title: 'Bốc số thứ tự & Nộp hồ sơ tại quầy tiếp nhận',
+          description: 'Lấy số quầy Tư pháp - Công chứng và chờ gọi tên',
+          order: 3,
+        },
+        {
+          title: 'Nộp lệ phí công chứng & Nhận lại bản gốc + văn bản chứng thực',
+          description: 'Kiểm tra kỹ con dấu, chữ ký và số lượng bản sao đã đóng dấu',
+          order: 4,
+          important: true,
+        },
+      ],
+      importantFacts: knownFacts.map((f) => ({
+        type: f.type,
+        title: f.title,
+        value: f.value,
+      })),
+      firstRecommendedAction: 'Kiểm tra bản chính CCCD và giấy tờ cần công chứng',
+    };
+
+    return normalizeGeneratedLifePlan(plan, prompt, routing);
+  }
+
+  // 6. Mua sắm & Đi chợ / Mua sữa (Shopping)
+  if (routing.family === 'shopping' || pLower.includes('mua') || pLower.includes('chợ') || pLower.includes('siêu thị')) {
+    const isMilk = pLower.includes('sữa');
+    const title = isMilk ? '🥛 Đi mua sữa' : '🛒 Kế hoạch đi mua sắm / đi chợ';
+
+    const plan: GeneratedSessionPlan = {
+      title,
+      goal: prompt,
+      scenarioType: 'custom',
+      scenarioFamily: 'shopping',
+      subtype: 'shopping_trip',
+      modules: ['checklist', 'notes', 'followUp'],
+      tasks: [
+        {
+          title: 'Kiểm tra loại đồ cần mua & Tiền/Thẻ trong ví',
+          description: 'Xác định loại đồ cần mua và chuẩn bị ví tiền / điện thoại',
+          order: 1,
+          important: true,
+          subtasks: [
+            { title: 'Kiểm tra tên/loại đồ cần mua', order: 1 },
+            { title: 'Kiểm tra ví tiền hoặc điện thoại thanh toán', order: 2 },
+          ],
+        },
+        {
+          title: 'Di chuyển đến cửa hàng / siêu thị',
+          description: 'Đến địa điểm cửa hàng gần nhất',
+          order: 2,
+          important: true,
+        },
+        {
+          title: 'Chọn món đồ & Thanh toán tại quầy',
+          description: 'Lấy đúng loại sản phẩm và kiểm tra hóa đơn/tiền thối',
+          order: 3,
+          important: true,
+        },
+      ],
+      importantFacts: knownFacts.map((f) => ({
+        type: f.type,
+        title: f.title,
+        value: f.value,
+      })),
+      firstRecommendedAction: 'Kiểm tra tên/loại đồ cần mua',
+    };
+
+    return normalizeGeneratedLifePlan(plan, prompt, routing);
+  }
+
+  // 7. Mặc định theo Scenario Registry
   const tasks = registry.suggestedTasks.map((t, idx) => ({
     title: t.title,
     description: t.description,
@@ -213,6 +433,83 @@ export function generateFallbackCustomSessionPlan(prompt: string): GeneratedSess
   return normalizeGeneratedLifePlan(plan, prompt, routing);
 }
 
+export function deduceHonorifics(
+  userProfile?: UserProfile | null,
+  session?: LifeSession | null,
+  userInput?: string
+): { addressing: string; me: string; da: string; a: string; isElderly: boolean; isYoungerSenior: boolean; praise: string } {
+  let addressing = userProfile ? buildAddressing(userProfile) : '';
+
+  const combinedText = `${userInput || ''} ${session?.goal || ''} ${session?.title || ''} ${session?.messages?.map((m) => m.text).join(' ') || ''}`.toLowerCase();
+
+  if (!addressing || addressing === 'bạn') {
+    if (combinedText.includes('bác')) addressing = 'bác';
+    else if (combinedText.includes('ông')) addressing = 'ông';
+    else if (combinedText.includes('bà')) addressing = 'bà';
+    else if (combinedText.includes('cô')) addressing = 'cô';
+    else if (combinedText.includes('chú')) addressing = 'chú';
+    else if (combinedText.includes('anh')) addressing = 'anh';
+    else if (combinedText.includes('chị')) addressing = 'chị';
+    else addressing = 'bạn';
+  }
+
+  const isElderly = ['bác', 'ông', 'bà', 'cô', 'chú'].includes(addressing);
+  const isYoungerSenior = ['anh', 'chị'].includes(addressing);
+
+  const me = isElderly ? 'con' : isYoungerSenior ? 'em' : 'Lovira';
+  const da = isElderly ? `Dạ thưa ${addressing}` : isYoungerSenior ? `Dạ ${addressing}` : 'Dạ';
+  const a = isElderly ? 'ạ' : isYoungerSenior ? 'nha' : 'nhé';
+
+  const praise = isElderly
+    ? `Dạ mừng quá ${addressing} ơi!`
+    : isYoungerSenior
+    ? `Dạ tuyệt vời ${addressing} ơi!`
+    : `Dạ tuyệt vời ${addressing} ơi!`;
+
+  return { addressing, me, da, a, isElderly, isYoungerSenior, praise };
+}
+
+export function formatSoftNextStepGuidance(
+  nextRec: { title: string; description?: string },
+  honorifics: { addressing: string; me: string; da: string; a: string; isElderly: boolean },
+  sessionGoal: string = ''
+): string {
+  const { addressing, me, da, a } = honorifics;
+  const title = nextRec.title;
+  const tLower = title.toLowerCase();
+  const goalLower = sessionGoal.toLowerCase();
+
+  // Shopping / Buying items
+  if (tLower.includes('kiểm tra tên/loại') || tLower.includes('loại đồ cần mua') || tLower.includes('ví tiền')) {
+    const itemMatch = goalLower.match(/mua\s+([a-zA-ZÀ-ỹ\s]+)/i);
+    const itemStr = itemMatch ? itemMatch[1].trim() : 'đồ';
+    return `${da}, ${addressing} định mua loại ${itemStr} gì thế ${a}? ${addressing.charAt(0).toUpperCase() + addressing.slice(1)} nhớ kiểm tra đem theo ví tiền hoặc điện thoại để thanh toán nha ${addressing}!`;
+  }
+
+  // Buying / Selecting item step
+  if (tLower.includes('chọn món đồ') || tLower.includes('thanh toán')) {
+    return `${da}, bây giờ ${addressing} thong thả chọn đồ rồi lại quầy thanh toán ${a}!`;
+  }
+
+  // Documents / ID card
+  if (tLower.includes('cccd') || tLower.includes('cmnd') || tLower.includes('giấy tờ')) {
+    return `${da}, ${addressing} nhớ lấy sẵn Căn cước công dân bản gốc để trong túi/ví mang đi ${a}!`;
+  }
+
+  // Movement / Location arrival
+  if (tLower.includes('di chuyển') || tLower.includes('đến') || tLower.includes('tới')) {
+    return `${da}, bây giờ ${addressing} thong thả di chuyển đến nơi ${a}. Khi nào tới nơi, ${addressing} cứ nhắn "tới rồi" cho ${me} nha!`;
+  }
+
+  // Waiting / Ticket
+  if (tLower.includes('bốc số') || tLower.includes('số thứ tự') || tLower.includes('chờ')) {
+    return `${da}, khi vào quầy ${addressing} nhớ bốc số thứ tự trước, sau đó thong thả lại ghế ngồi chờ gọi tên ${a}!`;
+  }
+
+  // Default clean soft guidance
+  return `${da}, bước tiếp theo là: "${title}". ${nextRec.description && !nextRec.description.includes('undefined') ? `(${nextRec.description}) ` : ''}${addressing.charAt(0).toUpperCase() + addressing.slice(1)} thong thả làm xong rồi nhắn cho ${me} ${a}!`;
+}
+
 /**
  * Universal Local Intent Parser:
  * Evaluates user input against structured session state without hardcoded single-scenario assumptions
@@ -229,19 +526,13 @@ export function parseLocalIntent(
   const resolvedStep = resolveCurrentStep(session);
   const currentTaskOrSub = resolvedStep?.subtask || resolvedStep?.task;
 
-  const addressing = buildAddressing(userProfile) || 'bạn';
-  const pronoun = userProfile?.pronounStyle;
-  const isElderly = pronoun === 'ong' || pronoun === 'ba' || addressing.startsWith('bác') || addressing.startsWith('ông') || addressing.startsWith('bà') || addressing.startsWith('cô') || addressing.startsWith('chú');
-  const isYoungerSenior = pronoun === 'anh' || pronoun === 'chi' || addressing.startsWith('anh') || addressing.startsWith('chị');
-
-  const da = isElderly ? `Dạ thưa ${addressing}` : isYoungerSenior ? `Dạ ${addressing}` : 'Dạ';
-  const me = isElderly ? 'con' : isYoungerSenior ? 'em' : 'mình';
-  const a = isElderly ? 'ạ' : '';
+  const honorifics = deduceHonorifics(userProfile, session, text);
+  const { addressing, me, da, a, isElderly, isYoungerSenior, praise } = honorifics;
 
   // 1. Pause / Resume / Complete session
   if (tLower.includes('tạm dừng phiên') || tLower.includes('nghỉ tay') || tLower === 'tạm dừng') {
     return {
-      reply: `${da}, ${me} đã tạm dừng phiên hỗ trợ rồi nha. Khi nào ${addressing} muốn tiếp tục, chỉ cần nhắn "tiếp tục" cho ${me} nhé${a}!`,
+      reply: `${da}, ${me} đã tạm dừng phiên hỗ trợ rồi nha. Khi nào ${addressing} muốn tiếp tục, chỉ cần nhắn "tiếp tục" cho ${me} ${a}!`,
       actions: [{ type: 'PAUSE_SESSION', payload: {} }],
       confidence: 0.95,
     };
@@ -249,7 +540,7 @@ export function parseLocalIntent(
 
   if (tLower.includes('tiếp tục phiên') || tLower === 'tiếp tục' || tLower === 'làm tiếp') {
     return {
-      reply: `${da}, ${me} cùng ${addressing} tiếp tục công việc nhé${a}. Bước hiện tại của ${addressing} là: "` + (session.nextRecommendedAction?.title || 'xem lại danh sách') + `".`,
+      reply: `${da}, ${me} cùng ${addressing} tiếp tục công việc ${a}. Bước hiện tại của ${addressing} là: "` + (session.nextRecommendedAction?.title || 'xem lại danh sách') + `".`,
       actions: [{ type: 'RESUME_SESSION', payload: {} }],
       confidence: 0.95,
     };
@@ -282,12 +573,9 @@ export function parseLocalIntent(
       };
     }
 
-    const reply = nextAction.description
-      ? `${da}, bước tiếp theo ${addressing} cần làm là: "${nextAction.title}".\n(${nextAction.description})\n\nKhi làm xong ${addressing} báo ${me} nha${a}!`
-      : `${da}, bước tiếp theo ${addressing} cần làm là: "${nextAction.title}".\n\nKhi hoàn thành ${addressing} cứ nhắn "xong rồi" cho ${me} nhé${a}!`;
-
+    const softGuidance = formatSoftNextStepGuidance(nextAction, honorifics, session.goal);
     return {
-      reply,
+      reply: softGuidance,
       actions: [],
       confidence: 0.95,
     };
@@ -316,17 +604,26 @@ export function parseLocalIntent(
     };
   }
 
-  // 4. Universal "Xong rồi" / "Làm xong rồi" / "Hoàn thành bước này"
+  // 4. Universal "Xong rồi" / "Làm xong rồi" / "Chuẩn bị rồi" / "Hoàn thành bước này"
   if (
     tLower === 'xong rồi' ||
     tLower === 'xong' ||
     tLower === 'đã xong' ||
     tLower === 'hoàn thành rồi' ||
     tLower === 'làm xong rồi' ||
+    tLower.includes('chuẩn bị rồi') ||
+    tLower.includes('chuẩn bị xong') ||
+    tLower.includes('sẵn sàng rồi') ||
+    tLower.includes('làm xong rồi') ||
+    tLower.includes('xong rồi nhé') ||
+    tLower.includes('xong rồi nha') ||
     tLower.startsWith('xong rồi ') ||
     tLower.startsWith('đã làm xong') ||
     tLower.startsWith('xong bước') ||
-    tLower.startsWith('hoàn thành bước')
+    tLower.startsWith('hoàn thành bước') ||
+    tLower.endsWith('chuẩn bị rồi') ||
+    tLower.endsWith('chuẩn bị rồi nhé') ||
+    tLower.endsWith('chuẩn bị rồi nha')
   ) {
     const compResult = resolveCompletionTarget(session, text);
 
@@ -355,9 +652,21 @@ export function parseLocalIntent(
         },
       ];
 
-      const compliment = isElderly ? `Dạ mừng quá ${addressing} ơi!` : isYoungerSenior ? `Dạ tuyệt vời ${addressing} ơi!` : 'Giỏi quá!';
+      // Dynamically calculate new state and next step
+      const { newState } = applyAgentActionBatch(session, actions);
+      const nextRec = calculateNextRecommendedAction(newState);
+
+      let replyText = '';
+      if (nextRec && nextRec.title && !nextRec.title.includes('Hoàn thành tất cả')) {
+        const softGuidance = formatSoftNextStepGuidance(nextRec, honorifics, session.goal);
+        replyText = `${praise} ${me.charAt(0).toUpperCase() + me.slice(1)} đã đánh dấu hoàn thành xong rồi ${a}.\n\n${softGuidance}`;
+      } else {
+        replyText = `${praise} Tất cả các công việc trong phiên "${session.title}" đã hoàn thành trọn vẹn rồi ${addressing} ơi! 🎉`;
+      }
+
       return {
-        reply: `${compliment} ${me.charAt(0).toUpperCase() + me.slice(1)} đã đánh dấu hoàn thành bước: "${target.title}" rồi nha ${a}. Giờ tụi mình chuyển sang bước tiếp theo nhé!`,
+        reply: replyText,
+        speech: replyText.replace(/👉/g, '').replace(/\n/g, ' '),
         actions,
         confidence: 0.95,
       };
@@ -380,14 +689,22 @@ export function parseLocalIntent(
     };
   }
 
-  // 5. Universal "Tôi tới rồi" / "Đã đến nơi" / "Đến địa điểm rồi"
+  // 5. Universal "Tôi tới rồi" / "Đã đến nơi" / "Bác đến rồi" / "Đến quầy rồi"
   if (
-    tLower.includes('tôi tới rồi') ||
-    tLower.includes('tôi đến nơi rồi') ||
-    tLower.includes('đã tới nơi') ||
-    tLower.includes('đến nơi rồi') ||
-    tLower === 'tới rồi' ||
-    tLower === 'đến rồi'
+    tLower.includes('tới rồi') ||
+    tLower.includes('đến rồi') ||
+    tLower.includes('đến nơi') ||
+    tLower.includes('đã tới') ||
+    tLower.includes('đã đến') ||
+    tLower.includes('đến quầy') ||
+    tLower.includes('tới quầy') ||
+    tLower.includes('vào quầy') ||
+    tLower.includes('vào phòng') ||
+    tLower.includes('sang phòng') ||
+    tLower.includes('tới phòng') ||
+    tLower.includes('đến cửa hàng') ||
+    tLower.includes('đến ngân hàng') ||
+    tLower.includes('tới ngân hàng')
   ) {
     const isMovementTitle = (title: string) => {
       const tl = title.toLowerCase();
@@ -406,17 +723,29 @@ export function parseLocalIntent(
 
     // Check if current active step is a movement task
     if (currentTaskOrSub && isMovementTitle(currentTaskOrSub.title) && currentTaskOrSub.status !== 'completed') {
-      return {
-        reply: `${da}, ${addressing} đã đến nơi an toàn rồi, mừng quá ${a}! ${me.charAt(0).toUpperCase() + me.slice(1)} đánh dấu hoàn thành bước "${currentTaskOrSub.title}" rồi nha. Bây giờ ${addressing} vào việc tiếp theo nhé!`,
-        actions: [
-          {
-            type: resolvedStep?.subtask ? 'COMPLETE_SUBTASK' : 'COMPLETE_TASK',
-            payload: {
-              taskId: resolvedStep?.task?.id || currentTaskOrSub.id,
-              subtaskId: resolvedStep?.subtask?.id,
-            },
+      const actions: AgentAction[] = [
+        {
+          type: resolvedStep?.subtask ? 'COMPLETE_SUBTASK' : 'COMPLETE_TASK',
+          payload: {
+            taskId: resolvedStep?.task?.id || currentTaskOrSub.id,
+            subtaskId: resolvedStep?.subtask?.id,
           },
-        ],
+        },
+      ];
+
+      const { newState } = applyAgentActionBatch(session, actions);
+      const nextRec = calculateNextRecommendedAction(newState);
+
+      let replyText = `${da}, ${addressing} đã đến nơi an toàn rồi, mừng quá ${a}!`;
+      if (nextRec && nextRec.title && !nextRec.title.includes('Hoàn thành tất cả')) {
+        const softGuidance = formatSoftNextStepGuidance(nextRec, honorifics, session.goal);
+        replyText += `\n\n${softGuidance}`;
+      }
+
+      return {
+        reply: replyText,
+        speech: replyText.replace(/👉/g, '').replace(/\n/g, ' '),
+        actions,
         confidence: 0.95,
       };
     }
@@ -553,6 +882,46 @@ export function parseLocalIntent(
       reply: 'Mình chưa lưu mã hồ sơ của bạn trong phiên này. Khi có giấy hẹn hoặc mã tra cứu, bạn nhắn mình lưu lại ngay nhé!',
       actions: [],
       confidence: 0.9,
+    };
+  }
+
+  // 8. Universal Recommendation & Advice Requests ("gợi ý bác đi", "bác chưa biết", "nó 4 tuổi", "chọn loại nào")
+  if (
+    tLower.includes('gợi ý') ||
+    tLower.includes('chưa biết') ||
+    tLower.includes('tư vấn') ||
+    tLower.includes('nếu mua') ||
+    tLower.includes('nên mua') ||
+    tLower.includes('chọn loại') ||
+    tLower.includes('mua gì') ||
+    tLower.includes('tuổi') ||
+    tLower.includes('không biết')
+  ) {
+    let adviceReply = '';
+    const factVal = text;
+
+    if (tLower.includes('4 tuổi') || (tLower.includes('tuổi') && (tLower.includes('4') || tLower.includes('bốn')))) {
+      adviceReply = `${da}, đối với cháu 4 tuổi, ${me} gợi ý bác một vài món ngon, lành tính và cháu rất thích nè:\n\n🥛 Sữa tươi tiệt trùng nguyên chất (TH True Milk Organic, Vinamilk)\n🍶 Sữa chua uống men sống tốt cho tiêu hóa\n🥐 Bánh quy xốp hình thú hoặc bánh flan mềm\n\nBác thích chọn mua món nào cho cháu hơn ${a}?`;
+    } else if (session.goal.toLowerCase().includes('mua sữa') || session.goal.toLowerCase().includes('mua đồ')) {
+      adviceReply = `${da}, nếu đi mua sữa hay mua đồ ăn, ${me} gợi ý bác một vài lựa chọn phổ biến và ngon miệng nhé:\n\n🥛 Sữa tươi tiệt trùng / Sữa hạt dinh dưỡng (óc chó, hạnh nhân)\n🍶 Sữa chua uống men sống tốt cho sức khỏe\n🍪 Bánh quy dinh dưỡng xốp mềm\n\nBác muốn ${me} ghi chú thêm gợi ý loại nào vào danh sách không ${a}?`;
+    } else {
+      adviceReply = `${da}, ${me} gợi ý ${addressing} một vài tiêu chuẩn chọn mua đồ tốt nhất nè:\n\n✨ Ưu tiên sản phẩm của các thương hiệu quen thuộc, uy tín\n🗓️ Kiểm tra kỹ ngày sản xuất và hạn sử dụng trên bao bì\n📦 Chọn bao bì nguyên vẹn, không móp méo\n\n${addressing.charAt(0).toUpperCase() + addressing.slice(1)} muốn ${me} hỗ trợ chi tiết thêm về mục nào không ${a}?`;
+    }
+
+    return {
+      reply: adviceReply,
+      speech: adviceReply.replace(/\n/g, ' '),
+      actions: [
+        {
+          type: 'ADD_FACT',
+          payload: {
+            category: 'requirement',
+            title: 'Dặn dò / Yêu cầu mới',
+            value: factVal,
+          },
+        },
+      ],
+      confidence: 0.95,
     };
   }
 

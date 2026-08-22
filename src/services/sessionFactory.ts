@@ -9,6 +9,7 @@ import {
 import { calculateNextRecommendedAction } from './actionEngine';
 import { ScenarioRoutingResult } from './scenarioRouter';
 import { normalizeGeneratedLifePlan } from './planValidator';
+import { deduceHonorifics, formatSoftNextStepGuidance } from './localIntentEngine';
 
 /**
  * Creates a complete, fully-hydrated LifeSession from a GeneratedSessionPlan
@@ -98,17 +99,20 @@ export function createLifeSessionFromPlan(
   // Dynamically calculate recommended next action so it incorporates subtasks and tasks cleanly
   session.nextRecommendedAction = calculateNextRecommendedAction(session);
 
-  const firstActionTitle =
-    session.nextRecommendedAction?.title ||
-    plan.firstRecommendedAction ||
-    tasks[0]?.title ||
-    'Bắt đầu bước đầu tiên';
+  const honorifics = deduceHonorifics(null, session, originalUserRequest);
+  const { addressing, me, da, a } = honorifics;
+
+  const firstAction = session.nextRecommendedAction || {
+    title: plan.firstRecommendedAction || tasks[0]?.title || 'Bắt đầu bước đầu tiên',
+  };
+
+  const softGuidance = formatSoftNextStepGuidance(firstAction, honorifics, session.goal);
 
   session.messages = [
     {
       id: `msg-${Date.now()}`,
       sender: 'lovira',
-      text: `Chào bạn nha! Mình đã lập kế hoạch cho mục tiêu: "${session.goal}".\n\nBước đầu tiên tụi mình làm sẽ là: "${firstActionTitle}". Nếu bạn có thêm thông tin chi tiết về thời gian hoặc địa điểm, cứ nhắn cho mình bất cứ lúc nào nhé!`,
+      text: `${da}${me.charAt(0).toUpperCase() + me.slice(1)} đã chuẩn bị kế hoạch đồng hành cùng ${addressing} rồi ạ.\n\n${softGuidance}`,
       timestamp: now,
     },
   ];

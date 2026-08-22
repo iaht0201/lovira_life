@@ -3,10 +3,11 @@ import { LifeSession, ModelProfile } from '../types';
 export const MODEL_POOL: ModelProfile[] = [
   { id: "openai/gpt-oss-20b", provider: "groq", capability: "fast", supportsVision: false, supportsToolCalling: true },
   { id: "openai/gpt-oss-120b", provider: "groq", capability: "reasoning", supportsVision: false, supportsToolCalling: true },
-  { id: "gemini-2.5-flash", provider: "gemini", capability: "fast", supportsVision: true, supportsToolCalling: true },
-  { id: "gemini-3.1-flash-lite", provider: "gemini", capability: "lite", supportsVision: true, supportsToolCalling: true },
   { id: "qwen/qwen3.6-27b", provider: "groq", capability: "conversation", supportsVision: false, supportsToolCalling: true },
   { id: "groq/compound-mini", provider: "groq", capability: "fast", supportsVision: false, supportsToolCalling: true },
+  { id: "groq/compound", provider: "groq", capability: "reasoning", supportsVision: false, supportsToolCalling: true },
+  { id: "gemini-2.5-flash", provider: "gemini", capability: "fast", supportsVision: true, supportsToolCalling: true },
+  { id: "gemini-3.1-flash-lite", provider: "gemini", capability: "lite", supportsVision: true, supportsToolCalling: true },
 ];
 
 export const DEMO_MEDICAL_SESSION: LifeSession = {
