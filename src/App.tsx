@@ -19,7 +19,12 @@ import {
 import { storageService, BriefSessionHeader } from './services/storageService';
 import { indexedDbService } from './services/indexedDbService';
 import { SCENARIO_TEMPLATES } from './data/initialData';
-import { applyAgentActionBatch, calculateNextRecommendedAction, reconcileParentTaskStatus } from './services/actionEngine';
+import {
+  applyAgentActionBatch,
+  calculateNextRecommendedAction,
+  reconcileParentTaskStatus,
+  reconcileSessionDerivedState,
+} from './services/actionEngine';
 import { parseLocalIntent } from './services/localIntentEngine';
 import { createLifeSessionFromPlan } from './services/sessionFactory';
 import { speakText } from './services/ttsService';
@@ -285,9 +290,8 @@ export default function App() {
       return t;
     });
 
-    const reconciledTasks = tasks.map((t) => reconcileParentTaskStatus(t));
-    const updated: LifeSession = { ...activeSession, tasks: reconciledTasks, updatedAt: new Date().toISOString() };
-    updated.nextRecommendedAction = calculateNextRecommendedAction(updated);
+    const candidate: LifeSession = { ...activeSession, tasks, updatedAt: new Date().toISOString() };
+    const updated = reconcileSessionDerivedState(candidate);
     saveUpdatedSession(updated);
   };
 
@@ -305,14 +309,13 @@ export default function App() {
           }
           return st;
         });
-        const parentCandidate = { ...t, subtasks: updatedSubtasks };
-        return reconcileParentTaskStatus(parentCandidate);
+        return { ...t, subtasks: updatedSubtasks };
       }
       return t;
     });
 
-    const updated: LifeSession = { ...activeSession, tasks, updatedAt: new Date().toISOString() };
-    updated.nextRecommendedAction = calculateNextRecommendedAction(updated);
+    const candidate: LifeSession = { ...activeSession, tasks, updatedAt: new Date().toISOString() };
+    const updated = reconcileSessionDerivedState(candidate);
     saveUpdatedSession(updated);
   };
 
@@ -329,15 +332,13 @@ export default function App() {
           order: existingSubtasks.length + 1,
           status: 'pending' as const,
         };
-        const updatedSubtasks = [...existingSubtasks, newSubtask];
-        const parentCandidate = { ...t, subtasks: updatedSubtasks };
-        return reconcileParentTaskStatus(parentCandidate);
+        return { ...t, subtasks: [...existingSubtasks, newSubtask] };
       }
       return t;
     });
 
-    const updated: LifeSession = { ...activeSession, tasks, updatedAt: new Date().toISOString() };
-    updated.nextRecommendedAction = calculateNextRecommendedAction(updated);
+    const candidate: LifeSession = { ...activeSession, tasks, updatedAt: new Date().toISOString() };
+    const updated = reconcileSessionDerivedState(candidate);
     saveUpdatedSession(updated);
     showToast(`Đã thêm bước con: "${title}"`);
   };
@@ -353,12 +354,12 @@ export default function App() {
       order: newOrder,
       status: 'pending' as const,
     };
-    const updated: LifeSession = {
+    const candidate: LifeSession = {
       ...activeSession,
       tasks: [...activeSession.tasks, newTask],
       updatedAt: new Date().toISOString(),
     };
-    updated.nextRecommendedAction = calculateNextRecommendedAction(updated);
+    const updated = reconcileSessionDerivedState(candidate);
     saveUpdatedSession(updated);
     showToast(`Đã thêm việc: "${title}"`);
   };
@@ -367,12 +368,12 @@ export default function App() {
   const handleDeleteTask = (taskId: string) => {
     if (!activeSession) return;
     const targetTask = activeSession.tasks.find((t) => t.id === taskId);
-    const updated: LifeSession = {
+    const candidate: LifeSession = {
       ...activeSession,
       tasks: activeSession.tasks.filter((t) => t.id !== taskId),
       updatedAt: new Date().toISOString(),
     };
-    updated.nextRecommendedAction = calculateNextRecommendedAction(updated);
+    const updated = reconcileSessionDerivedState(candidate);
     saveUpdatedSession(updated);
     showToast(`Đã xoá nhiệm vụ: "${targetTask?.title || ''}"`);
   };
@@ -538,20 +539,23 @@ export default function App() {
       const applyActionsAndSave = (actionsToApply: AgentAction[]) => {
         const batchRes = applyAgentActionBatch(sessionWithUserMsg, actionsToApply, 'chat');
 
-        if (batchRes.success) {
+        if (batchRes.status === 'full' || batchRes.status === 'partial') {
           const finalSession = batchRes.newState;
           const loviraMsg = {
             id: `msg-${Date.now()}`,
             sender: 'lovira' as const,
             text: replyText,
             timestamp: new Date().toISOString(),
-            actionsApplied: actionsToApply,
+            actionsApplied: batchRes.appliedActions,
           };
 
           finalSession.messages.push(loviraMsg);
           saveUpdatedSession(finalSession);
 
-          if (batchRes.logSummaries.length > 0) {
+          if (batchRes.status === 'partial') {
+            const failMsg = batchRes.rejectedActions.map((f) => f.reason).join(', ');
+            showToast(`⚠️ Lovira đã áp dụng một phần (${batchRes.appliedActions.length}/${actionsToApply.length}): ${failMsg}`);
+          } else if (batchRes.logSummaries.length > 0) {
             showToast(batchRes.logSummaries.join(' • '));
           }
 
@@ -563,7 +567,7 @@ export default function App() {
             setCameraModalOpen(true);
           }
         } else {
-          showToast(`⚠️ Lovira chưa thể cập nhật: ${batchRes.rejectedReason}`);
+          showToast(`⚠️ Lovira chưa thể cập nhật: ${batchRes.rejectedReason || 'Hành động không hợp lệ'}`);
         }
       };
 

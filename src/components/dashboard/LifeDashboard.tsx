@@ -128,7 +128,7 @@ export const LifeDashboard: React.FC<LifeDashboardProps> = ({
             Xin chào! Lovira có thể trợ giúp bạn làm việc gì hôm nay?
           </h2>
           <p className="text-sm md:text-base text-text-secondary leading-relaxed">
-            Lovira không chỉ trả lời câu hỏi. Lovira giúp bạn thực hiện từng bước công việc trong đời sống thực tế như đi khám bệnh, làm giấy tờ, mua sắm hoặc đọc tài liệu.
+            Lovira là trợ lý đồng hành thực tế — giúp bạn chuẩn bị, theo dõi và hoàn thành từng bước trong mọi sự kiện đời sống: phỏng vấn xin việc, đi khám bệnh, làm thủ tục hành chính, mua sắm, đón người thân hay bảo hành thiết bị.
           </p>
         </div>
       </section>

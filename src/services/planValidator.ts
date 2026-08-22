@@ -1,5 +1,5 @@
 import { GeneratedSessionPlan, GeneratedTask, ScenarioFamily, LifeModule, ImportantFactType } from '../types';
-import { ScenarioRoutingResult } from './scenarioRouter';
+import { ScenarioRoutingResult, extractKnownFacts } from './scenarioRouter';
 import { SCENARIO_REGISTRY } from './scenarioRegistry';
 
 export interface PlanValidationResult {
@@ -63,31 +63,51 @@ export function normalizeGeneratedLifePlan(
     ? rawPlan.modules
     : routing?.modules || registryEntry.defaultModules;
 
-  // Normalize Tasks
+  // Normalize Tasks with deduplication & max limit of 10 tasks
   let normalizedTasks: GeneratedTask[] = [];
-  if (Array.isArray(rawPlan?.tasks) && rawPlan.tasks.length > 0) {
-    normalizedTasks = rawPlan.tasks
-      .filter((t: any) => t && typeof t.title === 'string' && t.title.trim())
-      .map((t: any, idx: number) => {
-        const taskTitle = t.title.trim();
-        const subtasks = Array.isArray(t.subtasks)
-          ? t.subtasks
-              .filter((st: any) => st && typeof st.title === 'string' && st.title.trim())
-              .map((st: any, sIdx: number) => ({
-                title: st.title.trim(),
-                description: typeof st.description === 'string' ? st.description.trim() : undefined,
-                order: typeof st.order === 'number' ? st.order : sIdx + 1,
-              }))
-          : undefined;
+  const seenTaskTitles = new Set<string>();
 
-        return {
-          title: taskTitle,
-          description: typeof t.description === 'string' ? t.description.trim() : undefined,
-          order: typeof t.order === 'number' ? t.order : idx + 1,
-          important: typeof t.important === 'boolean' ? t.important : idx === 0,
-          subtasks: subtasks && subtasks.length > 0 ? subtasks : undefined,
-        };
+  if (Array.isArray(rawPlan?.tasks) && rawPlan.tasks.length > 0) {
+    for (const t of rawPlan.tasks) {
+      if (!t || typeof t.title !== 'string' || !t.title.trim()) continue;
+      const cleanTitle = t.title.trim();
+      const lowerKey = cleanTitle.toLowerCase();
+      if (seenTaskTitles.has(lowerKey)) continue;
+      seenTaskTitles.add(lowerKey);
+
+      // Subtasks deduplication
+      const seenSubtitles = new Set<string>();
+      let subtasks: { title: string; description?: string; order: number }[] | undefined;
+
+      if (Array.isArray(t.subtasks)) {
+        const cleanSubs = [];
+        let sIdx = 1;
+        for (const st of t.subtasks) {
+          if (!st || typeof st.title !== 'string' || !st.title.trim()) continue;
+          const subTitle = st.title.trim();
+          const subKey = subTitle.toLowerCase();
+          if (seenSubtitles.has(subKey) || subKey === lowerKey) continue;
+          seenSubtitles.add(subKey);
+
+          cleanSubs.push({
+            title: subTitle,
+            description: typeof st.description === 'string' ? st.description.trim() : undefined,
+            order: typeof st.order === 'number' ? st.order : sIdx++,
+          });
+        }
+        if (cleanSubs.length > 0) subtasks = cleanSubs;
+      }
+
+      normalizedTasks.push({
+        title: cleanTitle,
+        description: typeof t.description === 'string' ? t.description.trim() : undefined,
+        order: normalizedTasks.length + 1,
+        important: typeof t.important === 'boolean' ? t.important : normalizedTasks.length === 0,
+        subtasks,
       });
+
+      if (normalizedTasks.length >= 10) break;
+    }
   }
 
   // Fallback to registry tasks if tasks array is empty
@@ -101,25 +121,44 @@ export function normalizeGeneratedLifePlan(
     }));
   }
 
-  // Normalize Important Facts - only keep valid, non-empty, grounded facts
-  let normalizedFacts: { type: ImportantFactType; title: string; value: string }[] = [];
-  if (Array.isArray(rawPlan?.importantFacts)) {
-    const seen = new Set<string>();
-    normalizedFacts = rawPlan.importantFacts
-      .filter((f: any) => f && f.title && f.value && typeof f.value === 'string' && f.value.trim())
-      .map((f: any) => ({
-        type: (['date', 'time', 'location', 'person', 'requirement', 'instruction', 'warning', 'reference', 'contact', 'cost', 'identifier', 'note'].includes(f.type)
-          ? f.type
-          : 'requirement') as ImportantFactType,
-        title: String(f.title).trim(),
-        value: String(f.value).trim(),
-      }))
-      .filter((f: { type: ImportantFactType; title: string; value: string }) => {
-        const key = `${f.type}:${f.title.toLowerCase()}:${f.value.toLowerCase()}`;
-        if (seen.has(key)) return false;
-        seen.add(key);
-        return true;
+  // Normalize Important Facts - Merge extracted deterministic facts with generated facts
+  const deterministicFacts = extractKnownFacts(originalPrompt);
+  const seenFacts = new Set<string>();
+  const normalizedFacts: { type: ImportantFactType; title: string; value: string }[] = [];
+
+  // Add deterministic facts first
+  for (const df of deterministicFacts) {
+    const key = `${df.type}:${df.title.toLowerCase()}:${df.value.toLowerCase()}`;
+    if (!seenFacts.has(key)) {
+      seenFacts.add(key);
+      normalizedFacts.push({
+        type: df.type,
+        title: df.title,
+        value: df.value,
       });
+    }
+  }
+
+  // Add generated facts if valid and not conflicting
+  if (Array.isArray(rawPlan?.importantFacts)) {
+    for (const f of rawPlan.importantFacts) {
+      if (!f || !f.title || !f.value || typeof f.value !== 'string' || !f.value.trim()) continue;
+      const factType = (['date', 'time', 'location', 'person', 'requirement', 'instruction', 'warning', 'reference', 'contact', 'cost', 'identifier', 'note'].includes(f.type)
+        ? f.type
+        : 'requirement') as ImportantFactType;
+      const titleStr = String(f.title).trim();
+      const valStr = String(f.value).trim();
+      const key = `${factType}:${titleStr.toLowerCase()}:${valStr.toLowerCase()}`;
+
+      if (!seenFacts.has(key)) {
+        seenFacts.add(key);
+        normalizedFacts.push({
+          type: factType,
+          title: titleStr,
+          value: valStr,
+        });
+      }
+    }
   }
 
   // Calculate firstRecommendedAction

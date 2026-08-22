@@ -16,6 +16,8 @@ export interface BriefSessionHeader {
   title: string;
   status: LifeSession['status'];
   scenarioType: LifeSession['scenarioType'];
+  scenarioFamily?: ScenarioFamily;
+  subtype?: string;
   updatedAt: string;
 }
 
@@ -29,10 +31,10 @@ export const DEFAULT_ACCESSIBILITY: AccessibilitySettings = {
 };
 
 export const DEFAULT_AI_SETTINGS: AISettings = {
-  provider: 'demo',
+  provider: 'groq',
   apiKey: '',
-  selectedModel: 'gemini-2.5-flash',
-  demoMode: true,
+  selectedModel: 'openai/gpt-oss-20b',
+  demoMode: false,
 };
 
 /**
@@ -125,6 +127,8 @@ class StorageService {
         title: migrated.title,
         status: migrated.status,
         scenarioType: migrated.scenarioType,
+        scenarioFamily: migrated.scenarioFamily,
+        subtype: migrated.subtype,
         updatedAt: migrated.updatedAt,
       };
 

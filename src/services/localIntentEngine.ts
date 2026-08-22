@@ -255,6 +255,7 @@ export function parseLocalIntent(
     tLower.includes('tiếp theo') ||
     tLower.includes('làm gì tiếp') ||
     tLower.includes('giờ làm sao') ||
+    tLower.includes('giờ tôi làm gì') ||
     tLower.includes('bước tiếp theo') ||
     tLower.includes('bây giờ phải làm gì') ||
     tLower.includes('giờ tôi phải làm gì')
@@ -274,15 +275,7 @@ export function parseLocalIntent(
 
     return {
       reply,
-      actions: [
-        {
-          type: 'UPDATE_NEXT_ACTION',
-          payload: {
-            title: nextAction.title,
-            description: nextAction.description,
-          },
-        },
-      ],
+      actions: [],
       confidence: 0.95,
     };
   }

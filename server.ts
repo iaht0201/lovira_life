@@ -10,8 +10,8 @@ import { buildSessionContextPrompt } from './src/services/ai/SessionContextBuild
 import { callGroqAgent } from './src/services/ai/GroqProvider.js';
 import { selectGroqModel } from './src/services/ai/AIRouter.js';
 import { routeScenario, extractKnownFacts } from './src/services/scenarioRouter.js';
-import { normalizeGeneratedLifePlan } from './src/services/planValidator.js';
-import { resolveCurrentStep, calculateNextRecommendedAction } from './src/services/actionEngine.js';
+import { normalizeGeneratedLifePlan, validateGeneratedLifePlan } from './src/services/planValidator.js';
+import { resolveCurrentStep, calculateNextRecommendedAction, applyAgentActionBatch } from './src/services/actionEngine.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -131,26 +131,24 @@ async function startServer() {
           });
         }
 
-        // Only persist as fact if message contains real information (not simple conversational phrases)
-        const isConversational =
-          msgLower === 'cảm ơn' ||
-          msgLower === 'cảm ơn bạn' ||
-          msgLower === 'ok' ||
-          msgLower === 'được rồi' ||
-          msgLower.includes('giải thích') ||
-          msgLower.includes('lo quá') ||
-          msgLower.includes('làm gì') ||
-          msgLower.includes('tiếp theo');
-
-        if (!isConversational && message.trim().length > 6) {
-          actions.push({
-            type: 'ADD_FACT',
-            payload: {
-              category: 'note',
-              title: 'Ghi chú bổ sung',
-              value: message.trim(),
-            },
-          });
+        // Only persist as fact if user explicitly instructs to save or mentions real entity
+        if (
+          msgLower.startsWith('lưu lại:') ||
+          msgLower.startsWith('ghi nhớ:') ||
+          msgLower.startsWith('lưu thông tin:') ||
+          msgLower.startsWith('lưu:')
+        ) {
+          const cleanVal = message.replace(/^(lưu lại|ghi nhớ|lưu thông tin|lưu):?\s*/i, '').trim();
+          if (cleanVal) {
+            actions.push({
+              type: 'ADD_FACT',
+              payload: {
+                category: 'note',
+                title: 'Ghi chú đã lưu',
+                value: cleanVal,
+              },
+            });
+          }
         }
 
         // Completion intent
@@ -173,8 +171,13 @@ async function startServer() {
             },
           });
 
-          const nextRec = calculateNextRecommendedAction(session);
-          replyText = `Lovira đã ghi nhận bạn hoàn thành: "${activeTask.title}".\n\n👉 Bước tiếp theo: "${nextRec.title}".`;
+          const { newState } = applyAgentActionBatch(session, actions);
+          const nextRec = newState.nextRecommendedAction;
+          if (nextRec && nextRec.title && nextRec.title !== 'Hoàn thành tất cả công việc trong phiên! 🎉') {
+            replyText = `Lovira đã ghi nhận bạn hoàn thành: "${activeTask.title}".\n\n👉 Bước tiếp theo: "${nextRec.title}".`;
+          } else {
+            replyText = `Tuyệt vời! Bạn đã hoàn thành tất cả công việc trong phiên "${session.title}" rồi! 🎉`;
+          }
         } else if (msgLower.includes('tiếp theo') || msgLower.includes('làm gì') || msgLower.includes('cần làm')) {
           replyText = activeTask
             ? `Bước tiếp theo bạn cần thực hiện là: "${activeTask.title}". Khi xong bạn cứ nhắn cho Lovira nha!`
@@ -182,7 +185,7 @@ async function startServer() {
         } else {
           replyText = activeTask
             ? `Lovira đã ghi nhận: "${message}". Bước hiện tại của bạn là: "${activeTask.title}".`
-            : `Lovira đã ghi nhận thông tin: "${message}" vào phiên!`;
+            : `Lovira đã nhận tin nhắn của bạn. Bạn cần hỗ trợ gì tiếp theo nè?`;
         }
 
         return res.json({
@@ -411,6 +414,7 @@ async function startServer() {
         pLower.includes('phỏng vấn') ||
         pLower.includes('bảo hành') ||
         pLower.includes('sân bay') ||
+        pLower.includes('đón mẹ') ||
         pLower.includes('khám') ||
         pLower.includes('bệnh') ||
         pLower.includes('cccd') ||
@@ -419,7 +423,17 @@ async function startServer() {
         pLower.includes('ngân hàng') ||
         pLower.includes('làm thẻ') ||
         pLower.includes('chuyển nhà') ||
-        pLower.includes('mất ví')
+        pLower.includes('mất ví') ||
+        pLower.includes('gửi bưu kiện') ||
+        pLower.includes('gửi hàng') ||
+        pLower.includes('bưu điện') ||
+        pLower.includes('sửa máy') ||
+        pLower.includes('sửa laptop') ||
+        pLower.includes('sửa điện thoại') ||
+        pLower.includes('đi chợ') ||
+        pLower.includes('mua sắm') ||
+        pLower.includes('nộp cv') ||
+        pLower.includes('xin việc')
       ) {
         return res.json({ isSpecificEnough: true });
       }

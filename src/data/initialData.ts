@@ -113,9 +113,7 @@ export const SCENARIO_TEMPLATES = [
       "Nhận kết quả & mua thuốc",
       "Lưu lịch tái khám"
     ],
-    defaultFacts: [
-      { type: "requirement" as const, title: "Giấy tờ cần mang", value: "CCCD & Thẻ BHYT" }
-    ]
+    defaultFacts: []
   },
   {
     type: "administrative" as const,
@@ -130,9 +128,7 @@ export const SCENARIO_TEMPLATES = [
       "Nộp hồ sơ & nộp lệ phí",
       "Lưu giấy hẹn lấy kết quả"
     ],
-    defaultFacts: [
-      { type: "requirement" as const, title: "Giấy tờ cần chuẩn bị", value: "Sổ hộ khẩu / CCCD cũ / Ảnh 4x6" }
-    ]
+    defaultFacts: []
   },
   {
     type: "shopping" as const,
@@ -146,9 +142,7 @@ export const SCENARIO_TEMPLATES = [
       "Kiểm tra hạn sử dụng & giá tiền",
       "Thanh toán tại quầy thu ngân"
     ],
-    defaultFacts: [
-      { type: "instruction" as const, title: "Ngân sách mua sắm", value: "Dưới 500.000 VNĐ" }
-    ]
+    defaultFacts: []
   },
   {
     type: "document" as const,

@@ -274,11 +274,16 @@ export function validateAgentAction(
       return { valid: true };
     }
 
-    case 'REORDER_TASK':
+    case 'REORDER_TASK': {
       if (!payload.taskId || typeof payload.order !== 'number') {
         return { valid: false, reason: 'Lệnh đổi thứ tự thiếu mã nhiệm vụ hoặc thứ tự mới' };
       }
+      const matched = findBestMatchingTask(state, payload.taskId);
+      if (!matched.task && !matched.subtask) {
+        return { valid: false, reason: `Không tìm thấy nhiệm vụ phù hợp để đổi thứ tự: "${payload.taskId}"` };
+      }
       return { valid: true };
+    }
 
     case 'ADD_SUBTASK': {
       if (!payload.parentTaskId) {
@@ -554,11 +559,27 @@ export function applySingleAgentAction(
     }
 
     case 'ADD_RESOURCE': {
-      logSummary = `Đã thêm tài nguyên mới vào phiên`;
+      const newRes = {
+        id: `res-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`,
+        type: payload.resourceType || 'note',
+        title: (payload.title || 'Tài nguyên mới').trim(),
+        data: payload.data,
+        note: payload.note || payload.description,
+        createdAt: now,
+      };
+      newState.resources.push(newRes);
+      logSummary = `Đã thêm tài nguyên: "${newRes.title}"`;
       break;
     }
 
     case 'UPDATE_SESSION': {
+      const p = payload as any;
+      if (p.title) newState.title = p.title.trim();
+      if (p.goal) newState.goal = p.goal.trim();
+      if (p.scenarioFamily) newState.scenarioFamily = p.scenarioFamily;
+      if (p.subtype) newState.subtype = p.subtype;
+      if (Array.isArray(p.tags)) newState.tags = p.tags;
+      if (Array.isArray(p.modules)) newState.modules = p.modules;
       logSummary = `Đã cập nhật thông tin phiên`;
       break;
     }
@@ -592,6 +613,7 @@ export function applyAgentActionBatch(
   triggeredBy: SessionActionLogEntry['triggeredBy'] = 'chat'
 ): {
   success: boolean;
+  status: 'full' | 'partial' | 'failed';
   newState: LifeSession;
   appliedActions: AgentAction[];
   rejectedActions: { action: AgentAction; reason: string }[];
@@ -601,6 +623,7 @@ export function applyAgentActionBatch(
   if (!actions || actions.length === 0) {
     return {
       success: true,
+      status: 'full',
       newState: state,
       appliedActions: [],
       rejectedActions: [],
@@ -630,17 +653,28 @@ export function applyAgentActionBatch(
   // Reconcile all derived state (parent task status, currentStepId, nextRecommendedAction)
   const finalState = reconcileSessionDerivedState(currentState);
 
-  // If there was an explicit next action provided in the action batch, preserve it
+  // If there was an explicit next action provided in the action batch, preserve and link taskId properly
   const explicitNext = appliedActions.find((a) => a.type === 'UPDATE_NEXT_ACTION');
   if (explicitNext && explicitNext.payload.title) {
+    const matching = findBestMatchingTask(finalState, explicitNext.payload.taskId || explicitNext.payload.title);
+    const targetTaskId = matching.subtask?.id || matching.task?.id || explicitNext.payload.taskId;
     finalState.nextRecommendedAction = {
       title: explicitNext.payload.title,
       description: explicitNext.payload.description || 'Được chỉ định trực tiếp bởi Lovira',
+      taskId: targetTaskId,
+      parentContext: matching.parentTask?.title,
     };
+    if (targetTaskId) {
+      finalState.currentStepId = targetTaskId;
+    }
   }
 
+  const isAllSuccess = rejectedActions.length === 0;
+  const isAllFailed = appliedActions.length === 0 && actions.length > 0;
+
   return {
-    success: true,
+    success: isAllSuccess,
+    status: isAllSuccess ? 'full' : isAllFailed ? 'failed' : 'partial',
     newState: finalState,
     appliedActions,
     rejectedActions,
