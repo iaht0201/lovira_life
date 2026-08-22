@@ -1,0 +1,77 @@
+@import "tailwindcss";
+
+@layer base {
+  :root {
+    --font-scale: 1;
+    --bg-base: #FFFFFF;
+    --bg-surface: #F7F9F9;
+    --bg-surface-raised: #FFFFFF;
+    --text-primary: #14181B;
+    --text-secondary: #4B5563;
+    --border-default: #D9E0E1;
+    --color-primary: #00695C;
+    --color-primary-hover: #00534A;
+    --color-accent: #B45309;
+    --color-success: #15803D;
+    --color-warning: #B45309;
+    --color-danger: #B91C1C;
+    --color-focus-ring: #0B6E99;
+  }
+
+  html.dark {
+    --bg-base: #0F1417;
+    --bg-surface: #1B2226;
+    --bg-surface-raised: #232C31;
+    --text-primary: #F3F5F6;
+    --text-secondary: #B8C2C7;
+    --border-default: #33404A;
+    --color-primary: #4FD1C5;
+    --color-primary-hover: #6EE0D6;
+    --color-accent: #FBBF24;
+    --color-success: #4ADE80;
+    --color-warning: #FBBF24;
+    --color-danger: #F87171;
+    --color-focus-ring: #4FD1C5;
+  }
+
+  html.high-contrast {
+    --bg-base: #000000 !important;
+    --bg-surface: #121212 !important;
+    --bg-surface-raised: #000000 !important;
+    --text-primary: #FFFFFF !important;
+    --text-secondary: #E0E0E0 !important;
+    --border-default: #FFFFFF !important;
+    --color-primary: #FFFF00 !important;
+    --color-primary-hover: #FFFF88 !important;
+  }
+
+  html {
+    font-size: calc(16px * var(--font-scale));
+    background-color: var(--bg-base);
+    color: var(--text-primary);
+  }
+
+  body {
+    background-color: var(--bg-base);
+    color: var(--text-primary);
+    min-height: 100vh;
+  }
+
+  *:focus-visible {
+    outline: 3px solid var(--color-focus-ring) !important;
+    outline-offset: 2px !important;
+  }
+}
+
+.bg-bg-base { background-color: var(--bg-base); }
+.bg-surface { background-color: var(--bg-surface); }
+.bg-surface-raised { background-color: var(--bg-surface-raised); }
+.text-text-primary { color: var(--text-primary); }
+.text-text-secondary { color: var(--text-secondary); }
+.border-default { border-color: var(--border-default); }
+.bg-primary { background-color: var(--color-primary); }
+.text-primary { color: var(--color-primary); }
+.border-primary { border-color: var(--color-primary); }
+.hover\:bg-primary-hover:hover { background-color: var(--color-primary-hover); }
+.text-danger { color: var(--color-danger); }
+.bg-danger { background-color: var(--color-danger); }
