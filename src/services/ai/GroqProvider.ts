@@ -1,29 +1,44 @@
-import { LifeSession, LoviraAgentResponse, AgentAction, UserProfile } from '../../types';
+import {
+  LifeSession,
+  LoviraAgentResponse,
+  AgentAction,
+  UserProfile,
+  InteractionInputMode,
+  AppInteractionContext,
+  AppAction,
+} from '../../types';
 import { buildSessionContextPrompt } from './SessionContextBuilder';
 
 export interface GroqRequestOptions {
   message: string;
-  session: LifeSession;
+  session?: LifeSession | null;
   userProfile?: UserProfile | null;
   modelOverride?: string;
+  inputMode?: InteractionInputMode;
+  appContext?: AppInteractionContext;
 }
 
 export async function callGroqAgent(
   options: GroqRequestOptions,
   apiKey: string
 ): Promise<LoviraAgentResponse | null> {
-  const { message, session, userProfile, modelOverride } = options;
+  const { message, session, userProfile, modelOverride, inputMode, appContext } = options;
   const model = modelOverride || 'openai/gpt-oss-20b';
   const startTime = Date.now();
 
-  const contextPrompt = buildSessionContextPrompt(session, userProfile);
+  const contextPrompt = buildSessionContextPrompt({
+    session,
+    userProfile,
+    inputMode,
+    appContext,
+  });
 
   const tools = [
     {
       type: 'function',
       function: {
         name: 'update_life_session',
-        description: 'Phát hành các hành động cập nhật trạng thái phiên (Tasks, Subtasks, Facts, Step tiếp theo)',
+        description: 'Phát hành các hành động cập nhật trạng thái phiên (Tasks, Subtasks, Facts) hoặc điều hướng ứng dụng (App Actions)',
         parameters: {
           type: 'object',
           properties: {
@@ -42,7 +57,7 @@ export async function callGroqAgent(
             },
             actions: {
               type: 'array',
-              description: 'Danh sách các hành động cập nhật trạng thái',
+              description: 'Danh sách các hành động cập nhật trạng thái phiên',
               items: {
                 type: 'object',
                 properties: {
@@ -90,8 +105,41 @@ export async function callGroqAgent(
                 required: ['type', 'payload'],
               },
             },
+            appActions: {
+              type: 'array',
+              description: 'Danh sách các hành động điều hướng hoặc thao tác cấp ứng dụng (GO_HOME, OPEN_SETTINGS, OPEN_PROFILE, OPEN_SESSION, CREATE_SESSION, OPEN_CAMERA)',
+              items: {
+                type: 'object',
+                properties: {
+                  type: {
+                    type: 'string',
+                    enum: [
+                      'GO_HOME',
+                      'GO_BACK',
+                      'OPEN_SESSION',
+                      'CREATE_SESSION',
+                      'OPEN_SETTINGS',
+                      'OPEN_PROFILE',
+                      'OPEN_CAMERA',
+                      'UPDATE_ACCESSIBILITY_SETTING',
+                    ],
+                  },
+                  payload: {
+                    type: 'object',
+                    properties: {
+                      sessionId: { type: 'string' },
+                      sessionTitle: { type: 'string' },
+                      goal: { type: 'string' },
+                      setting: { type: 'string' },
+                      value: {},
+                    },
+                  },
+                },
+                required: ['type'],
+              },
+            },
           },
-          required: ['reply', 'actions'],
+          required: ['reply'],
         },
       },
     },
@@ -128,6 +176,7 @@ export async function callGroqAgent(
 
     let reply = choice?.message?.content || '';
     let actions: AgentAction[] = [];
+    let appActions: AppAction[] = [];
     let speech: string | undefined = undefined;
     let suggestedReplies: string[] | undefined = undefined;
 
@@ -137,6 +186,7 @@ export async function callGroqAgent(
         if (parsed.reply) reply = parsed.reply;
         if (parsed.speech) speech = parsed.speech;
         if (Array.isArray(parsed.actions)) actions = parsed.actions;
+        if (Array.isArray(parsed.appActions)) appActions = parsed.appActions;
         if (Array.isArray(parsed.suggestedReplies)) suggestedReplies = parsed.suggestedReplies;
       } catch (err) {
         console.warn('Groq arguments parse error:', err);
@@ -144,8 +194,8 @@ export async function callGroqAgent(
     }
 
     if (!reply) {
-      reply = actions.length > 0 
-        ? 'Mình đã cập nhật danh sách cho phiên của bạn rồi nhé!' 
+      reply = actions.length > 0 || appActions.length > 0
+        ? 'Mình đã cập nhật danh sách cho bạn rồi nhé!'
         : 'Lovira đã nhận nhắn gửi của bạn!';
     }
 
@@ -153,6 +203,7 @@ export async function callGroqAgent(
       reply: reply.replace(/\*\*/g, '').replace(/[*#]/g, ''),
       speech: (speech || reply).replace(/[*#]/g, ''),
       actions,
+      appActions: appActions.length > 0 ? appActions : undefined,
       suggestedReplies,
       meta: {
         engine: 'groq',

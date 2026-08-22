@@ -21,7 +21,7 @@ interface LifeSessionPageProps {
   onAddFact: (fact: { category: ImportantFactType; title: string; value: string }) => void;
   onDeleteFact: (factId: string) => void;
   onDeleteResource: (id: string) => void;
-  onSendMessage: (text: string) => void;
+  onSendMessage: (text: string, options?: { inputMode?: 'text' | 'voice' }) => void;
   onOpenCamera: () => void;
   isLoading?: boolean;
 }

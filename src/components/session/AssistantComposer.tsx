@@ -1,11 +1,12 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Send, Mic, Camera, Sparkles, Volume2, Bot, User, Loader2 } from 'lucide-react';
+import { Send, Mic, MicOff, Camera, Sparkles, Volume2, Bot, User, Loader2 } from 'lucide-react';
 import { SessionMessage, AgentAction } from '../../types';
-import { speakText } from '../../services/ttsService';
+import { speakText, stopSpeaking } from '../../services/ttsService';
+import { speechRecognitionService } from '../../services/voice/speechRecognitionService';
 
 interface AssistantComposerProps {
   messages: SessionMessage[];
-  onSendMessage: (text: string) => void;
+  onSendMessage: (text: string, options?: { inputMode?: 'text' | 'voice' }) => void;
   onOpenCamera: () => void;
   isLoading?: boolean;
   scenarioType?: string;
@@ -19,11 +20,14 @@ export const AssistantComposer: React.FC<AssistantComposerProps> = ({
 }) => {
   const [input, setInput] = useState('');
   const [isRecording, setIsRecording] = useState(false);
+  const [interimText, setInterimText] = useState<string | null>(null);
   const [recordNotice, setRecordNotice] = useState<string | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   // Dynamic suggested replies from the latest assistant message
-  const lastAssistantMessage = [...messages].reverse().find((m) => m.sender === 'lovira' || m.sender === 'system');
+  const lastAssistantMessage = [...messages]
+    .reverse()
+    .find((m) => m.sender === 'lovira' || m.sender === 'system');
   const dynamicReplies = lastAssistantMessage?.suggestedReplies;
 
   const defaultUniversalReplies = [
@@ -32,9 +36,10 @@ export const AssistantComposer: React.FC<AssistantComposerProps> = ({
     'Nhờ Lovira tư vấn',
   ];
 
-  const quickPrompts = (dynamicReplies && dynamicReplies.length > 0)
-    ? dynamicReplies.slice(0, 3)
-    : defaultUniversalReplies.slice(0, 3);
+  const quickPrompts =
+    dynamicReplies && dynamicReplies.length > 0
+      ? dynamicReplies.slice(0, 3)
+      : defaultUniversalReplies.slice(0, 3);
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -43,55 +48,57 @@ export const AssistantComposer: React.FC<AssistantComposerProps> = ({
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!input.trim() || isLoading) return;
-    onSendMessage(input.trim());
+    onSendMessage(input.trim(), { inputMode: 'text' });
     setInput('');
   };
 
   const handleQuickPrompt = (prompt: string) => {
     if (isLoading) return;
-    onSendMessage(prompt);
+    onSendMessage(prompt, { inputMode: 'text' });
   };
 
   const handleMicClick = () => {
-    // Check Web Speech API support
-    if (typeof window !== 'undefined' && ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window)) {
-      try {
-        const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
-        const recognition = new SpeechRecognition();
-        recognition.lang = 'vi-VN';
-        recognition.interimResults = false;
+    if (isRecording) {
+      speechRecognitionService.stopListening();
+      setIsRecording(false);
+      setInterimText(null);
+      return;
+    }
 
-        recognition.onstart = () => {
-          setIsRecording(true);
-          setRecordNotice('Đang lắng nghe giọng nói tiếng Việt...');
-        };
+    // Stop speaking if Lovira is currently talking
+    stopSpeaking();
 
-        recognition.onresult = (event: any) => {
-          const transcript = event.results[0][0].transcript;
-          if (transcript) {
-            onSendMessage(transcript);
-          }
-        };
+    const started = speechRecognitionService.startListening({
+      onStart: () => {
+        setIsRecording(true);
+        setInterimText(null);
+        setRecordNotice('Đang lắng nghe giọng nói...');
+      },
+      onInterimResult: (transcript) => {
+        setInterimText(transcript);
+      },
+      onFinalResult: (transcript) => {
+        setIsRecording(false);
+        setInterimText(null);
+        setRecordNotice(null);
+        if (transcript.trim()) {
+          onSendMessage(transcript.trim(), { inputMode: 'voice' });
+        }
+      },
+      onError: (errType, message) => {
+        setIsRecording(false);
+        setInterimText(null);
+        setRecordNotice(message);
+        setTimeout(() => setRecordNotice(null), 3500);
+      },
+      onEnd: () => {
+        setIsRecording(false);
+        setInterimText(null);
+      },
+    });
 
-        recognition.onerror = (err: any) => {
-          console.warn('Speech recognition error:', err);
-          setIsRecording(false);
-          setRecordNotice('Chưa nhận diện được giọng nói. Bạn hãy gõ câu lệnh nhé!');
-          setTimeout(() => setRecordNotice(null), 3000);
-        };
-
-        recognition.onend = () => {
-          setIsRecording(false);
-          setRecordNotice(null);
-        };
-
-        recognition.start();
-      } catch {
-        setRecordNotice('Trình duyệt chưa hỗ trợ ghi âm. Bạn hãy gõ phím nhé!');
-        setTimeout(() => setRecordNotice(null), 3000);
-      }
-    } else {
-      setRecordNotice('Tính năng giọng nói tiếng Việt nâng cao "Sắp có". Bạn hãy nhập câu hỏi bên dưới!');
+    if (!started) {
+      setRecordNotice('Chưa bật được micro. Bạn hãy nhập câu hỏi bằng bàn phím nhé!');
       setTimeout(() => setRecordNotice(null), 3000);
     }
   };
@@ -108,7 +115,7 @@ export const AssistantComposer: React.FC<AssistantComposerProps> = ({
               Hỏi hoặc dặn dò Lovira trong phiên này
             </h3>
             <p className="text-xs text-text-secondary">
-              Bạn có thể hỏi, trò chuyện hoặc nói cho Lovira biết điều vừa xảy ra.
+              Bạn có thể gõ phím hoặc bấm micro để trò chuyện tự nhiên với Lovira.
             </p>
           </div>
         </div>
@@ -148,8 +155,8 @@ export const AssistantComposer: React.FC<AssistantComposerProps> = ({
                     className="flex items-center gap-1 text-[10px] font-bold text-primary mt-1 hover:underline"
                     aria-label="Đọc lại câu trả lời này"
                   >
-                    <Volume2 className="w-3 h-3" />
-                    <span>Đọc lời này</span>
+                    <Volume2 className="w-3.5 h-3.5" />
+                    Đọc to câu này
                   </button>
                 )}
               </div>
@@ -158,80 +165,91 @@ export const AssistantComposer: React.FC<AssistantComposerProps> = ({
         })}
 
         {isLoading && (
-          <div className="flex items-center gap-2 text-xs font-medium text-primary p-2">
-            <Loader2 className="w-4 h-4 animate-spin" />
-            <span>Lovira đang suy nghĩ và cập nhật phiên...</span>
+          <div className="flex items-center gap-2 p-3 text-xs text-text-secondary">
+            <Loader2 className="w-4 h-4 animate-spin text-primary" />
+            <span>Lovira đang lắng nghe và suy nghĩ...</span>
           </div>
         )}
 
         <div ref={messagesEndRef} />
       </div>
 
-      {/* Suggested Quick Reply Chips */}
-      {quickPrompts.length > 0 && (
-        <div className="flex items-center gap-1.5 flex-wrap pt-0.5">
-          <span className="text-[11px] font-semibold text-text-secondary">
-            Gợi ý:
-          </span>
-          {quickPrompts.map((prompt) => (
+      {/* Suggested Fast Quick Reply Chips */}
+      <div className="flex flex-wrap gap-2 pt-1">
+        <span className="text-[11px] font-bold text-text-secondary flex items-center gap-1">
+          <Sparkles className="w-3 h-3 text-amber-500" />
+          Gợi ý nhanh:
+        </span>
+        {quickPrompts.map((prompt, idx) => (
+          <button
+            key={idx}
+            type="button"
+            disabled={isLoading}
+            onClick={() => handleQuickPrompt(prompt)}
+            className="px-3 py-1.5 rounded-full text-xs font-medium bg-surface-raised border border-default hover:border-primary hover:text-primary transition-colors text-text-primary active:scale-95 disabled:opacity-50"
+          >
+            {prompt}
+          </button>
+        ))}
+      </div>
+
+      {/* Speech notice or interim feedback */}
+      {(recordNotice || interimText) && (
+        <div className="p-2.5 rounded-xl bg-primary/10 border border-primary/20 text-xs font-medium text-text-primary flex items-center justify-between animate-in fade-in">
+          <span>{interimText ? `Đang nghe: "${interimText}"` : recordNotice}</span>
+          {isRecording && (
             <button
-              key={prompt}
-              onClick={() => handleQuickPrompt(prompt)}
-              disabled={isLoading}
-              className="min-h-[34px] px-3 py-1 rounded-full bg-surface-raised border border-default hover:border-primary hover:bg-primary/10 text-text-primary text-xs font-medium transition-all"
+              onClick={() => speechRecognitionService.stopListening()}
+              className="text-[11px] font-bold text-primary underline ml-2 shrink-0"
             >
-              {prompt}
+              Gửi ngay
             </button>
-          ))}
+          )}
         </div>
       )}
 
-      {/* Record Notice Popup */}
-      {recordNotice && (
-        <div className="p-2.5 rounded-xl bg-amber-500/15 border border-amber-500/40 text-amber-900 dark:text-amber-200 text-xs font-bold animate-fade-in">
-          {recordNotice}
-        </div>
-      )}
-
-      {/* Input Box */}
+      {/* User Input & Action Buttons Bar */}
       <form onSubmit={handleSubmit} className="flex items-center gap-2">
         <button
           type="button"
-          onClick={onOpenCamera}
-          className="min-h-[44px] min-w-[44px] flex items-center justify-center rounded-xl border border-default bg-surface hover:border-primary text-text-primary transition-all"
-          aria-label="Chụp ảnh tài liệu hoặc số thứ tự"
+          onClick={handleMicClick}
+          className={`p-3 rounded-xl border transition-all ${
+            isRecording
+              ? 'bg-rose-500 text-white border-rose-600 animate-pulse'
+              : 'bg-surface-raised text-text-secondary border-default hover:text-primary hover:border-primary'
+          }`}
+          title={isRecording ? 'Bấm để dừng thu âm' : 'Nói chuyện bằng giọng nói'}
+          aria-label={isRecording ? 'Dừng thu âm' : 'Bật micro'}
         >
-          <Camera className="w-5 h-5 text-amber-600 dark:text-amber-400" aria-hidden="true" />
+          {isRecording ? <MicOff className="w-5 h-5" /> : <Mic className="w-5 h-5" />}
         </button>
 
         <button
           type="button"
-          onClick={handleMicClick}
-          className={`min-h-[44px] min-w-[44px] flex items-center justify-center rounded-xl border transition-all ${
-            isRecording
-              ? 'bg-red-500 text-white border-red-600 animate-pulse'
-              : 'border-default bg-surface hover:border-primary text-text-primary'
-          }`}
-          aria-label="Nói câu lệnh bằng giọng nói"
+          onClick={onOpenCamera}
+          className="p-3 rounded-xl bg-surface-raised text-text-secondary border border-default hover:text-amber-600 hover:border-amber-500 transition-colors"
+          title="Nhìn giúp tôi — Quét ảnh tài liệu"
+          aria-label="Mở máy ảnh"
         >
-          <Mic className="w-5 h-5" aria-hidden="true" />
+          <Camera className="w-5 h-5" />
         </button>
 
         <input
           type="text"
           value={input}
           onChange={(e) => setInput(e.target.value)}
-          placeholder="Hỏi hoặc nói cho Lovira biết điều bạn cần..."
-          className="flex-1 min-h-[44px] px-4 py-2.5 rounded-xl border border-default bg-surface text-text-primary text-xs md:text-sm focus:outline-hidden focus:ring-2 focus:ring-primary"
+          placeholder="Nhắn hoặc dặn dò Lovira..."
+          disabled={isLoading}
+          className="flex-1 px-4 py-3 rounded-xl bg-surface-raised border border-default text-text-primary text-sm focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition-all"
         />
 
         <button
           type="submit"
           disabled={!input.trim() || isLoading}
-          className="min-h-[44px] px-5 py-2.5 rounded-xl bg-primary text-white font-bold text-sm shadow-md hover:bg-primary-hover disabled:opacity-50 transition-all flex items-center justify-center"
-          aria-label="Gửi tin nhắn cho Lovira"
+          className="p-3 rounded-xl bg-primary text-white font-bold disabled:opacity-40 hover:bg-primary-hover transition-colors shadow-xs"
+          aria-label="Gửi tin nhắn"
         >
-          <Send className="w-4 h-4" aria-hidden="true" />
+          <Send className="w-5 h-5" />
         </button>
       </form>
     </div>

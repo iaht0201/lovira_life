@@ -100,6 +100,23 @@ class IndexedDbService {
       console.warn('Failed to delete resource blob from IndexedDB', e);
     }
   }
+
+  async deleteSessionBlobs(sessionId: string): Promise<void> {
+    try {
+      const blobs = await this.getSessionResourceBlobs(sessionId);
+      if (blobs.length === 0) return;
+      const db = await this.getDB();
+      return new Promise((resolve, reject) => {
+        const tx = db.transaction(RESOURCE_STORE, 'readwrite');
+        const store = tx.objectStore(RESOURCE_STORE);
+        blobs.forEach((b) => store.delete(b.id));
+        tx.oncomplete = () => resolve();
+        tx.onerror = () => reject(tx.error);
+      });
+    } catch (e) {
+      console.warn('Failed to delete session blobs from IndexedDB', e);
+    }
+  }
 }
 
 export const indexedDbService = new IndexedDbService();

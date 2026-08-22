@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import {
   LifeSession,
   SessionStatus,
@@ -16,6 +16,12 @@ import {
   GeneratedSessionPlan,
   UserProfile,
   ScenarioFamily,
+  VoiceInteractionState,
+  VoiceErrorType,
+  InteractionInputMode,
+  AppAction,
+  AppInteractionContext,
+  PendingInteraction,
 } from './types';
 import { storageService, BriefSessionHeader } from './services/storageService';
 import { indexedDbService } from './services/indexedDbService';
@@ -30,7 +36,11 @@ import {
 import { buildPartialSuccessReply, deduceHonorifics } from './services/conversationStyle';
 import { parseLocalIntent } from './services/localIntentEngine';
 import { createLifeSessionFromPlan } from './services/sessionFactory';
-import { speakText } from './services/ttsService';
+import { speakText, stopSpeaking, isSpeaking } from './services/ttsService';
+import { speechRecognitionService } from './services/voice/speechRecognitionService';
+import { validateAppAction } from './services/interaction/appActionValidator';
+import { applyAppAction } from './services/interaction/appActionEngine';
+import { resolvePendingInteraction } from './services/interaction/pendingInteractionResolver';
 
 import { Header } from './components/common/Header';
 import { Navigation, NavTab } from './components/common/Navigation';
@@ -45,6 +55,7 @@ import { VSLFloatingPanel } from './components/vsl/VSLFloatingPanel';
 import { SettingsPage } from './components/settings/SettingsPage';
 import { ProfileInviteBanner } from './components/profile/ProfileInviteBanner';
 import { ProfileSetupFlow } from './components/profile/ProfileSetupFlow';
+import { GlobalVoiceButton } from './components/voice/GlobalVoiceButton';
 
 export default function App() {
   const [activeTab, setActiveTab] = useState<NavTab>('dashboard');
@@ -63,6 +74,12 @@ export default function App() {
   const [bannerDismissed, setBannerDismissed] = useState(
     storageService.isProfileBannerDismissed()
   );
+
+  // Voice Interaction State (Version 2)
+  const [voiceStatus, setVoiceStatus] = useState<VoiceInteractionState>('idle');
+  const [interimTranscript, setInterimTranscript] = useState<string>('');
+  const [voiceError, setVoiceError] = useState<string | undefined>(undefined);
+  const [pendingInteraction, setPendingInteraction] = useState<PendingInteraction | null>(null);
 
   const [confirmModal, setConfirmModal] = useState<{
     isOpen: boolean;
@@ -178,8 +195,8 @@ export default function App() {
         storageService.setActiveSessionId(newCustomSession.id);
         setActiveTab('session');
         showToast(`✨ Đã khởi tạo thành công phiên AI: "${newCustomSession.title}"`);
-        if (accessibility.speakResponse) {
-          speakText(`Lovira đã tạo xong kế hoạch cho ${newCustomSession.title}`);
+        if (accessibility.speakResponse || voiceStatus === 'speaking') {
+          speakWithVoiceStatus(`Lovira đã tạo xong kế hoạch cho ${newCustomSession.title}`);
         }
       } catch (err) {
         console.error('Error generating AI session plan:', err);
@@ -250,153 +267,222 @@ export default function App() {
     showToast(`Đã khởi tạo phiên "${newSession.title}"`);
   };
 
-  // 3. Delete Session with Confirm
+  // Helper for TTS synchronized with Voice Status
+  const speakWithVoiceStatus = useCallback((text: string) => {
+    stopSpeaking();
+    setVoiceStatus('speaking');
+    speakText(text, {
+      onStart: () => setVoiceStatus('speaking'),
+      onEnd: () => setVoiceStatus('idle'),
+      onError: () => setVoiceStatus('idle'),
+    });
+  }, []);
+
+  // 3. Delete Session
   const handleDeleteSession = (id: string) => {
-    const target = storageService.getSession(id);
     setConfirmModal({
       isOpen: true,
       title: 'Xoá phiên hỗ trợ',
-      message: `Bạn có chắc chắn muốn xoá phiên "${target?.title || id}"? Thao tác này sẽ xoá lịch sử và thông tin được lưu trên thiết bị.`,
+      message: 'Bạn có chắc chắn muốn xoá toàn bộ dữ liệu phiên này? Thao tác này không thể hoàn tác.',
       onConfirm: () => {
         storageService.deleteSession(id);
-        refreshSessionsList();
+        indexedDbService.deleteSessionBlobs(id);
         if (activeSession?.id === id) {
-          const list = storageService.getSessionsList();
-          if (list.length > 0) {
-            handleOpenSession(list[0].id);
-          } else {
-            setActiveSession(null);
-            setActiveTab('dashboard');
-          }
+          setActiveSession(null);
+          storageService.clearActiveSessionId();
+          setActiveTab('dashboard');
         }
+        refreshSessionsList();
         setConfirmModal((prev) => ({ ...prev, isOpen: false }));
         showToast('Đã xoá phiên hỗ trợ');
       },
     });
   };
 
-  // 4. Update Session Status
-  const handleUpdateStatus = (status: SessionStatus) => {
+  // 4. Update Status (Complete / Pause / Resume / Archive)
+  const handleUpdateStatus = (newStatus: SessionStatus) => {
     if (!activeSession) return;
-    const updated = { ...activeSession, status, updatedAt: new Date().toISOString() };
+    const now = new Date().toISOString();
+    const updated: LifeSession = {
+      ...activeSession,
+      status: newStatus,
+      updatedAt: now,
+      actionLog: [
+        {
+          id: `log-${Date.now()}`,
+          timestamp: now,
+          actionType: 'UPDATE_STATUS',
+          summary: `Chuyển trạng thái sang ${newStatus}`,
+          triggeredBy: 'manual',
+        },
+        ...activeSession.actionLog,
+      ],
+    };
     saveUpdatedSession(updated);
-    showToast(`Đã chuyển trạng thái phiên sang ${status}`);
+    showToast(`Đã chuyển trạng thái sang: ${newStatus}`);
   };
 
-  // 5. Toggle Task Complete
+  // 5. Toggle Task (Direct & Reconcile Parent)
   const handleToggleTask = (taskId: string) => {
     if (!activeSession) return;
-    const tasks = activeSession.tasks.map((t) => {
+    const now = new Date().toISOString();
+
+    const updatedTasks = activeSession.tasks.map((t) => {
       if (t.id === taskId) {
-        const nextStatus = t.status === 'completed' ? ('pending' as const) : ('completed' as const);
-        const updatedSubtasks = t.subtasks
-          ? t.subtasks.map((st) => ({ ...st, status: nextStatus }))
-          : undefined;
-        return { ...t, status: nextStatus, subtasks: updatedSubtasks };
+        const nextStatus = t.status === 'completed' ? 'pending' : 'completed';
+        // Auto complete all subtasks if task is marked completed
+        const updatedSubs = (t.subtasks || []).map((st) => ({
+          ...st,
+          status: nextStatus === 'completed' ? ('completed' as const) : st.status,
+        }));
+        return {
+          ...t,
+          status: nextStatus as any,
+          completedAt: nextStatus === 'completed' ? now : undefined,
+          subtasks: updatedSubs,
+        };
       }
       return t;
     });
 
-    const candidate: LifeSession = { ...activeSession, tasks, updatedAt: new Date().toISOString() };
-    const updated = reconcileSessionDerivedState(candidate);
-    saveUpdatedSession(updated);
+    let updatedSession: LifeSession = {
+      ...activeSession,
+      tasks: updatedTasks,
+      updatedAt: now,
+    };
+
+    updatedSession = reconcileSessionDerivedState(updatedSession);
+    saveUpdatedSession(updatedSession);
   };
 
-  // 5b. Toggle Subtask Complete
+  // 6. Toggle Subtask (Direct & Reconcile Parent)
   const handleToggleSubtask = (parentTaskId: string, subtaskId: string) => {
     if (!activeSession) return;
-    const tasks = activeSession.tasks.map((t) => {
+    const now = new Date().toISOString();
+
+    const updatedTasks = activeSession.tasks.map((t) => {
       if (t.id === parentTaskId && t.subtasks) {
-        const updatedSubtasks = t.subtasks.map((st) => {
+        const updatedSubs = t.subtasks.map((st) => {
           if (st.id === subtaskId) {
+            const nextStatus = st.status === 'completed' ? 'pending' : 'completed';
             return {
               ...st,
-              status: st.status === 'completed' ? ('pending' as const) : ('completed' as const),
+              status: nextStatus as any,
+              completedAt: nextStatus === 'completed' ? now : undefined,
             };
           }
           return st;
         });
-        return { ...t, subtasks: updatedSubtasks };
-      }
-      return t;
-    });
 
-    const candidate: LifeSession = { ...activeSession, tasks, updatedAt: new Date().toISOString() };
-    const updated = reconcileSessionDerivedState(candidate);
-    saveUpdatedSession(updated);
-  };
+        const allDone = updatedSubs.every((s) => s.status === 'completed');
+        const anyDone = updatedSubs.some((s) => s.status === 'completed');
+        const parentStatus = allDone
+          ? ('completed' as const)
+          : anyDone
+          ? ('in_progress' as const)
+          : t.status === 'completed'
+          ? ('in_progress' as const)
+          : t.status;
 
-  // 5c. Add Subtask
-  const handleAddSubtask = (parentTaskId: string, title: string) => {
-    if (!activeSession) return;
-    const tasks = activeSession.tasks.map((t) => {
-      if (t.id === parentTaskId) {
-        const existingSubtasks = t.subtasks || [];
-        const newSubtask = {
-          id: `subtask-${Date.now()}`,
-          parentTaskId,
-          title,
-          order: existingSubtasks.length + 1,
-          status: 'pending' as const,
+        return {
+          ...t,
+          status: parentStatus,
+          subtasks: updatedSubs,
         };
-        return { ...t, subtasks: [...existingSubtasks, newSubtask] };
       }
       return t;
     });
 
-    const candidate: LifeSession = { ...activeSession, tasks, updatedAt: new Date().toISOString() };
-    const updated = reconcileSessionDerivedState(candidate);
-    saveUpdatedSession(updated);
-    showToast(`Đã thêm bước con: "${title}"`);
+    let updatedSession: LifeSession = {
+      ...activeSession,
+      tasks: updatedTasks,
+      updatedAt: now,
+    };
+
+    updatedSession = reconcileSessionDerivedState(updatedSession);
+    saveUpdatedSession(updatedSession);
   };
 
-  // 6. Add Task
-  const handleAddTask = (title: string, description?: string) => {
-    if (!activeSession) return;
-    const newOrder = activeSession.tasks.length + 1;
+  // 7. Add / Delete Task
+  const handleAddTask = (title: string, important = false) => {
+    if (!activeSession || !title.trim()) return;
+    const now = new Date().toISOString();
     const newTask = {
       id: `task-${Date.now()}`,
-      title,
-      description,
-      order: newOrder,
+      title: title.trim(),
+      order: activeSession.tasks.length + 1,
       status: 'pending' as const,
+      important,
     };
-    const candidate: LifeSession = {
+
+    const updated: LifeSession = {
       ...activeSession,
       tasks: [...activeSession.tasks, newTask],
-      updatedAt: new Date().toISOString(),
+      updatedAt: now,
     };
-    const updated = reconcileSessionDerivedState(candidate);
-    saveUpdatedSession(updated);
+
+    const reconciled = reconcileSessionDerivedState(updated);
+    saveUpdatedSession(reconciled);
     showToast(`Đã thêm việc: "${title}"`);
   };
 
-  // 7. Delete Task
+  const handleAddSubtask = (parentTaskId: string, title: string) => {
+    if (!activeSession || !title.trim()) return;
+    const now = new Date().toISOString();
+    const newSubtask = {
+      id: `sub-${Date.now()}`,
+      title: title.trim(),
+      order: 1,
+      status: 'pending' as const,
+    };
+
+    const updatedTasks = activeSession.tasks.map((t) => {
+      if (t.id === parentTaskId) {
+        const subs = t.subtasks || [];
+        return {
+          ...t,
+          subtasks: [...subs, { ...newSubtask, order: subs.length + 1 }],
+        };
+      }
+      return t;
+    });
+
+    const updated: LifeSession = {
+      ...activeSession,
+      tasks: updatedTasks,
+      updatedAt: now,
+    };
+
+    const reconciled = reconcileSessionDerivedState(updated);
+    saveUpdatedSession(reconciled);
+    showToast(`Đã thêm việc con: "${title}"`);
+  };
+
   const handleDeleteTask = (taskId: string) => {
     if (!activeSession) return;
-    const targetTask = activeSession.tasks.find((t) => t.id === taskId);
-    const candidate: LifeSession = {
+    const updated: LifeSession = {
       ...activeSession,
       tasks: activeSession.tasks.filter((t) => t.id !== taskId),
       updatedAt: new Date().toISOString(),
     };
-    const updated = reconcileSessionDerivedState(candidate);
-    saveUpdatedSession(updated);
-    showToast(`Đã xoá nhiệm vụ: "${targetTask?.title || ''}"`);
+    const reconciled = reconcileSessionDerivedState(updated);
+    saveUpdatedSession(reconciled);
+    showToast('Đã xoá công việc');
   };
 
-  // 8. Add Important Fact
-  const handleAddFact = (fact: { category: ImportantFactType; title: string; value: string }) => {
-    if (!activeSession) return;
+  // 8. Add Fact
+  const handleAddFact = (fact: { title: string; value: string; type: ImportantFactType }) => {
+    if (!activeSession || !fact.title.trim()) return;
     const now = new Date().toISOString();
     const newFact = {
       id: `fact-${Date.now()}`,
-      type: fact.category,
-      title: fact.title,
-      value: fact.value,
+      type: fact.type,
+      title: fact.title.trim(),
+      value: fact.value.trim(),
       createdAt: now,
       updatedAt: now,
     };
+
     const updated: LifeSession = {
       ...activeSession,
       importantFacts: [newFact, ...activeSession.importantFacts],
@@ -467,38 +553,252 @@ export default function App() {
     showToast('Đã xoá tài nguyên ảnh');
   };
 
-  // 12. Send Message to Lovira
-  const handleSendMessage = async (userText: string) => {
-    if (!activeSession || isLoading) return;
+  // ----------------------------------------------------
+  // SHARED INTERACTION PIPELINE (V2 Voice & Text Action Engine)
+  // ----------------------------------------------------
+  const sendInteraction = async (
+    userText: string,
+    options: { inputMode?: InteractionInputMode } = {}
+  ) => {
+    const inputMode = options.inputMode || 'text';
+    if (!userText.trim() || isLoading) return;
 
-    const now = new Date().toISOString();
-    const userMsg = {
-      id: `msg-${Date.now()}`,
-      sender: 'user' as const,
-      text: userText,
-      timestamp: now,
-    };
-
-    const sessionWithUserMsg = {
-      ...activeSession,
-      messages: [...activeSession.messages, userMsg],
-      updatedAt: now,
-    };
-
-    setActiveSession(sessionWithUserMsg);
+    const trimmedText = userText.trim();
     setIsLoading(true);
+    setVoiceStatus('processing');
 
+    const runtimeContext = {
+      goHome: () => setActiveTab('dashboard'),
+      goBack: () => setActiveTab('dashboard'),
+      openSettings: () => setActiveTab('settings'),
+      openProfile: () => setProfileSetupOpen(true),
+      openSession: (sId: string) => handleOpenSession(sId),
+      createSession: async (goal: string) => {
+        await handleCreateSessionFromTemplate('custom', goal);
+      },
+      openCamera: () => setCameraModalOpen(true),
+      updateAccessibilitySetting: (key: string, value: any) => {
+        setAccessibility((prev) => ({ ...prev, [key]: value }));
+      },
+      showToast,
+    };
+
+    const appContext: AppInteractionContext = {
+      page: activeTab,
+      activeSessionId: activeSession?.id,
+      activeSessionTitle: activeSession?.title,
+      hasActiveSession: !!activeSession,
+      availableSessions: sessionsList,
+    };
+
+    // A. Check Pending Interaction (e.g. User confirms "Có / Tạo đi" for a previous proposal)
+    if (!activeSession && pendingInteraction) {
+      const pendingRes = resolvePendingInteraction(trimmedText, pendingInteraction);
+      if (pendingRes.clearPending) {
+        setPendingInteraction(null);
+      }
+      if (pendingRes.resolved) {
+        if (pendingRes.appAction) {
+          await applyAppAction(pendingRes.appAction, runtimeContext);
+        }
+        if (pendingRes.reply) {
+          if (inputMode === 'voice' || accessibility.speakResponse) {
+            speakWithVoiceStatus(pendingRes.reply);
+          } else {
+            showToast(pendingRes.reply);
+            setVoiceStatus('idle');
+          }
+        } else {
+          setVoiceStatus('idle');
+        }
+        setIsLoading(false);
+        return;
+      }
+    }
+
+    // B. Inside Active Session
+    if (activeSession && activeTab === 'session') {
+      const now = new Date().toISOString();
+      const userMsg = {
+        id: `msg-${Date.now()}`,
+        sender: 'user' as const,
+        text: trimmedText,
+        timestamp: now,
+        inputMode,
+      };
+
+      const sessionWithUserMsg = {
+        ...activeSession,
+        messages: [...activeSession.messages, userMsg],
+        updatedAt: now,
+      };
+
+      setActiveSession(sessionWithUserMsg);
+
+      try {
+        const res = await fetch('/api/chat', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            session: sessionWithUserMsg,
+            message: trimmedText,
+            isDemoMode: aiSettings.demoMode || aiSettings.provider === 'demo',
+            provider: aiSettings.provider,
+            userProfile,
+            inputMode,
+            appContext,
+          }),
+        });
+
+        if (!res.ok) {
+          throw new Error(`Server returned ${res.status}`);
+        }
+
+        const data = await res.json();
+        const replyText = data.reply || 'Lovira đã nhận thông tin của bạn.';
+        const speechText = data.speech || replyText;
+        const actions: AgentAction[] = data.actions || [];
+        const appActions: AppAction[] = data.appActions || [];
+        const suggestedReplies: string[] | undefined = data.suggestedReplies;
+
+        // 1. Process App Actions (e.g. user says "Về trang chủ", "Mở cài đặt", "Mở camera")
+        if (appActions.length > 0) {
+          for (const appAct of appActions) {
+            const val = validateAppAction(appAct, appContext);
+            if (val.valid && val.action) {
+              await applyAppAction(val.action, runtimeContext);
+            }
+          }
+        }
+
+        // 2. Process Session Structured Actions
+        const sensitiveAction = actions.find((a) => a.requiresConfirmation);
+
+        const applyActionsAndSave = (actionsToApply: AgentAction[]) => {
+          const batchTrigger = inputMode === 'voice' ? 'voice' : 'chat';
+          const batchRes = applyAgentActionBatch(sessionWithUserMsg, actionsToApply, batchTrigger);
+
+          if (batchRes.status === 'full' || batchRes.status === 'partial') {
+            const finalSession = batchRes.newState;
+            let consistentReply = replyText;
+            let finalSuggestedReplies = suggestedReplies;
+
+            if (batchRes.status === 'partial' && batchRes.rejectedActions.length > 0) {
+              console.warn('Some agent actions were ignored by validator:', batchRes.rejectedActions);
+              const honorifics = deduceHonorifics(userProfile, trimmedText);
+              consistentReply = buildPartialSuccessReply(
+                batchRes.appliedActions,
+                batchRes.rejectedActions,
+                replyText,
+                honorifics
+              );
+              finalSuggestedReplies = ['Kiểm tra lại bước hiện tại', 'Giờ tôi cần làm gì?'];
+            }
+
+            const loviraMsg = {
+              id: `msg-${Date.now()}`,
+              sender: 'lovira' as const,
+              text: consistentReply,
+              timestamp: new Date().toISOString(),
+              actionsApplied: batchRes.appliedActions,
+              suggestedReplies: finalSuggestedReplies,
+            };
+
+            finalSession.messages.push(loviraMsg);
+            saveUpdatedSession(finalSession);
+
+            if (batchRes.status === 'partial') {
+              const failMsg = batchRes.rejectedActions.map((f) => f.reason).join(', ');
+              showToast(`⚠️ Lovira đã áp dụng một phần (${batchRes.appliedActions.length}/${actionsToApply.length}): ${failMsg}`);
+            } else if (batchRes.logSummaries.length > 0) {
+              showToast(batchRes.logSummaries.join(' • '));
+            }
+
+            if (inputMode === 'voice' || accessibility.speakResponse) {
+              speakWithVoiceStatus(speechText || consistentReply);
+            } else {
+              setVoiceStatus('idle');
+            }
+
+            if (actionsToApply.some((a) => a.type === 'OPEN_CAMERA')) {
+              setCameraModalOpen(true);
+            }
+          } else {
+            showToast(`⚠️ Lovira chưa thể cập nhật: ${batchRes.rejectedReason || 'Hành động không hợp lệ'}`);
+            if (inputMode === 'voice' || accessibility.speakResponse) {
+              speakWithVoiceStatus(replyText);
+            } else {
+              setVoiceStatus('idle');
+            }
+          }
+        };
+
+        if (sensitiveAction) {
+          setConfirmModal({
+            isOpen: true,
+            title: 'Xác nhận thao tác nhạy cảm từ Lovira',
+            message: sensitiveAction.confirmationPrompt || 'Lovira đề xuất thực hiện thay đổi quan trọng này. Bạn có đồng ý không?',
+            onConfirm: () => {
+              applyActionsAndSave(actions);
+              setConfirmModal((prev) => ({ ...prev, isOpen: false }));
+            },
+          });
+          setVoiceStatus('idle');
+        } else {
+          applyActionsAndSave(actions);
+        }
+      } catch (e) {
+        console.warn('Backend chat unreachable, trying offline local fallback:', e);
+        const localResult = parseLocalIntent(trimmedText, sessionWithUserMsg, userProfile);
+        if (localResult) {
+          const batchTrigger = inputMode === 'voice' ? 'voice' : 'chat';
+          const batchRes = applyAgentActionBatch(sessionWithUserMsg, localResult.actions, batchTrigger);
+          const finalSession = batchRes.newState;
+
+          const loviraMsg = {
+            id: `msg-${Date.now() + 1}`,
+            sender: 'lovira' as const,
+            text: localResult.reply,
+            timestamp: new Date().toISOString(),
+            actionsApplied: localResult.actions,
+            suggestedReplies: localResult.suggestedReplies,
+          };
+
+          finalSession.messages.push(loviraMsg);
+          saveUpdatedSession(finalSession);
+
+          if (batchRes.logSummaries.length > 0) {
+            showToast(batchRes.logSummaries.join(' • '));
+          }
+
+          if (inputMode === 'voice' || accessibility.speakResponse) {
+            speakWithVoiceStatus(localResult.speech || localResult.reply);
+          } else {
+            setVoiceStatus('idle');
+          }
+        } else {
+          showToast('Không có kết nối mạng. Lovira vẫn lưu trữ cục bộ an toàn!');
+          setVoiceStatus('idle');
+        }
+      } finally {
+        setIsLoading(false);
+      }
+      return;
+    }
+
+    // C. Outside Session (Dashboard or other tabs)
     try {
-      // 1. Send directly to /api/chat (Backend routes through deterministic local router, Groq, or Gemini)
       const res = await fetch('/api/chat', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          session: sessionWithUserMsg,
-          message: userText,
+          session: null,
+          message: trimmedText,
           isDemoMode: aiSettings.demoMode || aiSettings.provider === 'demo',
           provider: aiSettings.provider,
           userProfile,
+          inputMode,
+          appContext,
         }),
       });
 
@@ -507,117 +807,105 @@ export default function App() {
       }
 
       const data = await res.json();
-      const replyText = data.reply || 'Lovira đã nhận thông tin của bạn.';
-      const actions: AgentAction[] = data.actions || [];
-      const suggestedReplies: string[] | undefined = data.suggestedReplies;
+      const replyText = data.reply || 'Lovira đang lắng nghe bạn.';
+      const speechText = data.speech || replyText;
+      const appActions: AppAction[] = data.appActions || [];
 
-      // Check for confirmation requirement in actions
-      const sensitiveAction = actions.find((a) => a.requiresConfirmation);
-
-      const applyActionsAndSave = (actionsToApply: AgentAction[]) => {
-        const batchRes = applyAgentActionBatch(sessionWithUserMsg, actionsToApply, 'chat');
-
-        if (batchRes.status === 'full' || batchRes.status === 'partial') {
-          const finalSession = batchRes.newState;
-          let consistentReply = replyText;
-
-          let finalSuggestedReplies = suggestedReplies;
-
-          if (batchRes.status === 'partial' && batchRes.rejectedActions.length > 0) {
-            console.warn('Some agent actions were ignored by validator:', batchRes.rejectedActions);
-            // If AI didn't provide a conversational reply, fallback to state-consistent reply
-            if (!replyText || !replyText.trim()) {
-              const honorifics = deduceHonorifics(userProfile, userText);
-              consistentReply = buildPartialSuccessReply(
-                batchRes.appliedActions,
-                batchRes.rejectedActions,
-                replyText,
-                honorifics
-              );
+      // 1. Execute app navigation actions
+      if (appActions.length > 0) {
+        for (const appAct of appActions) {
+          const val = validateAppAction(appAct, appContext);
+          if (val.valid && val.action) {
+            if (val.resolvedSessionId && val.action.type === 'OPEN_SESSION') {
+              val.action.payload = { ...val.action.payload, sessionId: val.resolvedSessionId };
             }
+            await applyAppAction(val.action, runtimeContext);
           }
-
-          const loviraMsg = {
-            id: `msg-${Date.now()}`,
-            sender: 'lovira' as const,
-            text: consistentReply,
-            timestamp: new Date().toISOString(),
-            actionsApplied: batchRes.appliedActions,
-            suggestedReplies: finalSuggestedReplies,
-          };
-
-          finalSession.messages.push(loviraMsg);
-          saveUpdatedSession(finalSession);
-
-          if (batchRes.status === 'partial') {
-            const failMsg = batchRes.rejectedActions.map((f) => f.reason).join(', ');
-            showToast(`⚠️ Lovira đã áp dụng một phần (${batchRes.appliedActions.length}/${actionsToApply.length}): ${failMsg}`);
-          } else if (batchRes.logSummaries.length > 0) {
-            showToast(batchRes.logSummaries.join(' • '));
-          }
-
-          if (accessibility.speakResponse) {
-            speakText(data.speech || consistentReply);
-          }
-
-          if (actionsToApply.some((a) => a.type === 'OPEN_CAMERA')) {
-            setCameraModalOpen(true);
-          }
-        } else {
-          showToast(`⚠️ Lovira chưa thể cập nhật: ${batchRes.rejectedReason || 'Hành động không hợp lệ'}`);
         }
-      };
-
-      if (sensitiveAction) {
-        setConfirmModal({
-          isOpen: true,
-          title: 'Xác nhận thao tác nhạy cảm từ Lovira',
-          message: sensitiveAction.confirmationPrompt || 'Lovira đề xuất thực hiện thay đổi quan trọng này. Bạn có đồng ý không?',
-          onConfirm: () => {
-            applyActionsAndSave(actions);
-            setConfirmModal((prev) => ({ ...prev, isOpen: false }));
-          },
-        });
       } else {
-        applyActionsAndSave(actions);
+        // Check if reply proposes to create a session
+        const hasCreateProposal =
+          replyText.toLowerCase().includes('mở một phiên') ||
+          replyText.toLowerCase().includes('tạo một phiên') ||
+          replyText.toLowerCase().includes('có muốn tạo') ||
+          replyText.toLowerCase().includes('hướng dẫn từng bước');
+
+        if (hasCreateProposal) {
+          setPendingInteraction({
+            type: 'create_session',
+            data: { goal: trimmedText },
+            createdAt: new Date().toISOString(),
+            expiresAt: Date.now() + 180000,
+          });
+        }
+      }
+
+      showToast(replyText);
+
+      if (inputMode === 'voice' || accessibility.speakResponse) {
+        speakWithVoiceStatus(speechText);
+      } else {
+        setVoiceStatus('idle');
       }
     } catch (e) {
-      console.warn('Backend chat unreachable, trying offline local intent fallback:', e);
-
-      // Offline client-side fallback
-      const localResult = parseLocalIntent(userText, sessionWithUserMsg, userProfile);
-      if (localResult) {
-        const batchRes = applyAgentActionBatch(sessionWithUserMsg, localResult.actions, 'chat');
-        const finalSession = batchRes.newState;
-
-        const loviraMsg = {
-          id: `msg-${Date.now() + 1}`,
-          sender: 'lovira' as const,
-          text: localResult.reply,
-          timestamp: new Date().toISOString(),
-          actionsApplied: localResult.actions,
-          suggestedReplies: localResult.suggestedReplies,
-        };
-
-        finalSession.messages.push(loviraMsg);
-        saveUpdatedSession(finalSession);
-
-        if (batchRes.logSummaries.length > 0) {
-          showToast(batchRes.logSummaries.join(' • '));
-        }
-
-        if (accessibility.speakResponse) {
-          speakText(localResult.speech || localResult.reply);
-        }
-      } else {
-        showToast('Không có kết nối mạng. Lovira vẫn lưu trữ cục bộ an toàn!');
-      }
+      console.warn('Dashboard interaction error:', e);
+      showToast('Lovira chưa thể kết nối lúc này. Bạn thử lại nhé!');
+      setVoiceStatus('idle');
     } finally {
       setIsLoading(false);
     }
   };
 
-  // 13. Camera Image Capture & AI Vision Extraction
+  // Voice Recording Handlers
+  const handleStartVoiceListening = () => {
+    stopSpeaking();
+    setVoiceError(undefined);
+    setInterimTranscript('');
+
+    const started = speechRecognitionService.startListening({
+      onStart: () => {
+        setVoiceStatus('listening');
+        setInterimTranscript('');
+      },
+      onInterimResult: (transcript) => {
+        setInterimTranscript(transcript);
+      },
+      onFinalResult: (transcript) => {
+        setInterimTranscript('');
+        if (transcript.trim()) {
+          sendInteraction(transcript.trim(), { inputMode: 'voice' });
+        } else {
+          setVoiceStatus('idle');
+        }
+      },
+      onError: (errType, message) => {
+        setVoiceStatus('error');
+        setVoiceError(message);
+        setInterimTranscript('');
+      },
+      onEnd: () => {
+        if (voiceStatus === 'listening') {
+          setVoiceStatus('idle');
+        }
+      },
+    });
+
+    if (!started) {
+      setVoiceStatus('error');
+      setVoiceError('Trình duyệt chưa hỗ trợ nhận diện giọng nói tiếng Việt.');
+    }
+  };
+
+  const handleStopVoiceListening = () => {
+    speechRecognitionService.stopListening();
+  };
+
+  const handleStopSpeaking = () => {
+    stopSpeaking();
+    setVoiceStatus('idle');
+  };
+
+  // 12. Camera Image Capture & AI Vision Extraction
   const handleCaptureCameraImage = async (dataUrl: string) => {
     if (!activeSession) return;
 
@@ -687,7 +975,7 @@ export default function App() {
       }
 
       if (accessibility.speakResponse) {
-        speakText(replyText);
+        speakWithVoiceStatus(replyText);
       }
     } catch (e) {
       console.warn('Vision extraction failed', e);
@@ -713,7 +1001,7 @@ export default function App() {
         />
 
         {/* Main Content Workspace */}
-        <main className="flex-1 p-4 md:p-6 overflow-x-hidden min-w-0">
+        <main className="flex-1 p-4 md:p-6 overflow-x-hidden min-w-0 pb-24 md:pb-6">
           {/* Quick Accessibility Toolbar Bar */}
           <AccessibilityToolbar
             settings={accessibility}
@@ -762,7 +1050,7 @@ export default function App() {
               onAddFact={handleAddFact}
               onDeleteFact={handleDeleteFact}
               onDeleteResource={handleDeleteResource}
-              onSendMessage={handleSendMessage}
+              onSendMessage={(text, opts) => sendInteraction(text, opts)}
               onOpenCamera={() => setCameraModalOpen(true)}
               isLoading={isLoading}
             />
@@ -813,6 +1101,17 @@ export default function App() {
           )}
         </main>
       </div>
+
+      {/* Global Floating Voice Action Button (Version 2) */}
+      <GlobalVoiceButton
+        status={voiceStatus}
+        interimTranscript={interimTranscript}
+        errorMessage={voiceError}
+        onStartListening={handleStartVoiceListening}
+        onStopListening={handleStopVoiceListening}
+        onStopSpeaking={handleStopSpeaking}
+        disabled={isLoading}
+      />
 
       {/* Profile Setup Flow Modal */}
       {profileSetupOpen && (

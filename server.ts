@@ -48,22 +48,26 @@ async function startServer() {
   // 2. Chat Endpoint with Groq, Gemini & Function Calling
   app.post('/api/chat', async (req, res) => {
     try {
-      const { session, message, isDemoMode, userProfile, provider } = req.body as {
-        session: LifeSession;
+      const { session, message, isDemoMode, userProfile, provider, inputMode, appContext } = req.body as {
+        session?: LifeSession | null;
         message: string;
         isDemoMode?: boolean;
         userProfile?: any;
         provider?: 'groq' | 'gemini' | 'demo';
+        inputMode?: 'text' | 'voice';
+        appContext?: any;
       };
 
-      if (!session || !message) {
-        return res.status(400).json({ error: 'Thiếu dữ liệu session hoặc message' });
+      if (!message || !message.trim()) {
+        return res.status(400).json({ error: 'Thiếu dữ liệu message' });
       }
 
-      // 1. Fast check local deterministic commands
-      const localResult = parseLocalIntent(message, session, userProfile);
-      if (localResult) {
-        return res.json(localResult);
+      // 1. Fast check local deterministic commands if session exists
+      if (session) {
+        const localResult = parseLocalIntent(message, session, userProfile);
+        if (localResult) {
+          return res.json(localResult);
+        }
       }
 
       // 2. Try Groq Provider if GROQ_API_KEY is available
@@ -71,7 +75,7 @@ async function startServer() {
       if (groqKey && provider !== 'gemini' && !isDemoMode) {
         const selectedModel = selectGroqModel(message, session);
         const groqRes = await callGroqAgent(
-          { message, session, userProfile, modelOverride: selectedModel },
+          { message, session, userProfile, modelOverride: selectedModel, inputMode, appContext },
           groqKey
         );
         if (groqRes) {
@@ -87,25 +91,33 @@ async function startServer() {
         const { addressing, da } = honorifics;
 
         const prefix = da ? `${da}, ` : '';
-        const replyText = `${prefix}hiện Lovira đang ở chế độ ngoại tuyến nên chưa thể tư vấn chi tiết nội dung này cho ${addressing}. ${addressing.charAt(0).toUpperCase() + addressing.slice(1)} vẫn có thể xem hoặc cập nhật tiến độ các việc trong phiên nhé!`;
+        const replyText = session
+          ? `${prefix}hiện Lovira đang ở chế độ ngoại tuyến nên chưa thể tư vấn chi tiết nội dung này cho ${addressing}. ${addressing.charAt(0).toUpperCase() + addressing.slice(1)} vẫn có thể xem hoặc cập nhật tiến độ các việc trong phiên nhé!`
+          : `${prefix}Lovira đang lắng nghe ${addressing}. Hiện Lovira đang ở chế độ ngoại tuyến. ${addressing.charAt(0).toUpperCase() + addressing.slice(1)} có thể tạo hoặc mở các phiên hỗ trợ trên màn hình nhé!`;
 
         return res.json({
           reply: replyText,
           speech: replyText,
           actions: [],
-          suggestedReplies: ['Giờ làm gì tiếp theo?', 'Xong bước hiện tại rồi'],
+          appActions: [],
+          suggestedReplies: session ? ['Giờ làm gì tiếp theo?', 'Xong bước hiện tại rồi'] : ['Mở phiên đi khám bệnh', 'Tạo phiên mới'],
           meta: { engine: 'local', model: 'offline-notice' },
         });
       }
 
-      const systemPrompt = buildSessionContextPrompt(session, userProfile);
+      const systemPrompt = buildSessionContextPrompt({
+        session,
+        userProfile,
+        inputMode,
+        appContext,
+      });
 
       const tools = [
         {
           functionDeclarations: [
             {
               name: 'update_life_session',
-              description: 'Phát hành các hành động cập nhật trạng thái phiên (Tasks, Subtasks, Facts, Step tiếp theo) và câu trả lời hội thoại',
+              description: 'Phát hành các hành động cập nhật trạng thái phiên (Tasks, Subtasks, Facts, Step tiếp theo), điều hướng ứng dụng (App Actions) và câu trả lời hội thoại',
               parameters: {
                 type: Type.OBJECT,
                 properties: {
@@ -124,7 +136,7 @@ async function startServer() {
                   },
                   actions: {
                     type: Type.ARRAY,
-                    description: 'Danh sách các hành động cập nhật trạng thái Todo / Facts / Next Action',
+                    description: 'Danh sách các hành động cập nhật trạng thái Todo / Facts / Next Action trong phiên',
                     items: {
                       type: Type.OBJECT,
                       properties: {
@@ -150,8 +162,31 @@ async function startServer() {
                       required: ['type', 'payload'],
                     },
                   },
+                  appActions: {
+                    type: Type.ARRAY,
+                    description: 'Danh sách các hành động điều hướng hoặc thao tác cấp ứng dụng (GO_HOME, OPEN_SETTINGS, OPEN_PROFILE, OPEN_SESSION, CREATE_SESSION, OPEN_CAMERA)',
+                    items: {
+                      type: Type.OBJECT,
+                      properties: {
+                        type: {
+                          type: Type.STRING,
+                          description: 'GO_HOME, GO_BACK, OPEN_SESSION, CREATE_SESSION, OPEN_SETTINGS, OPEN_PROFILE, OPEN_CAMERA',
+                        },
+                        payload: {
+                          type: Type.OBJECT,
+                          properties: {
+                            sessionId: { type: Type.STRING },
+                            sessionTitle: { type: Type.STRING },
+                            goal: { type: Type.STRING },
+                            setting: { type: Type.STRING },
+                          },
+                        },
+                      },
+                      required: ['type'],
+                    },
+                  },
                 },
-                required: ['reply', 'actions'],
+                required: ['reply'],
               },
             },
           ],
@@ -174,6 +209,7 @@ async function startServer() {
       const functionCalls = candidate?.content?.parts?.filter((p) => p.functionCall).map((p) => p.functionCall);
 
       let actions: AgentAction[] = [];
+      let appActions: any[] = [];
       let textReply = response.text || '';
       let speechText: string | undefined = undefined;
       let suggestedReplies: string[] | undefined = undefined;
@@ -186,6 +222,7 @@ async function startServer() {
             if (args.speech) speechText = args.speech;
             if (Array.isArray(args.suggestedReplies)) suggestedReplies = args.suggestedReplies;
             if (Array.isArray(args.actions)) actions = args.actions;
+            if (Array.isArray(args.appActions)) appActions = args.appActions;
           }
         }
       }
@@ -202,6 +239,7 @@ async function startServer() {
         reply: cleanReply,
         speech: speechText ? speechText.replace(/\*\*/g, '').replace(/[*#]/g, '') : cleanReply,
         actions,
+        appActions: appActions.length > 0 ? appActions : undefined,
         suggestedReplies,
         meta: {
           engine: 'gemini',
@@ -214,13 +252,15 @@ async function startServer() {
     } catch (error: any) {
       console.error('API chat error:', error);
       const { session, message } = req.body;
-      const localResult = parseLocalIntent(message, session);
-      if (localResult) {
-        return res.json(localResult);
+      if (session) {
+        const localResult = parseLocalIntent(message, session);
+        if (localResult) {
+          return res.json(localResult);
+        }
       }
 
       res.json({
-        reply: 'Lovira đang hoạt động ở chế độ dự phòng. Thông tin phiên của bạn được bảo toàn!',
+        reply: 'Lovira đang hoạt động ở chế độ dự phòng. Thông tin của bạn được bảo toàn an toàn!',
         actions: [],
       });
     }

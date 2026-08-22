@@ -14,6 +14,7 @@ const KEY_BANNER_DISMISSED = 'lovira_profile_banner_dismissed';
 export interface BriefSessionHeader {
   id: string;
   title: string;
+  goal?: string;
   status: LifeSession['status'];
   scenarioType: LifeSession['scenarioType'];
   scenarioFamily?: ScenarioFamily;
@@ -125,6 +126,7 @@ class StorageService {
       const brief: BriefSessionHeader = {
         id: migrated.id,
         title: migrated.title,
+        goal: migrated.goal,
         status: migrated.status,
         scenarioType: migrated.scenarioType,
         scenarioFamily: migrated.scenarioFamily,
@@ -169,6 +171,10 @@ class StorageService {
 
   setActiveSessionId(id: string): void {
     localStorage.setItem(KEY_ACTIVE_SESSION, id);
+  }
+
+  clearActiveSessionId(): void {
+    localStorage.removeItem(KEY_ACTIVE_SESSION);
   }
 
   getAccessibilitySettings(): AccessibilitySettings {

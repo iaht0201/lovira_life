@@ -1,5 +1,10 @@
+import { AppAction } from './services/interaction/appActionTypes';
+
 export * from './types/userProfile';
 export * from './types/clarification';
+export * from './services/voice/voiceTypes';
+export * from './services/interaction/interactionTypes';
+export * from './services/interaction/appActionTypes';
 
 export type SessionStatus = 'draft' | 'active' | 'paused' | 'completed' | 'archived';
 
@@ -103,6 +108,7 @@ export interface SessionMessage {
   sender: 'user' | 'lovira' | 'system';
   text: string;
   timestamp: string;
+  inputMode?: 'text' | 'voice';
   actionsApplied?: AgentAction[];
   suggestedReplies?: string[];
 }
@@ -206,6 +212,7 @@ export interface LoviraAgentResponse {
   reply: string;
   speech?: string;
   actions: AgentAction[];
+  appActions?: AppAction[];
   suggestedReplies?: string[];
   nextRecommendedAction?: RecommendedAction;
   warnings?: string[];
