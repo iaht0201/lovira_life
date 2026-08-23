@@ -7,8 +7,10 @@ interface HomeHeroProps {
 }
 
 export const HomeHero: React.FC<HomeHeroProps> = ({
-  userName = 'Chú Ba',
+  userName,
 }) => {
+  const displayName = userName && userName.trim() ? userName.trim() : 'bạn';
+
   return (
     <section className="relative rounded-[28px] border border-lovira-purple bg-lovira-hero shadow-lovira overflow-hidden p-6 md:p-10 flex flex-col items-center sm:items-start text-center sm:text-left transition-colors">
       {/* Background Decorative Sparkles / Bubbles */}
@@ -19,12 +21,12 @@ export const HomeHero: React.FC<HomeHeroProps> = ({
       <div className="relative z-10 max-w-[560px] space-y-3 my-auto w-full">
         {/* Title uses text-lovira-title for dynamic contrast */}
         <h1 className="text-[28px] sm:text-[36px] md:text-[40px] font-[900] text-lovira-title tracking-tight leading-[1.15]">
-          Chào {userName}! 👋
+          Chào {displayName}! 👋
         </h1>
 
         {/* Description uses text-lovira-muted */}
         <p className="text-[15px] sm:text-[16px] text-lovira-muted leading-[1.65] font-[500] max-w-[520px]">
-          Con là Lovira – trợ lý đồng hành cùng chú trong cuộc sống hằng ngày.
+          Con là Lovira – trợ lý đồng hành cùng {displayName === 'bạn' ? 'bạn' : displayName} trong cuộc sống hằng ngày.
         </p>
       </div>
 

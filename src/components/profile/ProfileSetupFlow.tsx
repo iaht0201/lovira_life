@@ -84,11 +84,13 @@ export const ProfileSetupFlow: React.FC<ProfileSetupFlowProps> = ({
   };
 
   const pronouns: { id: PronounStyle; label: string }[] = [
-    { id: 'ban', label: 'Bạn' },
-    { id: 'anh', label: 'Anh' },
-    { id: 'chi', label: 'Chị' },
+    { id: 'ban', label: 'Mặc định (Không xưng hô tên)' },
+    { id: 'chu', label: 'Chú' },
+    { id: 'bac', label: 'Bác' },
     { id: 'ong', label: 'Ông' },
     { id: 'ba', label: 'Bà' },
+    { id: 'anh', label: 'Anh' },
+    { id: 'chi', label: 'Chị' },
     { id: 'custom', label: 'Khác' },
   ];
 

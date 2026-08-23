@@ -6,7 +6,7 @@ export type AccessibilityContextType =
   | "elderly"
   | "unfamiliar_with_tech";
 
-export type PronounStyle = "anh" | "chi" | "ong" | "ba" | "ban" | "custom";
+export type PronounStyle = "anh" | "chi" | "ong" | "ba" | "ban" | "chu" | "bac" | "custom";
 
 export type CommunicationPace = "normal" | "slow_detailed";
 

@@ -25,13 +25,24 @@ import { ProfileInviteBanner } from './components/profile/ProfileInviteBanner';
 import { ProfileSetupFlow } from './components/profile/ProfileSetupFlow';
 import { ConfirmDialog } from './components/common/ConfirmDialog';
 import { Toast } from './components/common/Toast';
+import { SplashScreen } from './components/common/SplashScreen';
+import { PWAInstallPrompt } from './components/common/PWAInstallPrompt';
+import { PermissionRequestModal } from './components/common/PermissionRequestModal';
+import { OnboardingModal } from './components/common/OnboardingModal';
 
 function AppContent() {
+  const [showSplash, setShowSplash] = useState(true);
   const [activeTab, setActiveTab] = useState<NavTab>('dashboard');
   const [aiSettings, setAiSettings] = useState<AISettings>(() => storageService.getAISettings());
   const [userProfile, setUserProfile] = useState<UserProfile | null>(() => storageService.getUserProfile());
   const [profileSetupOpen, setProfileSetupOpen] = useState(false);
   const [bannerDismissed, setBannerDismissed] = useState(() => storageService.isProfileBannerDismissed());
+
+  // New Modals State
+  const [permissionModalOpen, setPermissionModalOpen] = useState(false);
+  const [onboardingOpen, setOnboardingOpen] = useState<boolean>(() => {
+    return localStorage.getItem('lovira_onboarded') !== 'true';
+  });
 
   const [confirmModal, setConfirmModal] = useState<{
     isOpen: boolean;
@@ -106,188 +117,212 @@ function AppContent() {
   }, [aiSettings]);
 
   return (
-    <AppShell
-      activeTab={activeTab}
-      onTabChange={setActiveTab}
-      onCreateSession={() => handleCreateSessionFromTemplate('medical')}
-      userName={userProfile?.preferredName || 'Chú Ba'}
-      planName="Gói miễn phí"
-      voiceStatus={voiceStatus}
-      onVoiceClick={
-        voiceStatus === 'listening'
-          ? stopListening
-          : () => startListening((transcript) => sendInteraction(transcript, { inputMode: 'voice', activeTab }))
-      }
-      accessibility={accessibility}
-      onUpdateAccessibility={setAccessibility}
-    >
-      {/* Profile Invite Banner */}
-      {!userProfile &&
-        !bannerDismissed &&
-        (sessionsList.filter((s) => s.status === 'completed').length >= 1 ||
-          storageService.getAppOpenCount() >= 3) && (
-          <ProfileInviteBanner
-            onOpenSetup={() => setProfileSetupOpen(true)}
-            onDismiss={() => {
-              storageService.setProfileBannerDismissed(true);
-              setBannerDismissed(true);
+    <>
+      {/* 1. App Boot Splash Screen */}
+      {showSplash && <SplashScreen onFinish={() => setShowSplash(false)} />}
+
+      <AppShell
+        activeTab={activeTab}
+        onTabChange={setActiveTab}
+        onCreateSession={() => handleCreateSessionFromTemplate('medical')}
+        userName={userProfile?.preferredName || ''}
+        planName="Gói miễn phí"
+        voiceStatus={voiceStatus}
+        onVoiceClick={
+          voiceStatus === 'listening'
+            ? stopListening
+            : () => startListening((transcript) => sendInteraction(transcript, { inputMode: 'voice', activeTab }))
+        }
+        accessibility={accessibility}
+        onUpdateAccessibility={setAccessibility}
+      >
+        {/* Profile Invite Banner */}
+        {!userProfile &&
+          !bannerDismissed &&
+          (sessionsList.filter((s) => s.status === 'completed').length >= 1 ||
+            storageService.getAppOpenCount() >= 3) && (
+            <ProfileInviteBanner
+              onOpenSetup={() => setProfileSetupOpen(true)}
+              onDismiss={() => {
+                storageService.setProfileBannerDismissed(true);
+                setBannerDismissed(true);
+              }}
+            />
+          )}
+
+        {/* Tab 1: Full Homepage */}
+        {activeTab === 'dashboard' && (
+          <HomePage
+            userName={userProfile?.preferredName || ''}
+            sessionsList={sessionsList}
+            onOpenSession={handleOpenSession}
+            onCreateSessionFromTemplate={handleCreateSessionFromTemplate}
+            onDeleteSession={(id) => handleDeleteSession(id, setConfirmModal)}
+            onOpenTasks={() => setActiveTab('tasks')}
+            onOpenReminders={() => setActiveTab('reminders')}
+            onOpenChat={() => {
+              if (activeSession) {
+                setActiveTab('session');
+              } else if (sessionsList.length > 0) {
+                handleOpenSession(sessionsList[0].id);
+              } else {
+                handleCreateSessionFromTemplate('custom', 'Trò chuyện cùng Lovira');
+              }
             }}
           />
         )}
 
-      {/* Tab 1: Full Homepage */}
-      {activeTab === 'dashboard' && (
-        <HomePage
-          userName={userProfile?.preferredName || 'Chú Ba'}
-          sessionsList={sessionsList}
-          onOpenSession={handleOpenSession}
-          onCreateSessionFromTemplate={handleCreateSessionFromTemplate}
-          onDeleteSession={(id) => handleDeleteSession(id, setConfirmModal)}
-          onOpenTasks={() => setActiveTab('tasks')}
-          onOpenReminders={() => setActiveTab('reminders')}
-          onOpenChat={() => {
-            if (activeSession) {
-              setActiveTab('session');
-            } else if (sessionsList.length > 0) {
-              handleOpenSession(sessionsList[0].id);
-            } else {
-              handleCreateSessionFromTemplate('custom', 'Trò chuyện cùng Lovira');
-            }
+        {/* Tab 2: Life Session Active Screen / Chat */}
+        {(activeTab === 'session' || activeTab === 'chat') && activeSession && (
+          <LifeSessionPage
+            session={activeSession}
+            sessionsList={sessionsList}
+            onOpenSession={handleOpenSession}
+            onCreateNewSession={() => handleCreateSessionFromTemplate('medical')}
+            onOpenHistory={() => setActiveTab('history')}
+            onBack={() => setActiveTab('dashboard')}
+            onUpdateStatus={handleUpdateStatus}
+            onDeleteSession={() => handleDeleteSession(activeSession.id, setConfirmModal)}
+            onCompleteCurrentTask={handleCompleteCurrentTask}
+            onToggleTask={handleToggleTask}
+            onToggleSubtask={handleToggleSubtask}
+            onAddTask={handleAddTask}
+            onAddSubtask={handleAddSubtask}
+            onDeleteTask={handleDeleteTask}
+            onAddFact={handleAddFact}
+            onDeleteFact={(id) => handleDeleteFact(id, setConfirmModal)}
+            onDeleteResource={handleDeleteResource}
+            onSendMessage={(text, opts) => sendInteraction(text, { ...opts, activeTab })}
+            onOpenCamera={() => setCameraModalOpen(true)}
+            isLoading={isLoading}
+            voiceStatus={voiceStatus}
+            interimTranscript={interimTranscript}
+            userName={userProfile?.preferredName || ''}
+            onStartVoice={() => startListening((transcript) => sendInteraction(transcript, { inputMode: 'voice', activeTab }))}
+            onStopVoice={stopListening}
+            onCancelVoice={cancelListening}
+          />
+        )}
+
+        {/* Fallback if session/chat tab opened with no session */}
+        {(activeTab === 'session' || activeTab === 'chat') && !activeSession && (
+          <div className="p-8 text-center bg-surface border border-dashed border-default rounded-2xl space-y-4 max-w-lg mx-auto my-8">
+            <p className="text-base font-bold text-text-primary">Chưa mở phiên hỗ trợ nào.</p>
+            <p className="text-xs text-text-secondary">Hãy tạo một phiên mới để trò chuyện và được Lovira trợ giúp nhen.</p>
+            <button
+              onClick={() => handleCreateSessionFromTemplate('medical')}
+              className="px-5 py-2.5 bg-[#7C4DFF] hover:bg-[#6D3CF0] text-white font-bold text-sm rounded-xl transition-all shadow-xs cursor-pointer"
+            >
+              + Tạo phiên Đi khám bệnh mẫu ngay
+            </button>
+          </div>
+        )}
+
+        {/* Tab 3: Tasks & Session Management Dashboard */}
+        {(activeTab === 'tasks' || activeTab === 'history') && (
+          <LifeDashboard
+            activeSession={activeSession}
+            sessionsList={sessionsList}
+            onOpenSession={handleOpenSession}
+            onCreateSessionFromTemplate={handleCreateSessionFromTemplate}
+            onDeleteSession={(id) => handleDeleteSession(id, setConfirmModal)}
+            onOpenCamera={() => setCameraModalOpen(true)}
+          />
+        )}
+
+        {/* Tab 4: Reminders */}
+        {activeTab === 'reminders' && (
+          <div className="max-w-2xl mx-auto space-y-6">
+            <h2 className="text-2xl font-bold text-[#17151F]">Quản lý Nhắc nhở</h2>
+            <UpcomingReminders />
+          </div>
+        )}
+
+        {/* Tab 5: Settings */}
+        {activeTab === 'settings' && (
+          <SettingsPage
+            accessibility={accessibility}
+            aiSettings={aiSettings}
+            userProfile={userProfile}
+            onUpdateAccessibility={setAccessibility}
+            onUpdateAISettings={setAiSettings}
+            onUpdateUserProfile={setUserProfile}
+            onOpenProfileSetup={() => setProfileSetupOpen(true)}
+          />
+        )}
+
+        {/* Tab 6: Profile Page */}
+        {activeTab === 'profile' && (
+          <ProfilePage
+            userProfile={userProfile}
+            onOpenProfileSetup={() => setProfileSetupOpen(true)}
+            onUpdateUserProfile={setUserProfile}
+            totalSessionsCount={sessionsList.length}
+          />
+        )}
+
+        {/* Profile Setup Flow Modal */}
+        {profileSetupOpen && (
+          <ProfileSetupFlow
+            initialProfile={userProfile}
+            onClose={() => setProfileSetupOpen(false)}
+            onSaveSuccess={(savedProfile) => {
+              setUserProfile(savedProfile);
+              setProfileSetupOpen(false);
+              showToast('Đã cập nhật thông tin cá nhân!');
+            }}
+          />
+        )}
+
+        {/* First Time Onboarding Modal */}
+        <OnboardingModal
+          isOpen={onboardingOpen}
+          onClose={() => setOnboardingOpen(false)}
+          onSaveProfile={(p) => {
+            if (p) setUserProfile(p);
+            showToast('Đã lưu thiết lập ban đầu!');
           }}
         />
-      )}
 
-      {/* Tab 2: Life Session Active Screen / Chat */}
-      {(activeTab === 'session' || activeTab === 'chat') && activeSession && (
-        <LifeSessionPage
-          session={activeSession}
-          sessionsList={sessionsList}
-          onOpenSession={handleOpenSession}
-          onCreateNewSession={() => handleCreateSessionFromTemplate('medical')}
-          onOpenHistory={() => setActiveTab('history')}
-          onBack={() => setActiveTab('dashboard')}
-          onUpdateStatus={handleUpdateStatus}
-          onDeleteSession={() => handleDeleteSession(activeSession.id, setConfirmModal)}
-          onCompleteCurrentTask={handleCompleteCurrentTask}
-          onToggleTask={handleToggleTask}
-          onToggleSubtask={handleToggleSubtask}
-          onAddTask={handleAddTask}
-          onAddSubtask={handleAddSubtask}
-          onDeleteTask={handleDeleteTask}
-          onAddFact={handleAddFact}
-          onDeleteFact={(id) => handleDeleteFact(id, setConfirmModal)}
-          onDeleteResource={handleDeleteResource}
-          onSendMessage={(text, opts) => sendInteraction(text, { ...opts, activeTab })}
-          onOpenCamera={() => setCameraModalOpen(true)}
-          isLoading={isLoading}
-          voiceStatus={voiceStatus}
-          interimTranscript={interimTranscript}
-          userName={userProfile?.preferredName || 'Chú Ba'}
-          onStartVoice={() => startListening((transcript) => sendInteraction(transcript, { inputMode: 'voice', activeTab }))}
-          onStopVoice={stopListening}
-          onCancelVoice={cancelListening}
+        {/* App Permissions Modal */}
+        <PermissionRequestModal
+          isOpen={permissionModalOpen}
+          onClose={() => setPermissionModalOpen(false)}
         />
-      )}
 
-      {/* Fallback if session/chat tab opened with no session */}
-      {(activeTab === 'session' || activeTab === 'chat') && !activeSession && (
-        <div className="p-8 text-center bg-surface border border-dashed border-default rounded-2xl space-y-4 max-w-lg mx-auto my-8">
-          <p className="text-base font-bold text-text-primary">Chưa mở phiên hỗ trợ nào.</p>
-          <p className="text-xs text-text-secondary">Hãy tạo một phiên mới để trò chuyện và được Lovira trợ giúp nhen.</p>
-          <button
-            onClick={() => handleCreateSessionFromTemplate('medical')}
-            className="px-5 py-2.5 bg-[#7C4DFF] hover:bg-[#6D3CF0] text-white font-bold text-sm rounded-xl transition-all shadow-xs"
-          >
-            + Tạo phiên Đi khám bệnh mẫu ngay
-          </button>
-        </div>
-      )}
-
-      {/* Tab 3: Tasks & Session Management Dashboard */}
-      {(activeTab === 'tasks' || activeTab === 'history') && (
-        <LifeDashboard
-          activeSession={activeSession}
-          sessionsList={sessionsList}
-          onOpenSession={handleOpenSession}
-          onCreateSessionFromTemplate={handleCreateSessionFromTemplate}
-          onDeleteSession={(id) => handleDeleteSession(id, setConfirmModal)}
-          onOpenCamera={() => setCameraModalOpen(true)}
+        {/* Camera Capture Modal */}
+        <CameraModal
+          isOpen={cameraModalOpen}
+          onClose={() => setCameraModalOpen(false)}
+          onCaptureImage={handleCaptureCameraImage}
         />
-      )}
 
-      {/* Tab 4: Reminders */}
-      {activeTab === 'reminders' && (
-        <div className="max-w-2xl mx-auto space-y-6">
-          <h2 className="text-2xl font-bold text-[#17151F]">Quản lý Nhắc nhở</h2>
-          <UpcomingReminders />
-        </div>
-      )}
-
-      {/* Tab 5: Settings */}
-      {activeTab === 'settings' && (
-        <SettingsPage
-          accessibility={accessibility}
-          aiSettings={aiSettings}
-          userProfile={userProfile}
-          onUpdateAccessibility={setAccessibility}
-          onUpdateAISettings={setAiSettings}
-          onUpdateUserProfile={setUserProfile}
-          onOpenProfileSetup={() => setProfileSetupOpen(true)}
+        {/* Vietnamese Sign Language Panel Placeholder */}
+        <VSLFloatingPanel
+          isOpen={accessibility.vslEnabled}
+          onClose={() => setAccessibility((prev) => ({ ...prev, vslEnabled: false }))}
+          latestText={
+            activeSession?.messages[activeSession.messages.length - 1]?.text ||
+            'Lovira Life sẵn sàng đồng hành cùng bạn!'
+          }
         />
-      )}
 
-      {/* Tab 6: Profile Page */}
-      {activeTab === 'profile' && (
-        <ProfilePage
-          userProfile={userProfile}
-          onOpenProfileSetup={() => setProfileSetupOpen(true)}
-          onUpdateUserProfile={setUserProfile}
-          totalSessionsCount={sessionsList.length}
+        {/* PWA Mobile Install Banner */}
+        <PWAInstallPrompt />
+
+        {/* Accessible Confirm Dialog */}
+        <ConfirmDialog
+          isOpen={confirmModal.isOpen}
+          title={confirmModal.title}
+          message={confirmModal.message}
+          onConfirm={confirmModal.onConfirm}
+          onCancel={() => setConfirmModal((prev) => ({ ...prev, isOpen: false }))}
         />
-      )}
 
-      {/* Profile Setup Flow Modal */}
-      {profileSetupOpen && (
-        <ProfileSetupFlow
-          initialProfile={userProfile}
-          onClose={() => setProfileSetupOpen(false)}
-          onSaveSuccess={(savedProfile) => {
-            setUserProfile(savedProfile);
-            setProfileSetupOpen(false);
-            showToast('Đã cập nhật thông tin cá nhân!');
-          }}
-        />
-      )}
-
-      {/* Camera Capture Modal */}
-      <CameraModal
-        isOpen={cameraModalOpen}
-        onClose={() => setCameraModalOpen(false)}
-        onCaptureImage={handleCaptureCameraImage}
-      />
-
-      {/* Vietnamese Sign Language Panel Placeholder */}
-      <VSLFloatingPanel
-        isOpen={accessibility.vslEnabled}
-        onClose={() => setAccessibility((prev) => ({ ...prev, vslEnabled: false }))}
-        latestText={
-          activeSession?.messages[activeSession.messages.length - 1]?.text ||
-          'Lovira Life sẵn sàng đồng hành cùng bạn!'
-        }
-      />
-
-      {/* Accessible Confirm Dialog */}
-      <ConfirmDialog
-        isOpen={confirmModal.isOpen}
-        title={confirmModal.title}
-        message={confirmModal.message}
-        onConfirm={confirmModal.onConfirm}
-        onCancel={() => setConfirmModal((prev) => ({ ...prev, isOpen: false }))}
-      />
-
-      {/* Toast Notification */}
-      {toastMessage && <Toast message={toastMessage} />}
-    </AppShell>
+        {/* Toast Notification */}
+        {toastMessage && <Toast message={toastMessage} />}
+      </AppShell>
+    </>
   );
 }
 

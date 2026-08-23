@@ -84,6 +84,8 @@ export function buildAddressing(profile: UserProfile | null): string | undefined
     ong: 'ông',
     ba: 'bà',
     ban: 'bạn',
+    chu: 'chú',
+    bac: 'bác',
     custom: profile.customPronoun?.trim() || 'bạn',
   };
 
