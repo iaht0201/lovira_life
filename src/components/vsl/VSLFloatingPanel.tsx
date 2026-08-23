@@ -19,7 +19,7 @@ export const VSLFloatingPanel: React.FC<VSLFloatingPanelProps> = ({
 
   return (
     <div
-      className={`fixed z-40 transition-all duration-300 border-2 border-indigo-500 rounded-[20px] bg-lovira-card shadow-lovira-lg ${
+      className={`fixed z-40 transition-all duration-300 border-2 border-indigo-500 rounded-[20px] bg-white dark:bg-[#1C162E] opacity-100 shadow-lovira-lg ${
         mode === 'dock'
           ? 'top-[80px] right-4 w-72 md:w-96 max-h-[80vh] p-4 flex flex-col'
           : `bottom-20 right-4 w-72 md:w-80 ${isMinimized ? 'h-14 overflow-hidden p-3' : 'p-4'}`

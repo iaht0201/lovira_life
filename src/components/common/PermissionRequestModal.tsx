@@ -103,8 +103,8 @@ export const PermissionRequestModal: React.FC<PermissionRequestModalProps> = ({
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-50 bg-black/70 backdrop-blur-xs flex items-center justify-center p-4 overflow-y-auto animate-in fade-in duration-200">
-      <div className="bg-surface border border-purple-500/30 rounded-2xl max-w-lg w-full p-5 sm:p-6 shadow-2xl space-y-5 relative">
+    <div className="fixed inset-0 z-50 bg-black/90 backdrop-blur-md flex items-center justify-center p-4 overflow-y-auto animate-in fade-in duration-200">
+      <div className="bg-white dark:bg-[#1C162E] opacity-100 border-2 border-purple-500/40 rounded-2xl max-w-lg w-full p-5 sm:p-6 shadow-2xl space-y-5 relative z-10">
         {/* Header */}
         <div className="flex items-center justify-between border-b border-default pb-4">
           <div className="flex items-center gap-3">

@@ -95,8 +95,8 @@ export const ProfileSetupFlow: React.FC<ProfileSetupFlowProps> = ({
   ];
 
   return (
-    <div className="fixed inset-0 z-50 bg-black/70 backdrop-blur-xs flex items-center justify-center p-4 overflow-y-auto animate-in fade-in duration-150">
-      <div className="bg-lovira-card border border-lovira rounded-[24px] max-w-lg w-full p-6 shadow-lovira-lg space-y-5 relative">
+    <div className="fixed inset-0 z-50 bg-black/90 backdrop-blur-md flex items-center justify-center p-4 overflow-y-auto animate-in fade-in duration-150">
+      <div className="bg-white dark:bg-[#1C162E] opacity-100 border-2 border-purple-500/40 rounded-[24px] max-w-lg w-full p-6 shadow-lovira-lg space-y-5 relative z-10">
         {/* Top Header */}
         <div className="flex items-center justify-between border-b border-lovira-subtle pb-4">
           <div className="flex items-center gap-2.5">

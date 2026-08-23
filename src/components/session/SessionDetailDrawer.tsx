@@ -51,12 +51,12 @@ export const SessionDetailDrawer: React.FC<SessionDetailDrawerProps> = ({
     <div className="fixed inset-0 z-50 flex justify-end">
       {/* Backdrop */}
       <div
-        className="fixed inset-0 bg-black/60 transition-opacity animate-in fade-in"
+        className="fixed inset-0 bg-black/85 backdrop-blur-md transition-opacity animate-in fade-in"
         onClick={onClose}
       />
 
       {/* Drawer Container (Desktop slide-over / Mobile bottom sheet) */}
-      <div className="relative z-10 w-full sm:w-[420px] md:w-[460px] h-full max-h-[100dvh] bg-surface border-l border-default shadow-lovira-lg flex flex-col overflow-hidden animate-in slide-in-from-right duration-200">
+      <div className="relative z-10 w-full sm:w-[420px] md:w-[460px] h-full max-h-[100dvh] bg-white dark:bg-[#1C162E] opacity-100 border-l-2 border-default shadow-lovira-lg flex flex-col overflow-hidden animate-in slide-in-from-right duration-200">
         {/* Drawer Header */}
         <div className="p-4 border-b border-default flex items-center justify-between shrink-0 bg-surface-raised">
           <div className="flex items-center gap-2">

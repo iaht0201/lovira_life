@@ -114,11 +114,11 @@ export const CameraModal: React.FC<CameraModalProps> = ({
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md animate-fade-in"
+      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/90 backdrop-blur-md animate-fade-in"
       role="dialog"
       aria-modal="true"
     >
-      <div className="w-full max-w-lg p-5 bg-surface-raised border border-default rounded-3xl shadow-2xl space-y-4">
+      <div className="w-full max-w-lg p-5 bg-white dark:bg-[#1C162E] opacity-100 border-2 border-purple-500/40 rounded-3xl shadow-2xl space-y-4 z-10">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
             <div className="p-2 bg-amber-500/20 text-amber-600 rounded-xl">

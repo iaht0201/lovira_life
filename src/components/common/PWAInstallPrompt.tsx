@@ -94,7 +94,7 @@ export const PWAInstallPrompt: React.FC = () => {
     <>
       {/* Bottom Floating Install Banner */}
       <div className="fixed bottom-16 sm:bottom-6 left-3 right-3 sm:left-auto sm:right-6 sm:max-w-md z-40 animate-in slide-in-from-bottom duration-300">
-        <div className="bg-surface-raised border border-purple-500/30 rounded-2xl p-4 shadow-2xl backdrop-blur-md flex flex-col space-y-3">
+        <div className="bg-white dark:bg-[#1C162E] opacity-100 border-2 border-purple-500/40 rounded-2xl p-4 shadow-2xl flex flex-col space-y-3">
           <div className="flex items-start justify-between gap-3">
             <div className="flex items-center gap-3">
               <div className="w-11 h-11 rounded-xl bg-gradient-to-br from-[#7C4DFF] to-[#A45CFF] text-white flex items-center justify-center shrink-0 shadow-xs">
@@ -142,8 +142,8 @@ export const PWAInstallPrompt: React.FC = () => {
 
       {/* iOS Modal Instructions */}
       {showIOSGuide && (
-        <div className="fixed inset-0 z-50 bg-black/70 backdrop-blur-xs flex items-center justify-center p-4">
-          <div className="bg-surface border border-purple-500/30 rounded-2xl p-5 max-w-sm w-full space-y-4 shadow-2xl animate-in zoom-in-95">
+        <div className="fixed inset-0 z-50 bg-black/90 backdrop-blur-md flex items-center justify-center p-4">
+          <div className="bg-white dark:bg-[#1C162E] opacity-100 border-2 border-purple-500/40 rounded-2xl p-5 max-w-sm w-full space-y-4 shadow-2xl animate-in zoom-in-95">
             <div className="flex items-center justify-between border-b border-default pb-3">
               <h3 className="text-sm font-bold text-text-primary flex items-center gap-2">
                 <Smartphone className="w-5 h-5 text-[#7C4DFF]" />
