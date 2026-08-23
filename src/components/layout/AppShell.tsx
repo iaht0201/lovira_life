@@ -2,7 +2,7 @@ import React from 'react';
 import { DesktopSidebar, NavTab } from './DesktopSidebar';
 import { Topbar } from './Topbar';
 import { MobileBottomNav } from './MobileBottomNav';
-import { VoiceInteractionState } from '../../types';
+import { VoiceInteractionState, AccessibilitySettings } from '../../types';
 
 interface AppShellProps {
   activeTab: NavTab;
@@ -12,6 +12,8 @@ interface AppShellProps {
   planName?: string;
   voiceStatus: VoiceInteractionState;
   onVoiceClick: () => void;
+  accessibility?: AccessibilitySettings;
+  onUpdateAccessibility?: (settings: AccessibilitySettings) => void;
   children: React.ReactNode;
 }
 
@@ -23,6 +25,8 @@ export const AppShell: React.FC<AppShellProps> = ({
   planName = 'Gói miễn phí',
   voiceStatus,
   onVoiceClick,
+  accessibility,
+  onUpdateAccessibility,
   children,
 }) => {
   return (
@@ -40,6 +44,8 @@ export const AppShell: React.FC<AppShellProps> = ({
       <div className="flex-1 flex flex-col min-w-0 min-h-screen pb-[80px] md:pb-0">
         {/* Topbar Header */}
         <Topbar
+          accessibility={accessibility}
+          onUpdateAccessibility={onUpdateAccessibility}
           onOpenSettings={() => onTabChange('settings')}
           onOpenProfile={() => onTabChange('profile')}
         />

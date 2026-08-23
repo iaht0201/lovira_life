@@ -57,6 +57,7 @@ import { LifeSessionPage } from './components/session/LifeSessionPage';
 import { CameraModal } from './components/camera/CameraModal';
 import { VSLFloatingPanel } from './components/vsl/VSLFloatingPanel';
 import { SettingsPage } from './components/settings/SettingsPage';
+import { ProfilePage } from './components/profile/ProfilePage';
 import { ProfileInviteBanner } from './components/profile/ProfileInviteBanner';
 import { ProfileSetupFlow } from './components/profile/ProfileSetupFlow';
 import { GlobalVoiceButton } from './components/voice/GlobalVoiceButton';
@@ -1059,13 +1060,9 @@ export default function App() {
       onVoiceClick={
         voiceStatus === 'listening' ? handleStopVoiceListening : handleStartVoiceListening
       }
+      accessibility={accessibility}
+      onUpdateAccessibility={setAccessibility}
     >
-      {/* Quick Accessibility Toolbar Bar */}
-      <AccessibilityToolbar
-        settings={accessibility}
-        onUpdate={setAccessibility}
-      />
-
       {/* Profile Invite Banner (Layer 2 Onboarding) */}
       {!userProfile &&
         !bannerDismissed &&
@@ -1106,6 +1103,10 @@ export default function App() {
       {(activeTab === 'session' || activeTab === 'chat') && activeSession && (
         <LifeSessionPage
           session={activeSession}
+          sessionsList={sessionsList}
+          onOpenSession={handleOpenSession}
+          onCreateNewSession={() => handleCreateSessionFromTemplate('medical')}
+          onOpenHistory={() => setActiveTab('history')}
           onBack={() => setActiveTab('dashboard')}
           onUpdateStatus={handleUpdateStatus}
           onDeleteSession={() => handleDeleteSession(activeSession.id)}
@@ -1179,16 +1180,12 @@ export default function App() {
 
       {/* Tab 6: Profile Setup */}
       {activeTab === 'profile' && (
-        <div className="max-w-2xl mx-auto p-6 bg-surface border border-[#ECE8F5] rounded-3xl space-y-4">
-          <h2 className="text-2xl font-bold text-[#17151F]">Hồ sơ cá nhân</h2>
-          <p className="text-sm text-text-secondary">Cập nhật xưng hô, vai trò và thông tin cá nhân của chú để Lovira hỗ trợ chu đáo nhất.</p>
-          <button
-            onClick={() => setProfileSetupOpen(true)}
-            className="px-6 py-2.5 bg-[#7C4DFF] text-white font-bold text-sm rounded-xl shadow-xs"
-          >
-            Chỉnh sửa hồ sơ ngay
-          </button>
-        </div>
+        <ProfilePage
+          userProfile={userProfile}
+          onOpenProfileSetup={() => setProfileSetupOpen(true)}
+          onUpdateUserProfile={setUserProfile}
+          totalSessionsCount={sessionsList.length}
+        />
       )}
 
       {/* Profile Setup Flow Modal */}

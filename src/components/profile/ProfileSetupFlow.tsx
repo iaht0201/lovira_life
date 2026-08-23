@@ -93,20 +93,20 @@ export const ProfileSetupFlow: React.FC<ProfileSetupFlowProps> = ({
   ];
 
   return (
-    <div className="fixed inset-0 z-50 bg-black/70 backdrop-blur-xs flex items-center justify-center p-4 overflow-y-auto animate-fade-in">
-      <div className="bg-surface border border-default rounded-3xl max-w-lg w-full p-6 shadow-2xl space-y-6 relative">
+    <div className="fixed inset-0 z-50 bg-black/70 backdrop-blur-xs flex items-center justify-center p-4 overflow-y-auto animate-in fade-in duration-150">
+      <div className="bg-lovira-card border border-lovira rounded-[24px] max-w-lg w-full p-6 shadow-lovira-lg space-y-5 relative">
         {/* Top Header */}
-        <div className="flex items-center justify-between border-b border-default pb-4">
-          <div className="flex items-center gap-2">
-            <div className="p-2 rounded-xl bg-primary/10 text-primary">
-              <Sparkles className="w-5 h-5" />
+        <div className="flex items-center justify-between border-b border-lovira-subtle pb-4">
+          <div className="flex items-center gap-2.5">
+            <div className="w-[36px] h-[36px] rounded-[12px] bg-lovira-badge-purple text-lovira-purple flex items-center justify-center font-[700]">
+              <Sparkles className="w-[18px] h-[18px]" />
             </div>
             <div>
-              <h3 className="text-base font-extrabold text-text-primary">
-                Hồ sơ cá nhân & Cá nhân hóa
+              <h3 className="text-[16px] font-[800] text-lovira-title">
+                Thiết lập Hồ sơ cá nhân
               </h3>
-              <p className="text-xs text-text-secondary">
-                Bước {step} / {totalSteps} — Hoàn toàn tùy chọn, có thể bỏ qua bất kỳ lúc nào
+              <p className="text-[12px] font-[500] text-lovira-muted">
+                Bước {step} / {totalSteps} — Tùy chỉnh xưng hô & phong cách AI
               </p>
             </div>
           </div>
@@ -114,16 +114,16 @@ export const ProfileSetupFlow: React.FC<ProfileSetupFlowProps> = ({
           <button
             onClick={onClose}
             aria-label="Thoát"
-            className="p-1.5 rounded-xl border border-default hover:bg-surface-raised text-text-secondary transition-all"
+            className="p-2 rounded-[12px] border border-lovira hover:bg-lovira-card-hover text-lovira-muted hover:text-lovira-title transition-all cursor-pointer"
           >
-            <X className="w-5 h-5" />
+            <X className="w-[18px] h-[18px]" />
           </button>
         </div>
 
         {/* Progress Bar */}
-        <div className="w-full bg-surface-raised h-2 rounded-full overflow-hidden">
+        <div className="w-full bg-lovira-input h-2 rounded-full overflow-hidden border border-lovira-subtle">
           <div
-            className="bg-primary h-full transition-all duration-300"
+            className="bg-lovira-purple h-full transition-all duration-300"
             style={{ width: `${(step / totalSteps) * 100}%` }}
           />
         </div>
@@ -132,27 +132,27 @@ export const ProfileSetupFlow: React.FC<ProfileSetupFlowProps> = ({
         <div className="space-y-4 min-h-[220px]">
           {/* STEP 1: Xưng hô */}
           {step === 1 && (
-            <div className="space-y-4 animate-fade-in">
-              <div className="flex items-center gap-2 text-primary font-bold text-sm">
-                <User className="w-5 h-5" />
-                <span>1. Bạn muốn Lovira gọi bạn là gì?</span>
+            <div className="space-y-4 animate-in fade-in">
+              <div className="flex items-center gap-2 text-lovira-purple font-[700] text-[14px]">
+                <User className="w-[18px] h-[18px]" />
+                <span>1. Tên gọi & Danh xưng mong muốn</span>
               </div>
 
-              <div className="space-y-2">
-                <label className="text-xs font-bold text-text-primary block">
+              <div className="space-y-1.5">
+                <label className="text-[12px] font-[700] text-lovira-title block">
                   Tên của bạn (hoặc biệt danh):
                 </label>
                 <input
                   type="text"
                   value={preferredName}
                   onChange={(e) => setPreferredName(e.target.value)}
-                  placeholder="Ví dụ: Minh, Hoa, Hùng..."
-                  className="w-full p-3 rounded-xl border border-default bg-surface-raised text-text-primary text-sm font-semibold focus:outline-none focus:border-primary"
+                  placeholder="Ví dụ: Ba, Hoa, Hùng, Minh..."
+                  className="w-full p-3 rounded-[12px] border border-lovira bg-lovira-input text-lovira-title text-[13px] font-[600] focus:outline-none focus:border-lovira-purple"
                 />
               </div>
 
-              <div className="space-y-2">
-                <label className="text-xs font-bold text-text-primary block">
+              <div className="space-y-1.5">
+                <label className="text-[12px] font-[700] text-lovira-title block">
                   Cách xưng hô phù hợp:
                 </label>
                 <div className="grid grid-cols-3 gap-2">
@@ -161,10 +161,10 @@ export const ProfileSetupFlow: React.FC<ProfileSetupFlowProps> = ({
                       key={p.id}
                       type="button"
                       onClick={() => setPronounStyle(p.id)}
-                      className={`p-2.5 rounded-xl border text-xs font-bold transition-all ${
+                      className={`p-2.5 rounded-[12px] border text-[12px] font-[700] transition-all cursor-pointer ${
                         pronounStyle === p.id
-                          ? 'bg-primary text-white border-primary shadow-xs'
-                          : 'bg-surface-raised border-default hover:border-primary text-text-primary'
+                          ? 'bg-lovira-purple text-white border-lovira-purple shadow-2xs'
+                          : 'bg-lovira-input border-lovira hover:border-lovira-purple text-lovira-title'
                       }`}
                     >
                       {p.label}
@@ -178,7 +178,7 @@ export const ProfileSetupFlow: React.FC<ProfileSetupFlowProps> = ({
                     value={customPronoun}
                     onChange={(e) => setCustomPronoun(e.target.value)}
                     placeholder="Nhập xưng hô tùy chỉnh (vd: Bác, Chú, Cậu...)"
-                    className="w-full p-2.5 mt-2 rounded-xl border border-default bg-surface-raised text-text-primary text-xs"
+                    className="w-full p-2.5 mt-2 rounded-[12px] border border-lovira bg-lovira-input text-lovira-title text-[12px]"
                   />
                 )}
               </div>
@@ -187,50 +187,50 @@ export const ProfileSetupFlow: React.FC<ProfileSetupFlowProps> = ({
 
           {/* STEP 2: Tốc độ giao tiếp */}
           {step === 2 && (
-            <div className="space-y-4 animate-fade-in">
-              <div className="flex items-center gap-2 text-primary font-bold text-sm">
-                <MessageSquareText className="w-5 h-5" />
-                <span>2. Tốc độ & độ chi tiết phản hồi</span>
+            <div className="space-y-4 animate-in fade-in">
+              <div className="flex items-center gap-2 text-lovira-purple font-[700] text-[14px]">
+                <MessageSquareText className="w-[18px] h-[18px]" />
+                <span>2. Tốc độ & Độ chi tiết phản hồi</span>
               </div>
 
-              <p className="text-xs text-text-secondary">
-                Chọn cách bạn muốn Lovira giải thích khi thực hiện công việc và trả lời câu hỏi:
+              <p className="text-[12px] font-[500] text-lovira-muted">
+                Cách Lovira giải thích khi hướng dẫn bạn làm việc:
               </p>
 
-              <div className="space-y-3 pt-1">
+              <div className="space-y-2.5 pt-1">
                 <button
                   type="button"
                   onClick={() => setCommunicationPace('normal')}
-                  className={`w-full p-4 rounded-2xl border text-left transition-all ${
+                  className={`w-full p-3.5 rounded-[16px] border text-left transition-all cursor-pointer ${
                     communicationPace === 'normal'
-                      ? 'bg-primary/10 border-primary font-bold text-primary shadow-xs'
-                      : 'bg-surface-raised border-default text-text-primary hover:border-primary/50'
+                      ? 'bg-lovira-badge-purple border-lovira-purple font-[700] text-lovira-purple shadow-2xs'
+                      : 'bg-lovira-input border-lovira text-lovira-title hover:border-lovira-purple'
                   }`}
                 >
-                  <div className="text-sm font-extrabold flex items-center justify-between">
+                  <div className="text-[13px] font-[800] flex items-center justify-between">
                     <span>⚡ Trả lời ngắn gọn, đi thẳng vào việc</span>
-                    {communicationPace === 'normal' && <CheckCircle2 className="w-4 h-4 text-primary" />}
+                    {communicationPace === 'normal' && <CheckCircle2 className="w-[16px] h-[16px] text-lovira-purple" />}
                   </div>
-                  <p className="text-xs text-text-secondary mt-1 font-normal">
-                    Phản hồi xúc tích, cô đọng, phù hợp khi bạn muốn xử lý nhanh các việc cần làm.
+                  <p className="text-[11px] font-[500] text-lovira-muted mt-1">
+                    Phản hồi súc tích, cô đọng, phù hợp với thao tác nhanh.
                   </p>
                 </button>
 
                 <button
                   type="button"
                   onClick={() => setCommunicationPace('slow_detailed')}
-                  className={`w-full p-4 rounded-2xl border text-left transition-all ${
+                  className={`w-full p-3.5 rounded-[16px] border text-left transition-all cursor-pointer ${
                     communicationPace === 'slow_detailed'
-                      ? 'bg-primary/10 border-primary font-bold text-primary shadow-xs'
-                      : 'bg-surface-raised border-default text-text-primary hover:border-primary/50'
+                      ? 'bg-lovira-badge-purple border-lovira-purple font-[700] text-lovira-purple shadow-2xs'
+                      : 'bg-lovira-input border-lovira text-lovira-title hover:border-lovira-purple'
                   }`}
                 >
-                  <div className="text-sm font-extrabold flex items-center justify-between">
+                  <div className="text-[13px] font-[800] flex items-center justify-between">
                     <span>🌱 Hướng dẫn chi tiết từng bước</span>
-                    {communicationPace === 'slow_detailed' && <CheckCircle2 className="w-4 h-4 text-primary" />}
+                    {communicationPace === 'slow_detailed' && <CheckCircle2 className="w-[16px] h-[16px] text-lovira-purple" />}
                   </div>
-                  <p className="text-xs text-text-secondary mt-1 font-normal">
-                    Câu văn rõ ràng, giải thích dễ hiểu, từ tốn nhắc lại ý chính khi cần thiết.
+                  <p className="text-[11px] font-[500] text-lovira-muted mt-1">
+                    Giải thích từ tốn, chi tiết từng bước (Phù hợp cho người cao tuổi).
                   </p>
                 </button>
               </div>
@@ -239,40 +239,40 @@ export const ProfileSetupFlow: React.FC<ProfileSetupFlowProps> = ({
 
           {/* STEP 3: Người thân liên hệ */}
           {step === 3 && (
-            <div className="space-y-4 animate-fade-in">
-              <div className="flex items-center gap-2 text-primary font-bold text-sm">
-                <PhoneCall className="w-5 h-5" />
-                <span>3. Thông tin người thân liên hệ (tùy chọn)</span>
+            <div className="space-y-4 animate-in fade-in">
+              <div className="flex items-center gap-2 text-lovira-purple font-[700] text-[14px]">
+                <PhoneCall className="w-[18px] h-[18px]" />
+                <span>3. Người thân hỗ trợ khẩn cấp (tùy chọn)</span>
               </div>
 
-              <p className="text-xs text-text-secondary">
-                Người thân hoặc người chăm sóc có thể được liên hệ nhanh nếu bạn cần sự hỗ trợ khẩn cấp.
+              <p className="text-[12px] font-[500] text-lovira-muted">
+                Thông tin người chăm sóc hoặc con cháu để gọi nhanh khi cần.
               </p>
 
               <div className="space-y-3">
-                <div>
-                  <label className="text-xs font-bold text-text-primary block mb-1">
-                    Tên người thân / người chăm sóc:
+                <div className="space-y-1">
+                  <label className="text-[12px] font-[700] text-lovira-title block">
+                    Tên người thân:
                   </label>
                   <input
                     type="text"
                     value={caregiverName}
                     onChange={(e) => setCaregiverName(e.target.value)}
                     placeholder="Ví dụ: Con gái Lan, Anh Tuấn..."
-                    className="w-full p-3 rounded-xl border border-default bg-surface-raised text-text-primary text-sm"
+                    className="w-full p-3 rounded-[12px] border border-lovira bg-lovira-input text-lovira-title text-[13px]"
                   />
                 </div>
 
-                <div>
-                  <label className="text-xs font-bold text-text-primary block mb-1">
-                    Số điện thoại liên hệ:
+                <div className="space-y-1">
+                  <label className="text-[12px] font-[700] text-lovira-title block">
+                    Số điện thoại:
                   </label>
                   <input
                     type="tel"
                     value={caregiverPhone}
                     onChange={(e) => setCaregiverPhone(e.target.value)}
                     placeholder="Ví dụ: 0912 345 678"
-                    className="w-full p-3 rounded-xl border border-default bg-surface-raised text-text-primary text-sm"
+                    className="w-full p-3 rounded-[12px] border border-lovira bg-lovira-input text-lovira-title text-[13px]"
                   />
                 </div>
               </div>
@@ -281,26 +281,26 @@ export const ProfileSetupFlow: React.FC<ProfileSetupFlowProps> = ({
 
           {/* STEP 4: Thông tin sức khỏe tự khai báo */}
           {step === 4 && (
-            <div className="space-y-4 animate-fade-in">
-              <div className="flex items-center gap-2 text-primary font-bold text-sm">
-                <HeartPulse className="w-5 h-5 text-rose-500" />
-                <span>4. Thông tin sức khỏe quan trọng (tùy chọn)</span>
+            <div className="space-y-4 animate-in fade-in">
+              <div className="flex items-center gap-2 text-rose-600 dark:text-rose-400 font-[700] text-[14px]">
+                <HeartPulse className="w-[18px] h-[18px]" />
+                <span>4. Bệnh nền / Món kiêng (tùy chọn)</span>
               </div>
 
-              <div className="p-3 rounded-xl bg-amber-500/10 border border-amber-500/30 text-xs text-text-primary leading-relaxed">
-                🛡️ <strong>Lưu ý bảo mật:</strong> Thông tin chỉ được lưu cục bộ trên thiết bị của bạn. Lovira chỉ sử dụng thông tin này khi hỗ trợ bạn trong các phiên đi khám hoặc y tế.
+              <div className="p-3 rounded-[12px] bg-amber-500/10 border border-amber-500/30 text-[11px] font-[500] text-lovira-title leading-relaxed">
+                🛡️ <strong>Lưu ý:</strong> Thông tin lưu cục bộ an toàn trên thiết bị của bạn.
               </div>
 
               <div className="space-y-1">
-                <label className="text-xs font-bold text-text-primary block">
-                  Nhập dị ứng thuốc, bệnh nền hoặc lưu ý y tế (Mỗi dòng 1 ý):
+                <label className="text-[12px] font-[700] text-lovira-title block">
+                  Nhập dị ứng, bệnh nền hoặc món ăn kiêng (Mỗi dòng 1 ý):
                 </label>
                 <textarea
                   rows={4}
                   value={conditionsText}
                   onChange={(e) => setConditionsText(e.target.value)}
-                  placeholder="Ví dụ:&#10;Dị ứng thuốc Penicillin&#10;Cao huyết áp&#10;Tiểu đường type 2"
-                  className="w-full p-3 rounded-xl border border-default bg-surface-raised text-text-primary text-xs leading-relaxed focus:outline-none focus:border-primary"
+                  placeholder="Ví dụ:&#10;Dị ứng thuốc Penicillin&#10;Cao huyết áp&#10;Kiêng hải sản"
+                  className="w-full p-3 rounded-[12px] border border-lovira bg-lovira-input text-lovira-title text-[12px] leading-relaxed focus:outline-none focus:border-lovira-purple"
                 />
               </div>
             </div>
@@ -308,15 +308,15 @@ export const ProfileSetupFlow: React.FC<ProfileSetupFlowProps> = ({
         </div>
 
         {/* BOTTOM BUTTONS */}
-        <div className="flex items-center justify-between border-t border-default pt-4">
+        <div className="flex items-center justify-between border-t border-lovira-subtle pt-4">
           <div className="flex items-center gap-2">
             {step > 1 && (
               <button
                 type="button"
                 onClick={() => setStep((prev) => prev - 1)}
-                className="px-3 py-2 rounded-xl border border-default text-text-secondary text-xs font-bold flex items-center gap-1 hover:bg-surface-raised"
+                className="px-3.5 py-2 rounded-[12px] border border-lovira text-lovira-muted hover:text-lovira-title text-[12px] font-[700] flex items-center gap-1 hover:bg-lovira-card-hover cursor-pointer"
               >
-                <ChevronLeft className="w-4 h-4" />
+                <ChevronLeft className="w-[16px] h-[16px]" />
                 <span>Quay lại</span>
               </button>
             )}
@@ -324,9 +324,9 @@ export const ProfileSetupFlow: React.FC<ProfileSetupFlowProps> = ({
             <button
               type="button"
               onClick={handleSkipCurrentStep}
-              className="px-3 py-2 text-text-secondary hover:text-text-primary text-xs font-semibold"
+              className="px-3 py-2 text-lovira-sub hover:text-lovira-title text-[12px] font-[600] cursor-pointer"
             >
-              Bỏ qua câu này
+              Bỏ qua
             </button>
           </div>
 
@@ -334,10 +334,10 @@ export const ProfileSetupFlow: React.FC<ProfileSetupFlowProps> = ({
             <button
               type="button"
               onClick={handleNextStep}
-              className="px-5 py-2.5 rounded-xl bg-primary text-white text-xs font-bold shadow-md hover:bg-primary-hover flex items-center gap-1"
+              className="px-5 py-2 rounded-[12px] bg-lovira-purple text-white text-[12px] font-[700] shadow-xs hover:opacity-90 transition-opacity flex items-center gap-1 cursor-pointer"
             >
               <span>{step === totalSteps ? 'Hoàn tất & Lưu' : 'Tiếp theo'}</span>
-              {step < totalSteps && <ChevronRight className="w-4 h-4" />}
+              {step < totalSteps && <ChevronRight className="w-[16px] h-[16px]" />}
             </button>
           </div>
         </div>

@@ -276,3 +276,5 @@ export interface AISettings {
   selectedModel: string;
   demoMode: boolean;
 }
+
+export type { BriefSessionHeader } from './services/storageService';
