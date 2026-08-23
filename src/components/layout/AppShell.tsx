@@ -29,6 +29,8 @@ export const AppShell: React.FC<AppShellProps> = ({
   onUpdateAccessibility,
   children,
 }) => {
+  const isChatTab = activeTab === 'chat' || activeTab === 'session';
+
   return (
     <div className="min-h-screen bg-bg-base text-text-primary flex flex-col md:flex-row antialiased">
       {/* Desktop Sidebar */}
@@ -41,7 +43,7 @@ export const AppShell: React.FC<AppShellProps> = ({
       />
 
       {/* Main Content Area */}
-      <div className="flex-1 flex flex-col min-w-0 min-h-screen pb-[80px] md:pb-0">
+      <div className="flex-1 flex flex-col min-w-0 min-h-screen pb-[76px] md:pb-0">
         {/* Topbar Header */}
         <Topbar
           accessibility={accessibility}
@@ -51,7 +53,13 @@ export const AppShell: React.FC<AppShellProps> = ({
         />
 
         {/* Page Main Content */}
-        <main className="flex-1 px-4 sm:px-6 md:px-8 py-6 max-w-[1440px] w-full mx-auto">
+        <main
+          className={`flex-1 flex flex-col min-h-0 w-full mx-auto ${
+            isChatTab
+              ? 'p-0 sm:px-6 md:px-8 md:py-6 max-w-[1440px]'
+              : 'px-3.5 sm:px-6 md:px-8 pt-4 pb-6 md:py-6 max-w-[1440px]'
+          }`}
+        >
           {children}
         </main>
       </div>

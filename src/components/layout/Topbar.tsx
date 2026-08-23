@@ -1,5 +1,17 @@
-import React, { useState } from 'react';
-import { Search, Bell, Settings, Type, Eye, Sun, Moon, Volume2, VolumeX, Sparkles, SlidersHorizontal, ChevronDown } from 'lucide-react';
+import React, { useState, useRef, useEffect } from 'react';
+import {
+  Search,
+  Bell,
+  Settings,
+  Type,
+  Eye,
+  Sun,
+  Moon,
+  Volume2,
+  Sparkles,
+  ChevronDown,
+  SlidersHorizontal,
+} from 'lucide-react';
 import { AccessibilitySettings } from '../../types';
 
 interface TopbarProps {
@@ -22,7 +34,18 @@ export const Topbar: React.FC<TopbarProps> = ({
   hasNotifications = true,
 }) => {
   const [searchQuery, setSearchQuery] = useState('');
-  const [showAccessPopover, setShowAccessPopover] = useState(false);
+  const [showDropdown, setShowDropdown] = useState(false);
+  const dropdownRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+        setShowDropdown(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
 
   const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setSearchQuery(e.target.value);
@@ -57,10 +80,17 @@ export const Topbar: React.FC<TopbarProps> = ({
     onUpdateAccessibility({ ...accessibility, vslEnabled: !accessibility.vslEnabled });
   };
 
+  const isCustomAccessActive =
+    accessibility &&
+    (accessibility.fontScale > 1.0 ||
+      accessibility.highContrast ||
+      accessibility.speakResponse ||
+      accessibility.vslEnabled);
+
   return (
-    <header className="h-[64px] bg-lovira-topbar backdrop-blur-md border-b border-lovira-subtle px-4 sm:px-6 md:px-8 flex items-center justify-between sticky top-0 z-30 shrink-0 transition-colors">
+    <header className="h-[64px] bg-lovira-topbar backdrop-blur-md border-b border-lovira-subtle px-3.5 sm:px-6 md:px-8 flex items-center justify-between sticky top-0 z-30 shrink-0 transition-colors">
       {/* Search Input (Desktop & Tablet) */}
-      <div className="relative flex-1 max-w-[280px] lg:max-w-[340px] hidden sm:block">
+      <div className="relative flex-1 max-w-[240px] sm:max-w-[280px] lg:max-w-[320px] hidden sm:block">
         <Search className="w-[18px] h-[18px] text-lovira-sub absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none" />
         <input
           type="text"
@@ -72,86 +102,96 @@ export const Topbar: React.FC<TopbarProps> = ({
       </div>
 
       {/* Mobile Title if small screen */}
-      <div className="sm:hidden flex items-center gap-1">
-        <span className="text-[22px] font-[900] text-lovira-purple">Lovira</span>
-        <span className="text-[18px] text-[#FF5CA8] font-black">♥</span>
+      <div className="sm:hidden flex items-center gap-1.5">
+        <span className="text-[20px] font-[900] text-lovira-purple">Lovira</span>
+        <span className="text-[16px] text-[#FF5CA8] font-black">♥</span>
       </div>
 
-      {/* Navbar Accessibility Controls Area */}
-      {accessibility && onUpdateAccessibility && (
-        <div className="flex items-center gap-2 ml-auto mr-2">
-          {/* Desktop Font Scale Segmented Buttons */}
-          <div className="hidden lg:flex items-center gap-1.5 px-2 py-1 rounded-[12px] bg-lovira-card border border-lovira">
-            <span className="text-[12px] font-[700] text-lovira-title flex items-center gap-1 mr-1">
-              <Type className="w-[14px] h-[14px] text-lovira-purple" />
-              <span>Cỡ chữ:</span>
-            </span>
-            {fontScales.map((scale) => {
-              const label = `${Math.round(scale * 100)}%`;
-              const isSelected = accessibility.fontScale === scale;
-              return (
-                <button
-                  key={scale}
-                  onClick={() => handleFontChange(scale)}
-                  title={`Đổi cỡ chữ ${label}`}
-                  className={`px-2 py-0.5 rounded-[8px] text-[11px] font-[800] transition-all cursor-pointer ${
-                    isSelected
-                      ? 'bg-lovira-purple text-white shadow-2xs'
-                      : 'text-lovira-muted hover:text-lovira-title hover:bg-lovira-card-hover'
-                  }`}
-                >
-                  {label}
-                </button>
-              );
-            })}
-          </div>
-
-          {/* High Contrast Toggle Button */}
-          <button
-            onClick={toggleHighContrast}
-            title="Bật/Tắt chế độ tương phản cao"
-            className={`h-[38px] px-2.5 rounded-[12px] border transition-all flex items-center gap-1.5 cursor-pointer text-[12px] font-[700] ${
-              accessibility.highContrast
-                ? 'bg-amber-400 text-black border-amber-500 font-bold ring-2 ring-amber-300'
-                : 'bg-lovira-card border-lovira text-lovira-muted hover:text-lovira-title hover:bg-lovira-card-hover'
-            }`}
-          >
-            <Eye className="w-[16px] h-[16px]" />
-            <span className="hidden xl:inline">Tương phản</span>
-          </button>
-
-          {/* Dark / Light Theme Button */}
-          <button
-            onClick={toggleTheme}
-            title={`Chuyển giao diện ${accessibility.theme === 'dark' ? 'Sáng' : 'Tối'}`}
-            className="w-[38px] h-[38px] rounded-[12px] bg-lovira-card border border-lovira hover:bg-lovira-card-hover text-lovira-muted hover:text-lovira-title flex items-center justify-center transition-colors cursor-pointer"
-          >
-            {accessibility.theme === 'dark' ? (
-              <Sun className="w-[18px] h-[18px] text-amber-400" />
-            ) : (
-              <Moon className="w-[18px] h-[18px] text-indigo-600" />
-            )}
-          </button>
-
-          {/* Compact Mobile/Tablet Accessibility Menu Trigger */}
-          <div className="relative lg:hidden">
+      {/* Right Controls Area */}
+      <div className="flex items-center gap-1.5 sm:gap-2 ml-auto">
+        {/* Unified Accessibility & Display Dropdown */}
+        {accessibility && onUpdateAccessibility && (
+          <div className="relative" ref={dropdownRef}>
             <button
-              onClick={() => setShowAccessPopover(!showAccessPopover)}
-              className="h-[38px] px-2.5 rounded-[12px] bg-lovira-badge-purple border border-lovira-purple text-lovira-purple flex items-center gap-1 text-[12px] font-[700] transition-colors cursor-pointer"
-              title="Tùy chọn Trợ năng"
+              onClick={() => setShowDropdown(!showDropdown)}
+              className={`h-[38px] px-2.5 sm:px-3 rounded-[12px] border transition-all flex items-center gap-1.5 cursor-pointer text-[12px] font-[700] ${
+                isCustomAccessActive
+                  ? 'bg-lovira-badge-purple border-lovira-purple text-lovira-purple shadow-2xs'
+                  : 'bg-lovira-card border-lovira text-lovira-muted hover:text-lovira-title hover:bg-lovira-card-hover'
+              }`}
+              title="Tùy chỉnh giao diện & Trợ năng"
+              aria-expanded={showDropdown}
             >
-              <Type className="w-[16px] h-[16px]" />
-              <span>{Math.round(accessibility.fontScale * 100)}%</span>
-              <ChevronDown className="w-[12px] h-[12px]" />
+              <SlidersHorizontal className="w-[15px] h-[15px] text-lovira-purple" />
+              <span className="hidden sm:inline">Trợ năng & Giao diện</span>
+              <span className="sm:hidden">{Math.round(accessibility.fontScale * 100)}%</span>
+              <ChevronDown
+                className={`w-[13px] h-[13px] transition-transform duration-200 ${
+                  showDropdown ? 'rotate-180' : ''
+                }`}
+              />
             </button>
 
-            {/* Accessibility Popover Panel */}
-            {showAccessPopover && (
-              <div className="absolute right-0 top-[48px] w-[260px] p-3 rounded-[18px] bg-lovira-card border border-lovira shadow-lovira-lg z-50 space-y-3 animate-in fade-in duration-150">
+            {/* Dropdown Menu Panel */}
+            {showDropdown && (
+              <div className="absolute right-0 top-[46px] w-[280px] p-3.5 rounded-[18px] bg-lovira-card border border-lovira shadow-lovira-lg z-50 space-y-3.5 animate-in fade-in slide-in-from-top-2 duration-150">
+                {/* Header title */}
+                <div className="flex items-center justify-between pb-2 border-b border-lovira-subtle">
+                  <span className="text-[12px] font-[800] text-lovira-title flex items-center gap-1.5">
+                    <SlidersHorizontal className="w-[14px] h-[14px] text-lovira-purple" />
+                    Tùy chỉnh Trợ năng
+                  </span>
+                  {isCustomAccessActive && (
+                    <span className="text-[10px] font-[700] px-1.5 py-0.5 rounded-full bg-lovira-purple text-white">
+                      Đang bật
+                    </span>
+                  )}
+                </div>
+
+                {/* 1. Theme & High Contrast */}
                 <div className="space-y-1.5">
-                  <div className="text-[11px] font-[700] text-lovira-muted uppercase tracking-wider flex items-center gap-1">
-                    <Type className="w-[12px] h-[12px]" />
-                    <span>Tăng/Giảm Cỡ Chữ</span>
+                  <div className="text-[11px] font-[700] text-lovira-muted uppercase tracking-wider">
+                    Giao diện & Tương phản
+                  </div>
+                  <div className="grid grid-cols-2 gap-1.5">
+                    <button
+                      onClick={toggleTheme}
+                      className="px-2.5 py-2 rounded-[10px] text-[12px] font-[700] flex items-center justify-center gap-1.5 bg-lovira-input hover:bg-lovira-card-hover border border-lovira text-lovira-title transition-all cursor-pointer"
+                    >
+                      {accessibility.theme === 'dark' ? (
+                        <>
+                          <Sun className="w-[14px] h-[14px] text-amber-400" />
+                          <span>Chế độ Tối</span>
+                        </>
+                      ) : (
+                        <>
+                          <Moon className="w-[14px] h-[14px] text-indigo-600" />
+                          <span>Chế độ Sáng</span>
+                        </>
+                      )}
+                    </button>
+
+                    <button
+                      onClick={toggleHighContrast}
+                      className={`px-2.5 py-2 rounded-[10px] text-[12px] font-[700] flex items-center justify-center gap-1.5 border transition-all cursor-pointer ${
+                        accessibility.highContrast
+                          ? 'bg-amber-400 text-black border-amber-500 font-bold'
+                          : 'bg-lovira-input border-lovira text-lovira-muted hover:text-lovira-title hover:bg-lovira-card-hover'
+                      }`}
+                    >
+                      <Eye className="w-[14px] h-[14px]" />
+                      <span>Tương phản</span>
+                    </button>
+                  </div>
+                </div>
+
+                {/* 2. Font Scale */}
+                <div className="space-y-1.5">
+                  <div className="text-[11px] font-[700] text-lovira-muted uppercase tracking-wider flex items-center justify-between">
+                    <span>Cỡ chữ hiển thị</span>
+                    <span className="text-lovira-purple font-[800]">
+                      {Math.round(accessibility.fontScale * 100)}%
+                    </span>
                   </div>
                   <div className="grid grid-cols-4 gap-1">
                     {fontScales.map((scale) => {
@@ -160,14 +200,11 @@ export const Topbar: React.FC<TopbarProps> = ({
                       return (
                         <button
                           key={scale}
-                          onClick={() => {
-                            handleFontChange(scale);
-                            setShowAccessPopover(false);
-                          }}
-                          className={`py-1.5 rounded-[8px] text-[11px] font-[800] text-center transition-all ${
+                          onClick={() => handleFontChange(scale)}
+                          className={`py-1.5 rounded-[8px] text-[11px] font-[800] text-center transition-all cursor-pointer ${
                             isSelected
-                              ? 'bg-lovira-purple text-white'
-                              : 'bg-lovira-badge-purple text-lovira-purple hover:bg-lovira-purple/20'
+                              ? 'bg-lovira-purple text-white shadow-2xs'
+                              : 'bg-lovira-input text-lovira-muted hover:text-lovira-title hover:bg-lovira-card-hover border border-lovira'
                           }`}
                         >
                           {label}
@@ -177,35 +214,42 @@ export const Topbar: React.FC<TopbarProps> = ({
                   </div>
                 </div>
 
+                {/* 3. Assistive Toggles */}
                 <div className="pt-2 border-t border-lovira-subtle space-y-1.5">
                   <button
-                    onClick={() => {
-                      toggleSpeech();
-                      setShowAccessPopover(false);
-                    }}
-                    className="w-full px-2.5 py-1.5 rounded-[10px] text-[12px] font-[600] flex items-center justify-between bg-lovira-card hover:bg-lovira-card-hover border border-lovira text-lovira-title"
+                    onClick={toggleSpeech}
+                    className="w-full px-2.5 py-2 rounded-[10px] text-[12px] font-[600] flex items-center justify-between bg-lovira-input hover:bg-lovira-card-hover border border-lovira text-lovira-title transition-all cursor-pointer"
                   >
                     <span className="flex items-center gap-1.5">
                       <Volume2 className="w-[14px] h-[14px] text-lovira-purple" />
-                      <span>Đọc giọng nói</span>
+                      <span>Đọc phản hồi bằng giọng nói</span>
                     </span>
-                    <span className="text-[11px] font-[700] text-lovira-purple">
+                    <span
+                      className={`text-[11px] font-[800] px-1.5 py-0.5 rounded-md ${
+                        accessibility.speakResponse
+                          ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400'
+                          : 'text-lovira-muted'
+                      }`}
+                    >
                       {accessibility.speakResponse ? 'Bật' : 'Tắt'}
                     </span>
                   </button>
 
                   <button
-                    onClick={() => {
-                      toggleVSL();
-                      setShowAccessPopover(false);
-                    }}
-                    className="w-full px-2.5 py-1.5 rounded-[10px] text-[12px] font-[600] flex items-center justify-between bg-lovira-card hover:bg-lovira-card-hover border border-lovira text-lovira-title"
+                    onClick={toggleVSL}
+                    className="w-full px-2.5 py-2 rounded-[10px] text-[12px] font-[600] flex items-center justify-between bg-lovira-input hover:bg-lovira-card-hover border border-lovira text-lovira-title transition-all cursor-pointer"
                   >
                     <span className="flex items-center gap-1.5">
                       <Sparkles className="w-[14px] h-[14px] text-indigo-500" />
-                      <span>Bảng Ký hiệu VSL</span>
+                      <span>Bảng Ngôn ngữ Ký hiệu VSL</span>
                     </span>
-                    <span className="text-[11px] font-[700] text-indigo-500">
+                    <span
+                      className={`text-[11px] font-[800] px-1.5 py-0.5 rounded-md ${
+                        accessibility.vslEnabled
+                          ? 'bg-indigo-500/10 text-indigo-600 dark:text-indigo-400'
+                          : 'text-lovira-muted'
+                      }`}
+                    >
                       {accessibility.vslEnabled ? 'Hiện' : 'Ẩn'}
                     </span>
                   </button>
@@ -213,19 +257,16 @@ export const Topbar: React.FC<TopbarProps> = ({
               </div>
             )}
           </div>
-        </div>
-      )}
+        )}
 
-      {/* Header Action Buttons */}
-      <div className="flex items-center gap-2">
         {/* Notification Button */}
         <button
           onClick={onOpenNotifications}
-          className="relative w-[40px] h-[40px] rounded-[12px] bg-lovira-card border border-lovira hover:bg-lovira-card-hover text-lovira-muted hover:text-lovira-main flex items-center justify-center transition-colors cursor-pointer"
+          className="relative w-[38px] h-[38px] sm:w-[40px] sm:h-[40px] rounded-[12px] bg-lovira-card border border-lovira hover:bg-lovira-card-hover text-lovira-muted hover:text-lovira-main flex items-center justify-center transition-colors cursor-pointer"
           title="Thông báo"
           aria-label="Thông báo"
         >
-          <Bell className="w-[20px] h-[20px]" />
+          <Bell className="w-[18px] h-[18px] sm:w-[20px] sm:h-[20px]" />
           {hasNotifications && (
             <span className="absolute top-2 right-2 w-[8px] h-[8px] rounded-full bg-[#FF5CA8] ring-2 ring-white dark:ring-[#1E1830]" />
           )}
@@ -234,21 +275,21 @@ export const Topbar: React.FC<TopbarProps> = ({
         {/* Settings Button */}
         <button
           onClick={onOpenSettings}
-          className="w-[40px] h-[40px] rounded-[12px] bg-lovira-card border border-lovira hover:bg-lovira-card-hover text-lovira-muted hover:text-lovira-main flex items-center justify-center transition-colors cursor-pointer"
+          className="w-[38px] h-[38px] sm:w-[40px] sm:h-[40px] rounded-[12px] bg-lovira-card border border-lovira hover:bg-lovira-card-hover text-lovira-muted hover:text-lovira-main flex items-center justify-center transition-colors cursor-pointer"
           title="Cài đặt"
           aria-label="Cài đặt"
         >
-          <Settings className="w-[20px] h-[20px]" />
+          <Settings className="w-[18px] h-[18px] sm:w-[20px] sm:h-[20px]" />
         </button>
 
         {/* User Avatar Button */}
         <button
           onClick={onOpenProfile}
-          className="w-[40px] h-[40px] rounded-full bg-lovira-badge-purple border border-lovira-purple hover:ring-2 hover:ring-lovira-purple/30 flex items-center justify-center overflow-hidden transition-all cursor-pointer ml-0.5"
+          className="w-[38px] h-[38px] sm:w-[40px] sm:h-[40px] rounded-full bg-lovira-badge-purple border border-lovira-purple hover:ring-2 hover:ring-lovira-purple/30 flex items-center justify-center overflow-hidden transition-all cursor-pointer ml-0.5"
           title="Hồ sơ cá nhân"
           aria-label="Hồ sơ cá nhân"
         >
-          <span className="text-[20px]">👴</span>
+          <span className="text-[18px] sm:text-[20px]">👴</span>
         </button>
       </div>
     </header>

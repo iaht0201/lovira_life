@@ -1,10 +1,11 @@
 import React, { useState } from 'react';
-import { Volume2, Check, Copy, Sparkles, Bot, User } from 'lucide-react';
+import { Volume2, Check, Copy, Sparkles, Bot, User, CheckCircle2 } from 'lucide-react';
 import { SessionMessage } from '../../types';
 
 interface ChatMessageRendererProps {
   message: SessionMessage;
   userName?: string;
+  showAvatar?: boolean;
   onSpeak?: (text: string) => void;
   isSpeaking?: boolean;
 }
@@ -18,7 +19,7 @@ function renderFormattedInlineText(text: string): React.ReactNode[] {
     if (part.startsWith('**') && part.endsWith('**')) {
       const boldContent = part.slice(2, -2);
       return (
-        <strong key={idx} className="font-bold text-text-primary text-inherit tracking-tight">
+        <strong key={idx} className="font-bold text-inherit tracking-tight">
           {boldContent}
         </strong>
       );
@@ -28,24 +29,20 @@ function renderFormattedInlineText(text: string): React.ReactNode[] {
 }
 
 /**
- * Preprocesses raw message text to convert inline lists like "1) ... 2) ..." or "1. ... 2. ..."
- * into clean newline-separated lists if AI returned them compressed.
+ * Preprocesses raw message text to convert inline lists into clean newline-separated lists.
  */
 function normalizeMessageContent(raw: string): string {
   if (!raw) return '';
   let text = raw.trim();
 
-  // If text contains inline numbered lists like "1) ... 2) ... 3) ...", add newlines before numbers
   if (/(?:\s|^)1\)\s+/.test(text) && /\s+2\)\s+/.test(text)) {
     text = text.replace(/(\s+)([1-9]\d*\))\s+/g, '\n$2 ');
-    // Also separate the intro before 1)
     text = text.replace(/(:\s*)(1\)\s+)/g, ':\n$2');
   } else if (/(?:\s|^)1\.\s+/.test(text) && /\s+2\.\s+/.test(text)) {
     text = text.replace(/(\s+)([1-9]\d*\.)\s+/g, '\n$2 ');
     text = text.replace(/(:\s*)(1\.\s+)/g, ':\n$2');
   }
 
-  // Also normalize inline bullets like " - " or " • "
   if (text.includes(' • ') && !text.includes('\n•')) {
     text = text.replace(/\s+•\s+/g, '\n• ');
   }
@@ -53,17 +50,21 @@ function normalizeMessageContent(raw: string): string {
   return text;
 }
 
-/**
- * Rich, accessible Chat Message renderer.
- * Formats recommendations, bullet points, numbers, and structured guidance into scannable UI.
- */
 export const ChatMessageRenderer: React.FC<ChatMessageRendererProps> = ({
   message,
-  userName = 'Bạn',
+  userName = 'Chú Ba',
+  showAvatar = true,
   onSpeak,
   isSpeaking = false,
 }) => {
   const isUser = message.sender === 'user';
+  const isSystemEvent =
+    message.text.startsWith('✓') ||
+    message.text.startsWith('System:') ||
+    message.text.startsWith('STATUS:') ||
+    message.text.includes('Đã hoàn thành') ||
+    message.text.includes('Đã cập nhật:');
+
   const [copied, setCopied] = useState(false);
 
   const handleCopy = () => {
@@ -74,10 +75,21 @@ export const ChatMessageRenderer: React.FC<ChatMessageRendererProps> = ({
     });
   };
 
+  // Render System Event (e.g., Task completion pill)
+  if (isSystemEvent) {
+    return (
+      <div className="flex justify-center my-3 w-full animate-in fade-in">
+        <div className="inline-flex items-center gap-1.5 px-3.5 py-1 rounded-full bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300 border border-emerald-300 dark:border-emerald-800 text-[11px] font-bold shadow-2xs">
+          <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400 shrink-0" />
+          <span>{message.text}</span>
+        </div>
+      </div>
+    );
+  }
+
   const normalized = normalizeMessageContent(message.text);
   const lines = normalized.split('\n');
 
-  // Group lines into blocks (paragraphs, bullet lists, numbered lists)
   interface Block {
     type: 'paragraph' | 'bullet' | 'numbered';
     number?: string;
@@ -89,7 +101,6 @@ export const ChatMessageRenderer: React.FC<ChatMessageRendererProps> = ({
     const trimmed = line.trim();
     if (!trimmed) continue;
 
-    // Numbered list item: "1. ...", "1) ...", "[1] ..."
     const numMatch = trimmed.match(/^([0-9]{1,2})[.)\]]\s+(.*)$/);
     if (numMatch) {
       blocks.push({
@@ -100,7 +111,6 @@ export const ChatMessageRenderer: React.FC<ChatMessageRendererProps> = ({
       continue;
     }
 
-    // Bullet list item: "• ...", "- ...", "* ...", "+ ..."
     const bulletMatch = trimmed.match(/^([•\-*+👉✓✔])\s+(.*)$/);
     if (bulletMatch) {
       blocks.push({
@@ -110,7 +120,6 @@ export const ChatMessageRenderer: React.FC<ChatMessageRendererProps> = ({
       continue;
     }
 
-    // Regular paragraph
     blocks.push({
       type: 'paragraph',
       content: trimmed,
@@ -118,67 +127,60 @@ export const ChatMessageRenderer: React.FC<ChatMessageRendererProps> = ({
   }
 
   const cleanSpeechText = message.text.replace(/\*\*/g, '').replace(/•/g, '').trim();
+  const timeStr = message.timestamp
+    ? new Date(message.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+    : '';
 
   return (
     <div
-      className={`flex items-start gap-3 w-full group ${
+      className={`flex items-start gap-2.5 sm:gap-3 w-full group my-1 ${
         isUser ? 'flex-row-reverse' : 'flex-row'
       }`}
     >
-      {/* Avatar */}
-      <div
-        className={`w-8 h-8 rounded-full flex items-center justify-center shrink-0 shadow-2xs font-bold text-xs ${
-          isUser
-            ? 'bg-primary text-white ring-2 ring-primary/20'
-            : 'bg-emerald-600 text-white ring-2 ring-emerald-500/20'
-        }`}
-        aria-hidden="true"
-      >
-        {isUser ? <User className="w-4 h-4" /> : <Bot className="w-4 h-4" />}
-      </div>
+      {/* Avatar (rendered only when showAvatar is true) */}
+      {!isUser ? (
+        <div className="w-8 h-8 rounded-full bg-gradient-to-br from-[#7C4DFF] to-indigo-600 text-white flex items-center justify-center shrink-0 shadow-2xs text-xs font-bold mt-1">
+          {showAvatar ? <Bot className="w-4 h-4" /> : <div className="w-8 h-8" />}
+        </div>
+      ) : (
+        <div className="w-8 h-8 rounded-full bg-[#7C4DFF] text-white flex items-center justify-center shrink-0 shadow-2xs text-xs font-bold mt-1">
+          {showAvatar ? <User className="w-4 h-4" /> : <div className="w-8 h-8" />}
+        </div>
+      )}
 
       {/* Bubble Container */}
-      <div className="max-w-[92%] sm:max-w-[85%] flex flex-col space-y-1.5 min-w-0">
-        {/* Header Sender Badge */}
-        <div
-          className={`flex items-center gap-2 px-1 text-[11px] font-semibold text-text-secondary ${
-            isUser ? 'justify-end' : 'justify-start'
-          }`}
-        >
-          <span>{isUser ? userName : 'Lovira Đồng Hành'}</span>
-          {!isUser && (
-            <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-full text-[10px] bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 font-medium">
-              <Sparkles className="w-2.5 h-2.5" />
-              Trợ lý AI
-            </span>
-          )}
-        </div>
-
+      <div
+        className={`flex flex-col space-y-1 min-w-0 ${
+          isUser
+            ? 'items-end max-w-[78%] sm:max-w-[68%]'
+            : 'items-start max-w-[86%] sm:max-w-[72%]'
+        }`}
+      >
         {/* Message Card */}
         <div
-          className={`p-3.5 sm:p-4 rounded-2xl text-xs sm:text-sm leading-relaxed border transition-shadow ${
+          className={`p-3.5 sm:p-4 rounded-2xl text-xs sm:text-sm leading-relaxed transition-all relative ${
             isUser
-              ? 'bg-primary text-white border-primary/40 rounded-tr-xs shadow-2xs font-medium'
-              : 'bg-surface border-default text-text-primary rounded-tl-xs shadow-2xs'
+              ? 'bg-[#7C4DFF] text-white rounded-tr-xs shadow-2xs font-medium'
+              : 'bg-[#F4EEFF] dark:bg-[#28203E] text-[#1E1830] dark:text-[#E8E2FA] rounded-tl-xs border border-purple-200 dark:border-purple-900 shadow-2xs'
           }`}
         >
-          <div className="space-y-2.5">
+          <div className="space-y-2">
             {blocks.map((block, idx) => {
               if (block.type === 'numbered') {
                 return (
                   <div
                     key={idx}
-                    className={`flex items-start gap-2.5 p-2 rounded-xl transition-colors ${
+                    className={`flex items-start gap-2 p-1.5 rounded-xl ${
                       isUser
-                        ? 'bg-white/10 text-white'
-                        : 'bg-surface-raised/70 border border-default/60 hover:border-primary/40 text-text-primary'
+                        ? 'bg-purple-700 text-white'
+                        : 'bg-white dark:bg-[#1E1830] text-text-primary border border-purple-100 dark:border-purple-900'
                     }`}
                   >
                     <span
-                      className={`inline-flex items-center justify-center w-5 h-5 rounded-full text-[11px] font-extrabold shrink-0 mt-0.5 ${
+                      className={`inline-flex items-center justify-center w-5 h-5 rounded-full text-[10px] font-extrabold shrink-0 mt-0.5 ${
                         isUser
-                          ? 'bg-white text-primary'
-                          : 'bg-primary/15 text-primary'
+                          ? 'bg-white text-[#7C4DFF]'
+                          : 'bg-purple-100 text-[#7C4DFF] dark:bg-purple-900 dark:text-purple-300'
                       }`}
                     >
                       {block.number}
@@ -192,17 +194,10 @@ export const ChatMessageRenderer: React.FC<ChatMessageRendererProps> = ({
 
               if (block.type === 'bullet') {
                 return (
-                  <div
-                    key={idx}
-                    className={`flex items-start gap-2.5 p-2 rounded-xl transition-colors ${
-                      isUser
-                        ? 'bg-white/10 text-white'
-                        : 'bg-surface-raised/70 border border-default/60 hover:border-emerald-500/30 text-text-primary'
-                    }`}
-                  >
+                  <div key={idx} className="flex items-start gap-2 pl-1">
                     <span
                       className={`w-1.5 h-1.5 rounded-full shrink-0 mt-2 ${
-                        isUser ? 'bg-white' : 'bg-emerald-500'
+                        isUser ? 'bg-white' : 'bg-[#7C4DFF]'
                       }`}
                     />
                     <div className="flex-1 leading-snug">
@@ -213,53 +208,50 @@ export const ChatMessageRenderer: React.FC<ChatMessageRendererProps> = ({
               }
 
               return (
-                <p
-                  key={idx}
-                  className={`${
-                    isUser ? 'text-white' : 'text-text-primary'
-                  } whitespace-pre-wrap leading-relaxed`}
-                >
+                <p key={idx} className="whitespace-pre-wrap leading-relaxed">
                   {renderFormattedInlineText(block.content)}
                 </p>
               );
             })}
           </div>
 
-          {/* Action Row for Lovira replies */}
-          {!isUser && (
-            <div className="flex items-center gap-3 pt-2 mt-2 border-t border-default/50 text-[11px] text-text-secondary">
-              {onSpeak && (
+          {/* Time & Action row */}
+          <div
+            className={`flex items-center gap-2 pt-2 mt-1 text-[10px] ${
+              isUser
+                ? 'text-purple-100 justify-end'
+                : 'text-text-secondary justify-between border-t border-purple-200 dark:border-purple-900'
+            }`}
+          >
+            {!isUser && (
+              <div className="flex items-center gap-2">
+                {onSpeak && (
+                  <button
+                    type="button"
+                    onClick={() => onSpeak(cleanSpeechText)}
+                    className="inline-flex items-center gap-1 font-bold text-[#7C4DFF] dark:text-purple-300 hover:underline transition-colors cursor-pointer"
+                  >
+                    <Volume2 className={`w-3 h-3 ${isSpeaking ? 'animate-pulse text-amber-500' : ''}`} />
+                    <span>Đọc to</span>
+                  </button>
+                )}
+
                 <button
                   type="button"
-                  onClick={() => onSpeak(cleanSpeechText)}
-                  className="inline-flex items-center gap-1.5 font-semibold text-primary hover:text-primary-hover hover:underline transition-colors focus:outline-none focus:ring-1 focus:ring-primary rounded px-1"
-                  aria-label="Đọc to câu trả lời này"
+                  onClick={handleCopy}
+                  className="inline-flex items-center gap-0.5 hover:text-text-primary transition-colors cursor-pointer"
                 >
-                  <Volume2 className={`w-3.5 h-3.5 ${isSpeaking ? 'animate-pulse text-amber-500' : ''}`} />
-                  <span>Đọc to</span>
-                </button>
-              )}
-
-              <button
-                type="button"
-                onClick={handleCopy}
-                className="inline-flex items-center gap-1 font-medium hover:text-text-primary transition-colors focus:outline-none focus:ring-1 focus:ring-primary rounded px-1"
-                aria-label="Sao chép nội dung tin nhắn"
-              >
-                {copied ? (
-                  <>
-                    <Check className="w-3.5 h-3.5 text-emerald-500" />
-                    <span className="text-emerald-500">Đã sao chép</span>
-                  </>
-                ) : (
-                  <>
-                    <Copy className="w-3.5 h-3.5" />
+                  {copied ? (
+                    <span className="text-emerald-600 font-bold">✓ Đã chép</span>
+                  ) : (
                     <span>Sao chép</span>
-                  </>
-                )}
-              </button>
-            </div>
-          )}
+                  )}
+                </button>
+              </div>
+            )}
+
+            {timeStr && <span>{timeStr}</span>}
+          </div>
         </div>
       </div>
     </div>
