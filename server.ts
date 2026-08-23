@@ -110,6 +110,7 @@ async function startServer() {
         userProfile,
         inputMode,
         appContext,
+        message,
       });
 
       const tools = [
@@ -123,11 +124,11 @@ async function startServer() {
                 properties: {
                   reply: {
                     type: Type.STRING,
-                    description: 'Câu trả lời tự nhiên, thân thiện, đúng danh xưng bằng tiếng Việt thuần túy (không dùng markdown asterisks)',
+                    description: 'Câu trả lời tự nhiên, thân thiện, ân cần và đúng danh xưng. Sử dụng định dạng rõ ràng (ngắt dòng, gạch đầu dòng • và **in đậm** cho tiêu đề từng mục khi đưa ra danh sách gợi ý).',
                   },
                   speech: {
                     type: Type.STRING,
-                    description: 'Lời đọc ngắn gọn cho giọng nói',
+                    description: 'Lời đọc ngắn gọn, tự nhiên, diễn cảm cho giọng nói (không chứa dấu sao markdown)',
                   },
                   suggestedReplies: {
                     type: Type.ARRAY,
@@ -136,13 +137,13 @@ async function startServer() {
                   },
                   actions: {
                     type: Type.ARRAY,
-                    description: 'Danh sách các hành động cập nhật trạng thái Todo / Facts / Next Action trong phiên',
+                    description: 'Danh sách các hành động cập nhật trạng thái Todo / Facts / Next Action trong phiên (ADD_FACT, COMPLETE_TASK, ADD_TASK, ADD_SUBTASK, COMPLETE_SUBTASK, COMPLETE_SESSION, UPDATE_NEXT_ACTION, DELETE_FACT)',
                     items: {
                       type: Type.OBJECT,
                       properties: {
                         type: {
                           type: Type.STRING,
-                          description: 'Loại hành động: ADD_FACT, COMPLETE_TASK, ADD_TASK, ADD_SUBTASK, COMPLETE_SUBTASK, UPDATE_NEXT_ACTION, DELETE_FACT',
+                          description: 'Loại hành động: ADD_FACT, COMPLETE_TASK, ADD_TASK, ADD_SUBTASK, COMPLETE_SUBTASK, COMPLETE_SESSION, UPDATE_NEXT_ACTION, DELETE_FACT',
                         },
                         payload: {
                           type: Type.OBJECT,
@@ -255,11 +256,11 @@ async function startServer() {
         textReply = `${da ? da + ', ' : ''}${me} đã ghi nhận lời nhắn của ${addressing}. ${addressing.charAt(0).toUpperCase() + addressing.slice(1)} cần ${me} hỗ trợ gì tiếp theo nhé${a}?`;
       }
 
-      const cleanReply = textReply.replace(/\*\*/g, '').replace(/[*#]/g, '');
+      const cleanSpeech = (speechText || textReply).replace(/\*\*/g, '').replace(/[*#•]/g, '').trim();
 
       const agentRes: LoviraAgentResponse = {
-        reply: cleanReply,
-        speech: speechText ? speechText.replace(/\*\*/g, '').replace(/[*#]/g, '') : cleanReply,
+        reply: textReply.trim(),
+        speech: cleanSpeech,
         actions,
         appActions: appActions.length > 0 ? appActions : undefined,
         pendingInteraction,

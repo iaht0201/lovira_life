@@ -30,10 +30,24 @@ const SHORT_MEANINGFUL_TOKENS = new Set([
   'hồ sơ',
   'thuốc',
   'tiền',
+  'ví',
   'đơn',
   'ảnh',
   'app',
   'xe',
+  'quán',
+  'quầy',
+  'phòng',
+  'tiệm',
+  'viện',
+  'bệnh viện',
+  'khám',
+  'khẩu trang',
+  'thẻ',
+  'bhyt',
+  'cccd',
+  'giấy',
+  'in',
 ]);
 
 const STOP_WORDS = new Set([
@@ -52,6 +66,19 @@ const STOP_WORDS = new Set([
   'đã',
   'đang',
   'sẽ',
+  'rồi',
+  'nha',
+  'nhé',
+  'ạ',
+  'chú',
+  'bác',
+  'cô',
+  'anh',
+  'chị',
+  'em',
+  'tôi',
+  'mình',
+  'con',
 ]);
 
 /**
@@ -79,8 +106,98 @@ function findTaskByIdDirect(
   return null;
 }
 
+export interface SemanticMatchCandidate {
+  task?: LifeTask;
+  subtask?: LifeTask;
+  parentTask?: LifeTask;
+  confidence: number;
+}
+
 /**
- * Semantic matching helper to find task or subtask by ID, title, or semantic keyword
+ * Evaluates semantic match score between a clean query phrase and a task/subtask title
+ */
+function scoreTaskMatch(title: string, query: string, isPending: boolean): number {
+  const tLower = title.toLowerCase().trim();
+  const qLower = query.toLowerCase().trim();
+
+  if (tLower === qLower) return 100;
+  if (tLower.includes(qLower) || qLower.includes(tLower)) {
+    return isPending ? 90 : 70;
+  }
+
+  const rawTokens = qLower.split(/[\s,./\-:;!?]+/).map((w) => w.trim());
+  const meaningfulTokens = rawTokens.filter(
+    (w) => (w.length >= 2 || SHORT_MEANINGFUL_TOKENS.has(w)) && !STOP_WORDS.has(w)
+  );
+
+  if (meaningfulTokens.length === 0) return 0;
+
+  const tWords = tLower.split(/[\s,./\-:;!?]+/);
+  let hits = 0;
+  for (const token of meaningfulTokens) {
+    if (tWords.some((tw) => tw.includes(token) || token.includes(tw))) {
+      hits++;
+    }
+  }
+
+  if (hits === 0) return 0;
+
+  const ratio = hits / meaningfulTokens.length;
+  let baseScore = ratio * 70 + (isPending ? 15 : 0);
+  if (hits >= 2) baseScore += 15;
+  return Math.min(baseScore, 95);
+}
+
+/**
+ * Searches ALL tasks and subtasks in the session regardless of order/currentStepId
+ */
+export function resolveSemanticTaskMatches(
+  session: LifeSession,
+  query: string
+): SemanticMatchCandidate[] {
+  if (!query || !query.trim() || !session.tasks || session.tasks.length === 0) return [];
+  const q = query.trim().toLowerCase();
+
+  // 1. Direct ID match
+  const byId = findTaskByIdDirect(session, query);
+  if (byId) return [{ ...byId, confidence: 1.0 }];
+
+  const candidates: SemanticMatchCandidate[] = [];
+
+  for (const t of session.tasks) {
+    const isParentPending = t.status !== 'completed' && t.status !== 'skipped';
+
+    if (t.subtasks && t.subtasks.length > 0) {
+      for (const st of t.subtasks) {
+        const isSubPending = st.status !== 'completed' && st.status !== 'skipped';
+        const score = scoreTaskMatch(st.title, q, isSubPending);
+        if (score >= 40) {
+          candidates.push({
+            subtask: st,
+            parentTask: t,
+            confidence: score / 100,
+          });
+        }
+      }
+    }
+
+    const parentScore = scoreTaskMatch(t.title, q, isParentPending);
+    if (parentScore >= 40) {
+      candidates.push({
+        task: t,
+        confidence: parentScore / 100,
+      });
+    }
+  }
+
+  // Sort by highest confidence first
+  candidates.sort((a, b) => b.confidence - a.confidence);
+  return candidates;
+}
+
+/**
+ * Semantic matching helper to find task or subtask by ID, title, or semantic keyword.
+ * Scans ALL tasks and subtasks equally across the entire session.
  */
 export function findBestMatchingTask(
   session: LifeSession,
@@ -93,7 +210,7 @@ export function findBestMatchingTask(
   const byId = findTaskByIdDirect(session, query);
   if (byId) return byId;
 
-  // 2. Special keyword markers referring explicitly to current/active/next step
+  // 2. Special keyword markers referring explicitly to current/active step
   const currentMarkers = [
     'current',
     'active',
@@ -108,7 +225,6 @@ export function findBestMatchingTask(
     'kế tiếp',
   ];
   if (currentMarkers.includes(q)) {
-    // Find active subtask / task or first pending without calling resolveCurrentStep
     for (const t of session.tasks) {
       if (t.subtasks) {
         const activeSub = t.subtasks.find((st) => st.status === 'active');
@@ -127,111 +243,16 @@ export function findBestMatchingTask(
     }
   }
 
-  // 3. Exact Title match
-  for (const t of session.tasks) {
-    if (t.subtasks) {
-      const exactSub = t.subtasks.find((st) => st.title.toLowerCase() === q);
-      if (exactSub) return { subtask: exactSub, parentTask: t };
-    }
-    if (t.title.toLowerCase() === q) return { task: t };
+  // 3. Scan all tasks and subtasks semantically
+  const matches = resolveSemanticTaskMatches(session, q);
+  if (matches.length > 0) {
+    return {
+      task: matches[0].task,
+      subtask: matches[0].subtask,
+      parentTask: matches[0].parentTask,
+    };
   }
 
-  // 4. Substring match in active/pending subtasks then parent tasks
-  for (const t of session.tasks) {
-    if (t.status === 'completed') continue;
-    if (t.subtasks) {
-      const pendingSub = t.subtasks.find(
-        (st) =>
-          st.status !== 'completed' &&
-          (st.title.toLowerCase().includes(q) || q.includes(st.title.toLowerCase()))
-      );
-      if (pendingSub) return { subtask: pendingSub, parentTask: t };
-    }
-  }
-
-  const pendingParent = session.tasks.find(
-    (t) =>
-      t.status !== 'completed' &&
-      (t.title.toLowerCase().includes(q) || q.includes(t.title.toLowerCase()))
-  );
-  if (pendingParent) return { task: pendingParent };
-
-  // 5. Scored token matching for meaningful keywords
-  const rawTokens = q.split(/[\s,./\-:;!?]+/).map((w) => w.trim().toLowerCase());
-  const meaningfulTokens = rawTokens.filter(
-    (w) => (w.length >= 3 || SHORT_MEANINGFUL_TOKENS.has(w)) && !STOP_WORDS.has(w)
-  );
-
-  if (meaningfulTokens.length > 0) {
-    interface CandidateScore {
-      result: { task?: LifeTask; subtask?: LifeTask; parentTask?: LifeTask };
-      score: number;
-    }
-
-    const candidates: CandidateScore[] = [];
-
-    for (const t of session.tasks) {
-      const isPending = t.status !== 'completed';
-      const baseBoost = isPending ? 20 : 0;
-      const tWords = t.title.toLowerCase().split(/[\s,./\-:;!?]+/);
-
-      let tHits = 0;
-      for (const token of meaningfulTokens) {
-        if (tWords.some((tw) => tw.includes(token) || token.includes(tw))) {
-          tHits++;
-        }
-      }
-
-      if (tHits >= 2 || (tHits === 1 && meaningfulTokens.length === 1)) {
-        const score = baseBoost + tHits * 30;
-        candidates.push({ result: { task: t }, score });
-      }
-
-      if (t.subtasks) {
-        for (const st of t.subtasks) {
-          const isSubPending = st.status !== 'completed';
-          const subBoost = isSubPending ? 25 : 0;
-          const stWords = st.title.toLowerCase().split(/[\s,./\-:;!?]+/);
-
-          let stHits = 0;
-          for (const token of meaningfulTokens) {
-            if (stWords.some((stw) => stw.includes(token) || token.includes(stw))) {
-              stHits++;
-            }
-          }
-
-          if (stHits >= 2 || (stHits === 1 && meaningfulTokens.length === 1)) {
-            const score = subBoost + stHits * 30;
-            candidates.push({ result: { subtask: st, parentTask: t }, score });
-          }
-        }
-      }
-    }
-
-    if (candidates.length > 0) {
-      candidates.sort((a, b) => b.score - a.score);
-      const top = candidates[0];
-      if (top.score >= 40) {
-        return top.result;
-      }
-    }
-  }
-
-  // 6. Fallback substring match anywhere in completed tasks
-  for (const t of session.tasks) {
-    if (t.subtasks) {
-      const sub = t.subtasks.find(
-        (st) =>
-          st.title.toLowerCase().includes(q) || q.includes(st.title.toLowerCase())
-      );
-      if (sub) return { subtask: sub, parentTask: t };
-    }
-    if (t.title.toLowerCase().includes(q) || q.includes(t.title.toLowerCase())) {
-      return { task: t };
-    }
-  }
-
-  // No match found -> return empty object. NEVER fallback to current task blindly!
   return {};
 }
 
@@ -247,13 +268,84 @@ export interface CompletionTargetResult {
 }
 
 /**
- * Resolves which task the user wants to complete.
- * Prioritizes:
- * 1. Explicit semantic match from userInput
- * 2. Uncompleted currentStepId
- * 3. Uncompleted nextRecommendedAction.taskId
- * 4. Single active task/subtask (if > 1, marks isAmbiguous: true)
- * 5. Single pending task (if > 1 without active context, marks isAmbiguous: true)
+ * Checks if user input is purely generic (referring to currently active/next step without specific content)
+ */
+export function isGenericCompletionQuery(input: string): boolean {
+  const clean = input
+    .toLowerCase()
+    .trim()
+    .replace(/[.!?,;]+$/g, '')
+    .replace(/^(dạ|vâng|ừ|ok|ừm)\s*/i, '')
+    .trim();
+
+  const genericPatterns = [
+    'xong',
+    'xong rồi',
+    'xong rồi nhé',
+    'xong rồi nha',
+    'đã xong',
+    'hoàn thành',
+    'hoàn thành rồi',
+    'làm xong rồi',
+    'làm xong',
+    'bước này xong rồi',
+    'xong bước này',
+    'xong bước này rồi',
+    'xong việc này rồi',
+    'xong việc rồi',
+    'xong cái này rồi',
+    'chuẩn bị rồi',
+    'chuẩn bị xong rồi',
+    'sẵn sàng rồi',
+  ];
+
+  return genericPatterns.includes(clean);
+}
+
+/**
+ * Extracts multiple completion targets from a single user statement (e.g. "lấy ví rồi và cũng gọi xe rồi")
+ */
+export function resolveMultiTaskCompletionTargets(
+  session: LifeSession,
+  userInput: string
+): CompletionTargetResult[] {
+  if (!session || !session.tasks || session.tasks.length === 0 || !userInput) {
+    return [];
+  }
+
+  // Split by common Vietnamese coordinating conjunctions and punctuation
+  const clauses = userInput
+    .split(/\b(?:và|với lại|rồi lại|đồng thời|cũng.*rồi|,)\b/i)
+    .map((c) => c.trim())
+    .filter((c) => c.length >= 3);
+
+  if (clauses.length <= 1) {
+    const single = resolveCompletionTarget(session, userInput);
+    return single.task || single.subtask ? [single] : [];
+  }
+
+  const results: CompletionTargetResult[] = [];
+  const seenIds = new Set<string>();
+
+  for (const clause of clauses) {
+    const match = resolveCompletionTarget(session, clause);
+    const id = match.subtask?.id || match.task?.id;
+    if (id && !seenIds.has(id)) {
+      seenIds.add(id);
+      results.push(match);
+    }
+  }
+
+  return results;
+}
+
+/**
+ * Resolves which task or subtask the user wants to complete.
+ * Non-sequential semantic resolution:
+ * 1. If userInput has specific semantic content ("chuẩn bị tiền rồi", "in giấy rồi", "tới quán rồi"):
+ *    - Scans ALL tasks and subtasks regardless of order or currentStepId.
+ * 2. ONLY if userInput is a purely generic marker ("xong rồi", "xong bước này"):
+ *    - Falls back to currentStepId / nextRecommendedAction / active task.
  */
 export function resolveCompletionTarget(
   session: LifeSession,
@@ -263,22 +355,51 @@ export function resolveCompletionTarget(
     return {};
   }
 
-  // 1. Try explicit matching from userInput if specified
-  if (userInput && userInput.trim().length > 3) {
-    const cleanQuery = userInput
-      .replace(/^(xong|hoàn thành|đã làm xong|đã xong|vừa xong|xong rồi|ok xong)\s*/i, '')
-      .replace(/^(bước|nhiệm vụ|công việc|việc|task)\s*/i, '')
-      .trim();
+  // 1. If user provided input with specific content
+  if (userInput && userInput.trim().length > 2) {
+    const isGeneric = isGenericCompletionQuery(userInput);
 
-    if (cleanQuery.length >= 2) {
-      const match = findBestMatchingTask(session, cleanQuery);
-      if (match.task || match.subtask) {
-        return match;
+    if (!isGeneric) {
+      const cleanQuery = userInput
+        .replace(/^(xong|hoàn thành|đã làm xong|đã xong|vừa xong|xong rồi|ok xong)\s*/i, '')
+        .replace(/^(bước|nhiệm vụ|công việc|việc|task)\s*/i, '')
+        .replace(/\s*(rồi|xong|xong rồi|nhé|nha|ạ)$/i, '')
+        .trim();
+
+      const queryToSearch = cleanQuery.length >= 2 ? cleanQuery : userInput;
+      const matches = resolveSemanticTaskMatches(session, queryToSearch);
+
+      if (matches.length > 0) {
+        // High confidence top match
+        const top = matches[0];
+        if (top.confidence >= 0.45) {
+          // If top two matches are equally strong and distinct pending tasks, mark ambiguous
+          if (
+            matches.length > 1 &&
+            Math.abs(matches[0].confidence - matches[1].confidence) < 0.05 &&
+            matches[1].confidence >= 0.6
+          ) {
+            const t0 = matches[0].subtask || matches[0].task;
+            const t1 = matches[1].subtask || matches[1].task;
+            if (t0 && t1 && t0.id !== t1.id && t0.status !== 'completed' && t1.status !== 'completed') {
+              return {
+                isAmbiguous: true,
+                candidateTasks: [t0, t1],
+              };
+            }
+          }
+
+          return {
+            task: top.task,
+            subtask: top.subtask,
+            parentTask: top.parentTask,
+          };
+        }
       }
     }
   }
 
-  // 2. Try session.currentStepId if not completed
+  // 2. Generic fallback: Try session.currentStepId if not completed
   if (session.currentStepId) {
     const match = findBestMatchingTask(session, session.currentStepId);
     const target = match.subtask || match.task;
@@ -345,11 +466,19 @@ export function resolveCompletionTarget(
     return { task: single };
   }
 
-  // More than 1 pending task and no explicit active step -> ambiguous
-  return {
-    isAmbiguous: true,
-    candidateTasks: pendingTasks,
-  };
+  // Fallback to first pending task
+  const firstPending = pendingTasks.sort((a, b) => a.order - b.order)[0];
+  if (firstPending) {
+    if (firstPending.subtasks && firstPending.subtasks.length > 0) {
+      const firstSub = firstPending.subtasks
+        .filter((st) => st.status !== 'completed' && st.status !== 'skipped')
+        .sort((a, b) => a.order - b.order)[0];
+      if (firstSub) return { subtask: firstSub, parentTask: firstPending };
+    }
+    return { task: firstPending };
+  }
+
+  return {};
 }
 
 /**
@@ -427,7 +556,7 @@ export function calculateNextRecommendedAction(session: LifeSession): Recommende
     if (nextSubtask) {
       return {
         title: nextSubtask.title,
-        description: nextSubtask.description || `Bước con thuộc công việc "${activeParent.title}"`,
+        description: nextSubtask.description,
         taskId: nextSubtask.id,
         parentContext: activeParent.title,
       };
@@ -436,7 +565,7 @@ export function calculateNextRecommendedAction(session: LifeSession): Recommende
 
   return {
     title: activeParent.title,
-    description: activeParent.description || `Bước thứ ${activeParent.order} trong buổi hỗ trợ`,
+    description: activeParent.description,
     taskId: activeParent.id,
   };
 }
@@ -680,14 +809,24 @@ export function applySingleAgentAction(
       const matched = findBestMatchingTask(newState, payload.taskId || '');
       if (matched.subtask && matched.parentTask) {
         matched.subtask.status = 'completed';
+        matched.subtask.completedAt = now;
+        matched.subtask.completionSource = matched.subtask.completionSource || 'explicit';
         const reconciled = reconcileParentTaskStatus(matched.parentTask);
         matched.parentTask.status = reconciled.status;
         logSummary = `Đã hoàn thành bước con: "${matched.subtask.title}"`;
       } else if (matched.task) {
         if (matched.task.subtasks && matched.task.subtasks.length > 0) {
-          matched.task.subtasks.forEach((st) => { st.status = 'completed'; });
+          matched.task.subtasks.forEach((st) => {
+            if (st.status !== 'completed' && st.status !== 'skipped') {
+              st.status = 'completed';
+              st.completedAt = now;
+              st.completionSource = st.completionSource || 'explicit';
+            }
+          });
         }
         matched.task.status = 'completed';
+        matched.task.completedAt = now;
+        matched.task.completionSource = matched.task.completionSource || 'explicit';
         logSummary = `Đã đánh dấu hoàn thành: "${matched.task.title}"`;
       }
       break;
@@ -768,6 +907,8 @@ export function applySingleAgentAction(
       const matched = findBestMatchingTask(newState, payload.subtaskId || '');
       if (matched.subtask && matched.parentTask) {
         matched.subtask.status = 'completed';
+        matched.subtask.completedAt = now;
+        matched.subtask.completionSource = matched.subtask.completionSource || 'explicit';
         const reconciled = reconcileParentTaskStatus(matched.parentTask);
         matched.parentTask.status = reconciled.status;
         logSummary = `Đã hoàn thành bước con: "${matched.subtask.title}" (thuộc ${matched.parentTask.title})`;
@@ -806,7 +947,24 @@ export function applySingleAgentAction(
 
     case 'COMPLETE_SESSION': {
       newState.status = 'completed';
-      logSummary = 'Đã hoàn thành phiên';
+      // Reconcile remaining tasks as completed via outcome
+      newState.tasks.forEach((t) => {
+        if (t.subtasks && t.subtasks.length > 0) {
+          t.subtasks.forEach((st) => {
+            if (st.status === 'pending' || st.status === 'active') {
+              st.status = 'completed';
+              st.completionSource = 'outcome';
+              st.completedAt = now;
+            }
+          });
+        }
+        if (t.status === 'pending' || t.status === 'active') {
+          t.status = 'completed';
+          t.completionSource = 'outcome';
+          t.completedAt = now;
+        }
+      });
+      logSummary = 'Đã hoàn thành phiên (tất cả các công việc đã được xác nhận kết quả)';
       break;
     }
 

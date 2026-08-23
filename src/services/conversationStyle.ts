@@ -21,15 +21,25 @@ export type GuidanceIntent =
   | 'complete'
   | 'generic';
 
-// Reliable user self-reference patterns in the current message (verb / self-state following pronoun)
+// Comprehensive user self-reference patterns in Vietnamese
 const selfRefPatterns: { regex: RegExp; pronoun: string }[] = [
-  { regex: /\bchú\s+(chưa|mua|đang|đã|sẽ|muốn|đi|có|làm|bận|nhờ|thấy|không|tới|cần|định|tự)\b/i, pronoun: 'chú' },
-  { regex: /\bbác\s+(chưa|mua|đang|đã|sẽ|muốn|đi|có|làm|bận|nhờ|thấy|không|tới|cần|định|tự)\b/i, pronoun: 'bác' },
-  { regex: /\bông\s+(chưa|mua|đang|đã|sẽ|muốn|đi|có|làm|bận|nhờ|thấy|không|tới|cần|định|tự)\b/i, pronoun: 'ông' },
-  { regex: /\bbà\s+(chưa|mua|đang|đã|sẽ|muốn|đi|có|làm|bận|nhờ|thấy|không|tới|cần|định|tự)\b/i, pronoun: 'bà' },
-  { regex: /\bcô\s+(chưa|mua|đang|đã|sẽ|muốn|đi|có|làm|bận|nhờ|thấy|không|tới|cần|định|tự)\b/i, pronoun: 'cô' },
-  { regex: /\banh\s+(chưa|mua|đang|đã|sẽ|muốn|đi|có|làm|bận|nhờ|thấy|không|tới|cần|định|tự)\b/i, pronoun: 'anh' },
-  { regex: /\bchị\s+(chưa|mua|đang|đã|sẽ|muốn|đi|có|làm|bận|nhờ|thấy|không|tới|cần|định|tự)\b/i, pronoun: 'chị' },
+  // 1. Action requested for user: "gợi ý cho chú đi", "chỉ giúp bác", "nói cho anh nghe", "tư vấn cho cô"
+  { regex: /\b(?:cho|giúp|chỉ|nói|hỏi|tư\s+vấn\s+(?:cho\s+)?|gợi\s+ý\s+(?:cho\s+)?|bảo|dặn)\s+chú\b/i, pronoun: 'chú' },
+  { regex: /\b(?:cho|giúp|chỉ|nói|hỏi|tư\s+vấn\s+(?:cho\s+)?|gợi\s+ý\s+(?:cho\s+)?|bảo|dặn)\s+bác\b/i, pronoun: 'bác' },
+  { regex: /\b(?:cho|giúp|chỉ|nói|hỏi|tư\s+vấn\s+(?:cho\s+)?|gợi\s+ý\s+(?:cho\s+)?|bảo|dặn)\s+ông\b/i, pronoun: 'ông' },
+  { regex: /\b(?:cho|giúp|chỉ|nói|hỏi|tư\s+vấn\s+(?:cho\s+)?|gợi\s+ý\s+(?:cho\s+)?|bảo|dặn)\s+bà\b/i, pronoun: 'bà' },
+  { regex: /\b(?:cho|giúp|chỉ|nói|hỏi|tư\s+vấn\s+(?:cho\s+)?|gợi\s+ý\s+(?:cho\s+)?|bảo|dặn)\s+cô\b/i, pronoun: 'cô' },
+  { regex: /\b(?:cho|giúp|chỉ|nói|hỏi|tư\s+vấn\s+(?:cho\s+)?|gợi\s+ý\s+(?:cho\s+)?|bảo|dặn)\s+anh\b/i, pronoun: 'anh' },
+  { regex: /\b(?:cho|giúp|chỉ|nói|hỏi|tư\s+vấn\s+(?:cho\s+)?|gợi\s+ý\s+(?:cho\s+)?|bảo|dặn)\s+chị\b/i, pronoun: 'chị' },
+
+  // 2. Pronoun followed by verbs or sentence particles: "chú làm rồi", "chú đi nhé", "chú nè", "chú ơi"
+  { regex: /\bchú\s+(chưa|mua|đang|đã|sẽ|muốn|đi|có|làm|bận|nhờ|thấy|không|tới|cần|định|tự|hỏi|thích|nè|đây|này|ơi|nhé|nha|ạ)\b/i, pronoun: 'chú' },
+  { regex: /\bbác\s+(chưa|mua|đang|đã|sẽ|muốn|đi|có|làm|bận|nhờ|thấy|không|tới|cần|định|tự|hỏi|thích|nè|đây|này|ơi|nhé|nha|ạ)\b/i, pronoun: 'bác' },
+  { regex: /\bông\s+(chưa|mua|đang|đã|sẽ|muốn|đi|có|làm|bận|nhờ|thấy|không|tới|cần|định|tự|hỏi|thích|nè|đây|này|ơi|nhé|nha|ạ)\b/i, pronoun: 'ông' },
+  { regex: /\bbà\s+(chưa|mua|đang|đã|sẽ|muốn|đi|có|làm|bận|nhờ|thấy|không|tới|cần|định|tự|hỏi|thích|nè|đây|này|ơi|nhé|nha|ạ)\b/i, pronoun: 'bà' },
+  { regex: /\bcô\s+(chưa|mua|đang|đã|sẽ|muốn|đi|có|làm|bận|nhờ|thấy|không|tới|cần|định|tự|hỏi|thích|nè|đây|này|ơi|nhé|nha|ạ)\b/i, pronoun: 'cô' },
+  { regex: /\banh\s+(chưa|mua|đang|đã|sẽ|muốn|đi|có|làm|bận|nhờ|thấy|không|tới|cần|định|tự|hỏi|thích|nè|đây|này|ơi|nhé|nha|ạ)\b/i, pronoun: 'anh' },
+  { regex: /\bchị\s+(chưa|mua|đang|đã|sẽ|muốn|đi|có|làm|bận|nhờ|thấy|không|tới|cần|định|tự|hỏi|thích|nè|đây|này|ơi|nhé|nha|ạ)\b/i, pronoun: 'chị' },
 ];
 
 /**
@@ -39,20 +49,30 @@ const selfRefPatterns: { regex: RegExp; pronoun: string }[] = [
  * 3. Default to neutral 'bạn'
  */
 export function deduceHonorifics(userProfile?: UserProfile | null, textContext?: string): HonorificContext {
-  let addressing = '';
+  let pronounMatched = '';
 
   // 1. Check explicit self-reference in message
   if (textContext) {
     for (const item of selfRefPatterns) {
       if (item.regex.test(textContext)) {
-        addressing = item.pronoun;
+        pronounMatched = item.pronoun;
         break;
       }
     }
   }
 
-  // 2. Fall back to user profile
-  if (!addressing) {
+  const name = userProfile?.preferredName?.trim();
+  let addressing = '';
+
+  if (pronounMatched) {
+    // If user's name is known and short, combine naturally (e.g. "chú Thái" or "chú")
+    if (name && name.length <= 15) {
+      addressing = `${pronounMatched} ${name}`;
+    } else {
+      addressing = pronounMatched;
+    }
+  } else {
+    // 2. Fall back to user profile
     addressing = buildAddressing(userProfile) || '';
   }
 
@@ -211,38 +231,102 @@ export function formatSoftNextStepGuidance(
   goal?: string
 ): string {
   const { addressing, me, a } = honorifics;
-  const title = nextAction.title;
+  const rawTitle = nextAction.title;
+  const title = rawTitle.replace(/^(\d+[\.\)]|\s*[-*•])\s*/, '').replace(/["'“”]/g, '').trim();
   const desc = nextAction.description || '';
   const intent = detectGuidanceIntent(title, desc, goal);
 
   const capAddressing = addressing.charAt(0).toUpperCase() + addressing.slice(1);
 
-  const extra = desc ? ` (${desc})` : '';
-
   switch (intent) {
     case 'prepare':
-      return `Tiếp theo, ${addressing} chuẩn bị phần "${title}" trước nhé${a}.${extra}`;
+      return `Tiếp theo, ${addressing} xem qua và chuẩn bị phần ${title.toLowerCase().startsWith('chuẩn bị') ? title : 'chuẩn bị ' + title} trước nhé${a}.`;
 
     case 'move':
-      return `Bây giờ ${addressing} thong thả thực hiện bước "${title}" nhé${a}.${extra}`;
+      return `Bây giờ ${addressing} thong thả thực hiện bước ${title} nhé${a}.`;
 
     case 'wait':
-      return `${capAddressing} chờ theo bước "${title}" nhé${a}.${extra}`;
+      return `${capAddressing} chờ theo bước ${title} nhé${a}.`;
 
     case 'verify':
-      return `Tiếp theo là phần kiểm tra: "${title}"${extra}. ${capAddressing} cứ thong thả thực hiện nhé${a}!`;
+      return `Tiếp theo là phần kiểm tra: ${title}. ${capAddressing} cứ thong thả thực hiện nhé${a}!`;
 
     case 'submit':
-      return `${capAddressing} thực hiện "${title}" theo hướng dẫn nhé${a}.${extra}`;
+      return `${capAddressing} thực hiện ${title} theo hướng dẫn nhé${a}.`;
 
     case 'complete':
-      return `Phần việc tiếp theo: "${title}"${extra}. Khi hoàn thành ${addressing} cứ báo cho ${me} biết nhé${a}!`;
+      return `Phần việc tiếp theo là ${title}. Khi hoàn thành ${addressing} cứ báo cho ${me} biết nhé${a}!`;
 
     case 'generic':
     default: {
-      return `Tiếp theo, ${addressing} thong thả làm phần "${title}" trước nhé${a}.${extra} Khi nào xong ${addressing} cứ báo cho ${me} biết nha!`;
+      return `Tiếp theo, ${addressing} thong thả làm phần ${title} trước nhé${a}. Khi nào xong ${addressing} cứ báo cho ${me} biết nha!`;
     }
   }
+}
+
+/**
+ * Generates a warm, conversational, and natural initial greeting for a new session.
+ * It summarizes the suggested todo list and asks an open, conversational kick-off question
+ * without robotic quotation marks or stiff system language.
+ */
+export function formatInitialSessionGreeting(
+  sessionTitle: string,
+  tasks: { title: string }[],
+  honorifics: HonorificContext,
+  goal?: string
+): string {
+  const { addressing, me, da, a } = honorifics;
+  const prefix = da ? `${da}, ` : '';
+
+  const contextText = `${sessionTitle} ${goal || ''}`.toLowerCase();
+
+  // 1. Warm, human opening based on scenario context
+  let intro = '';
+  if (contextText.includes('phỏng vấn') || contextText.includes('xin việc') || contextText.includes('tuyển dụng')) {
+    intro = `${prefix}${me} chào ${addressing}, ${me} sẽ đồng hành và hỗ trợ ${addressing} chuẩn bị thật chu đáo cho buổi phỏng vấn nhé! ${me.charAt(0).toUpperCase() + me.slice(1)} có lên danh sách gợi ý các việc chúng ta cùng làm nè:`;
+  } else if (contextText.includes('mua') || contextText.includes('đồ ăn') || contextText.includes('chợ') || contextText.includes('siêu thị')) {
+    intro = `${prefix}${me} chào ${addressing}, ${me} sẽ hỗ trợ ${addressing} đi mua đồ ăn nhé! ${me.charAt(0).toUpperCase() + me.slice(1)} có liệt kê dự kiến các việc chúng ta cần thực hiện như sau:`;
+  } else if (contextText.includes('khám') || contextText.includes('bệnh') || contextText.includes('bác sĩ') || contextText.includes('thuốc') || contextText.includes('viện')) {
+    intro = `${prefix}${me} chào ${addressing}, ${me} sẽ đồng hành cùng ${addressing} trong buổi đi khám bệnh này nhé. ${me.charAt(0).toUpperCase() + me.slice(1)} có gợi ý các bước chuẩn bị như sau:`;
+  } else if (contextText.includes('thủ tục') || contextText.includes('giấy tờ') || contextText.includes('hành chính') || contextText.includes('cccd') || contextText.includes('hộ chiếu')) {
+    intro = `${prefix}${me} chào ${addressing}, ${me} sẽ hỗ trợ ${addressing} chuẩn bị các thủ tục giấy tờ nhé! Dưới đây là các việc dự kiến chúng ta cùng thực hiện nè:`;
+  } else {
+    intro = `${prefix}${me} chào ${addressing}, ${me} đã chuẩn bị kế hoạch để hỗ trợ ${addressing} rồi đây ạ. Dưới đây là các việc dự kiến chúng ta cùng làm nhé:`;
+  }
+
+  // 2. Clear, structured todo list preview (clean up any existing bullet prefixes)
+  const taskListText = tasks
+    .slice(0, 8)
+    .map((t, idx) => {
+      const cleanTitle = t.title.replace(/^(\d+[\.\)]|\s*[-*•])\s*/, '').replace(/["'“”]/g, '').trim();
+      return `${idx + 1}. ${cleanTitle}`;
+    })
+    .join('\n');
+
+  // 3. Conversational kick-off question (transforming the first task into natural spoken Vietnamese)
+  const firstTitle = (tasks[0]?.title || '').toLowerCase();
+  let kickOffQuestion = '';
+
+  if (firstTitle.includes('xác nhận') || firstTitle.includes('thông tin') || firstTitle.includes('thời gian') || firstTitle.includes('địa điểm') || firstTitle.includes('giờ') || firstTitle.includes('hr')) {
+    kickOffQuestion = `Giờ mình bắt đầu nhé, ${addressing} đã có thông tin về thời gian và địa điểm chưa nè?`;
+  } else if (firstTitle.includes('chọn món') || firstTitle.includes('mua gì') || firstTitle.includes('món ăn') || firstTitle.includes('chọn')) {
+    kickOffQuestion = `Giờ mình bắt đầu nhé, ${addressing} đã biết mình muốn mua món gì chưa nè?`;
+  } else if (firstTitle.includes('tiền') || firstTitle.includes('ví')) {
+    kickOffQuestion = `Giờ mình bắt đầu nhé, ${addressing} đã chuẩn bị sẵn ví tiền chưa ạ?`;
+  } else if (firstTitle.includes('giấy tờ') || firstTitle.includes('hồ sơ') || firstTitle.includes('cv') || firstTitle.includes('cccd')) {
+    kickOffQuestion = `Giờ mình bắt đầu nhé, ${addressing} đã chuẩn bị sẵn các giấy tờ cần thiết chưa nè?`;
+  } else if (firstTitle.includes('đơn thuốc') || firstTitle.includes('sổ khám')) {
+    kickOffQuestion = `Giờ mình bắt đầu nhé, ${addressing} đã tìm thấy sổ khám hoặc đơn thuốc cũ chưa ạ?`;
+  } else {
+    const cleanFirstTitle = (tasks[0]?.title || '').replace(/^(\d+[\.\)]|\s*[-*•])\s*/, '').replace(/["'“”]/g, '').trim();
+    if (cleanFirstTitle) {
+      kickOffQuestion = `Giờ mình bắt đầu nhé, ${addressing} xem qua danh sách và cho ${me} biết ${addressing} muốn bắt đầu từ bước nào nha!`;
+    } else {
+      kickOffQuestion = `Giờ mình bắt đầu nhé, ${addressing} cần ${me} hỗ trợ gì đầu tiên nè?`;
+    }
+  }
+
+  return `${intro}\n\n${taskListText}\n\n${kickOffQuestion}`;
 }
 
 /**

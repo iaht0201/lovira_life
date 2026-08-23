@@ -5,11 +5,12 @@ import {
   LifeTask,
   ImportantFact,
   AccessibilityContext,
+  UserProfile,
 } from '../types';
 import { calculateNextRecommendedAction } from './actionEngine';
 import { ScenarioRoutingResult } from './scenarioRouter';
 import { normalizeGeneratedLifePlan } from './planValidator';
-import { deduceHonorifics, formatSoftNextStepGuidance } from './conversationStyle';
+import { deduceHonorifics, formatInitialSessionGreeting } from './conversationStyle';
 
 /**
  * Creates a complete, fully-hydrated LifeSession from a GeneratedSessionPlan
@@ -19,7 +20,8 @@ export function createLifeSessionFromPlan(
   rawPlan: GeneratedSessionPlan,
   originalUserRequest: string,
   routing?: ScenarioRoutingResult | ScenarioType,
-  accessibilityContext?: AccessibilityContext
+  accessibilityContext?: AccessibilityContext,
+  userProfile?: UserProfile | null
 ): LifeSession {
   const now = new Date().toISOString();
   const routingObj: ScenarioRoutingResult | undefined =
@@ -99,20 +101,19 @@ export function createLifeSessionFromPlan(
   // Dynamically calculate recommended next action so it incorporates subtasks and tasks cleanly
   session.nextRecommendedAction = calculateNextRecommendedAction(session);
 
-  const honorifics = deduceHonorifics(null, originalUserRequest);
-  const { addressing, me, da, a } = honorifics;
-
-  const firstAction = session.nextRecommendedAction || {
-    title: plan.firstRecommendedAction || tasks[0]?.title || 'Bắt đầu bước đầu tiên',
-  };
-
-  const softGuidance = formatSoftNextStepGuidance(firstAction, honorifics, session.goal);
+  const honorifics = deduceHonorifics(userProfile || null, originalUserRequest);
+  const initialGreeting = formatInitialSessionGreeting(
+    session.title,
+    tasks,
+    honorifics,
+    session.goal
+  );
 
   session.messages = [
     {
       id: `msg-${Date.now()}`,
       sender: 'lovira',
-      text: `${da ? da + ', ' : ''}${me.charAt(0).toUpperCase() + me.slice(1)} đã chuẩn bị kế hoạch đồng hành cùng ${addressing} rồi ạ.\n\n${softGuidance}`,
+      text: initialGreeting,
       timestamp: now,
     },
   ];

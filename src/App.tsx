@@ -33,7 +33,7 @@ import {
   reconcileSessionDerivedState,
   resolveCurrentStep,
 } from './services/actionEngine';
-import { buildPartialSuccessReply, deduceHonorifics } from './services/conversationStyle';
+import { buildPartialSuccessReply, deduceHonorifics, formatInitialSessionGreeting } from './services/conversationStyle';
 import { parseLocalIntent } from './services/localIntentEngine';
 import { createLifeSessionFromPlan } from './services/sessionFactory';
 import { speakText, stopSpeaking, isSpeaking } from './services/ttsService';
@@ -189,7 +189,13 @@ export default function App() {
           preferredInteraction: accessibility.speakResponse ? 'voice' : 'text',
           oneStepMode: accessibility.reducedMotion,
         };
-        const newCustomSession = createLifeSessionFromPlan(plan, customGoal, 'custom', accessibilityCtx);
+        const newCustomSession = createLifeSessionFromPlan(
+          plan,
+          customGoal,
+          'custom',
+          accessibilityCtx,
+          userProfile
+        );
 
         saveUpdatedSession(newCustomSession);
         storageService.setActiveSessionId(newCustomSession.id);
@@ -244,7 +250,12 @@ export default function App() {
         {
           id: `msg-${Date.now()}`,
           sender: 'lovira',
-          text: `Chào bạn nha! Mình là Lovira, người bạn đồng hành cùng bạn trong phiên "${tmpl.title}" nè. Bước đầu tiên tụi mình làm sẽ là: "${tmpl.defaultTasks[0] || 'chuẩn bị'}" nha!`,
+          text: formatInitialSessionGreeting(
+            tmpl.title,
+            tmpl.defaultTasks.map((t) => ({ title: t })),
+            deduceHonorifics(userProfile, tmpl.title),
+            tmpl.defaultGoal
+          ),
           timestamp: now,
         },
       ],
@@ -747,7 +758,23 @@ export default function App() {
               setCameraModalOpen(true);
             }
           } else {
-            showToast(`⚠️ Lovira chưa thể cập nhật: ${batchRes.rejectedReason || 'Hành động không hợp lệ'}`);
+            // Even if action batch failed, persist the conversational message so dialogue context is never dropped
+            const loviraMsg = {
+              id: `msg-${Date.now()}`,
+              sender: 'lovira' as const,
+              text: replyText,
+              timestamp: new Date().toISOString(),
+              suggestedReplies: suggestedReplies || ['Tiếp tục trò chuyện', 'Giờ tôi cần làm gì?'],
+            };
+
+            const fallbackSession = { ...sessionWithUserMsg };
+            fallbackSession.messages = [...fallbackSession.messages, loviraMsg];
+            saveUpdatedSession(fallbackSession);
+
+            if (actionsToApply.length > 0) {
+              const failReasons = batchRes.rejectedActions.map((f) => f.reason).join(', ') || batchRes.rejectedReason || 'Hành động không hợp lệ';
+              console.warn('Agent actions were not applied:', failReasons);
+            }
 
             // Still process non-conflicting app actions if session batch had no mutating actions
             if (actionsToApply.length === 0 && appActionsToApply.length > 0) {
@@ -757,7 +784,7 @@ export default function App() {
             }
 
             if (inputMode === 'voice' || accessibility.speakResponse) {
-              speakWithVoiceStatus(replyText);
+              speakWithVoiceStatus(speechText || replyText);
             } else {
               setVoiceStatus('idle');
             }
@@ -1089,6 +1116,7 @@ export default function App() {
               isLoading={isLoading}
               voiceStatus={voiceStatus}
               interimTranscript={interimTranscript}
+              userName={userProfile?.preferredName || 'Bạn'}
               onStartVoice={handleStartVoiceListening}
               onStopVoice={handleStopVoiceListening}
               onCancelVoice={handleCancelVoiceListening}

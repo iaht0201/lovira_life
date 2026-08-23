@@ -1,7 +1,8 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Send, Mic, MicOff, Camera, Sparkles, Volume2, Bot, User, Loader2, X } from 'lucide-react';
+import { Send, Mic, MicOff, Camera, Sparkles, Bot, Loader2, X } from 'lucide-react';
 import { SessionMessage, VoiceInteractionState } from '../../types';
 import { speakText, stopSpeaking } from '../../services/ttsService';
+import { ChatMessageRenderer } from './ChatMessageRenderer';
 
 interface AssistantComposerProps {
   messages: SessionMessage[];
@@ -11,6 +12,7 @@ interface AssistantComposerProps {
   scenarioType?: string;
   voiceStatus?: VoiceInteractionState;
   interimTranscript?: string;
+  userName?: string;
   onStartVoice?: () => void;
   onStopVoice?: () => void;
   onCancelVoice?: () => void;
@@ -23,6 +25,7 @@ export const AssistantComposer: React.FC<AssistantComposerProps> = ({
   isLoading = false,
   voiceStatus = 'idle',
   interimTranscript = '',
+  userName = 'Bạn',
   onStartVoice,
   onStopVoice,
   onCancelVoice,
@@ -77,68 +80,43 @@ export const AssistantComposer: React.FC<AssistantComposerProps> = ({
   return (
     <div className="p-5 rounded-2xl bg-surface border border-default shadow-xs space-y-4">
       <div className="flex items-center justify-between">
-        <div className="flex items-center gap-2">
-          <div className="p-2 rounded-xl bg-primary text-white">
+        <div className="flex items-center gap-2.5">
+          <div className="p-2 rounded-xl bg-primary text-white shadow-2xs">
             <Bot className="w-5 h-5" aria-hidden="true" />
           </div>
           <div>
             <h3 className="text-base font-bold text-text-primary">
-              Hỏi hoặc dặn dò Lovira trong phiên này
+              Trò chuyện & Tham vấn cùng Lovira
             </h3>
             <p className="text-xs text-text-secondary">
-              Bạn có thể gõ phím hoặc bấm micro để trò chuyện tự nhiên với Lovira.
+              Hỏi đáp, xin gợi ý đời sống hoặc dặn dò Lovira cập nhật tiến độ công việc.
             </p>
           </div>
         </div>
       </div>
 
       {/* Messages Stream Box */}
-      <div className="max-h-80 overflow-y-auto space-y-3 p-3 rounded-xl bg-surface-raised border border-default scroll-smooth">
-        {messages.map((msg) => {
-          const isUser = msg.sender === 'user';
-          const cleanText = msg.text.replace(/\*\*/g, '');
-          return (
-            <div
+      <div className="max-h-96 overflow-y-auto space-y-3.5 p-3.5 sm:p-4 rounded-xl bg-surface-raised border border-default scroll-smooth">
+        {messages.length === 0 ? (
+          <div className="text-center py-6 text-xs text-text-secondary">
+            Chưa có tin nhắn nào. Hãy gõ hoặc bấm micro để bắt đầu trò chuyện cùng Lovira!
+          </div>
+        ) : (
+          messages.map((msg) => (
+            <ChatMessageRenderer
               key={msg.id}
-              className={`flex items-start gap-2.5 ${isUser ? 'flex-row-reverse' : 'flex-row'}`}
-            >
-              <div
-                className={`w-8 h-8 rounded-full flex items-center justify-center shrink-0 text-xs font-bold ${
-                  isUser ? 'bg-primary text-white' : 'bg-emerald-600 text-white'
-                }`}
-              >
-                {isUser ? <User className="w-4 h-4" /> : <Bot className="w-4 h-4" />}
-              </div>
-
-              <div
-                className={`max-w-[85%] p-3.5 rounded-2xl text-xs md:text-sm leading-relaxed space-y-1 ${
-                  isUser
-                    ? 'bg-primary text-white rounded-tr-none font-medium'
-                    : 'bg-surface border border-default text-text-primary rounded-tl-none shadow-2xs'
-                }`}
-              >
-                <p className="whitespace-pre-wrap">{cleanText}</p>
-
-                {/* Speak button for assistant replies */}
-                {!isUser && (
-                  <button
-                    onClick={() => speakText(cleanText)}
-                    className="flex items-center gap-1 text-[10px] font-bold text-primary mt-1 hover:underline"
-                    aria-label="Đọc lại câu trả lời này"
-                  >
-                    <Volume2 className="w-3.5 h-3.5" />
-                    Đọc to câu này
-                  </button>
-                )}
-              </div>
-            </div>
-          );
-        })}
+              message={msg}
+              userName={userName}
+              onSpeak={speakText}
+              isSpeaking={voiceStatus === 'speaking'}
+            />
+          ))
+        )}
 
         {isLoading && (
-          <div className="flex items-center gap-2 p-3 text-xs text-text-secondary">
-            <Loader2 className="w-4 h-4 animate-spin text-primary" />
-            <span>Lovira đang lắng nghe và suy nghĩ...</span>
+          <div className="flex items-center gap-2.5 p-3 rounded-xl bg-surface border border-default text-xs text-text-secondary animate-pulse">
+            <Loader2 className="w-4 h-4 animate-spin text-primary shrink-0" />
+            <span>Lovira đang lắng nghe và chuẩn bị câu trả lời phù hợp...</span>
           </div>
         )}
 
@@ -146,8 +124,8 @@ export const AssistantComposer: React.FC<AssistantComposerProps> = ({
       </div>
 
       {/* Suggested Fast Quick Reply Chips */}
-      <div className="flex flex-wrap gap-2 pt-1">
-        <span className="text-[11px] font-bold text-text-secondary flex items-center gap-1">
+      <div className="flex flex-wrap items-center gap-2 pt-1">
+        <span className="text-[11px] font-bold text-text-secondary flex items-center gap-1 shrink-0">
           <Sparkles className="w-3 h-3 text-amber-500" />
           Gợi ý nhanh:
         </span>
@@ -157,7 +135,7 @@ export const AssistantComposer: React.FC<AssistantComposerProps> = ({
             type="button"
             disabled={isLoading}
             onClick={() => handleQuickPrompt(prompt)}
-            className="px-3 py-1.5 rounded-full text-xs font-medium bg-surface-raised border border-default hover:border-primary hover:text-primary transition-colors text-text-primary active:scale-95 disabled:opacity-50"
+            className="px-3 py-1.5 rounded-full text-xs font-medium bg-surface-raised border border-default hover:border-primary hover:text-primary hover:bg-primary/5 transition-all text-text-primary active:scale-95 disabled:opacity-50"
           >
             {prompt}
           </button>
@@ -181,7 +159,7 @@ export const AssistantComposer: React.FC<AssistantComposerProps> = ({
             <button
               type="button"
               onClick={onStopVoice}
-              className="px-2 py-1 rounded bg-primary text-white text-[11px] font-bold hover:bg-primary-hover"
+              className="px-2.5 py-1 rounded-lg bg-primary text-white text-[11px] font-bold hover:bg-primary-hover shadow-2xs"
             >
               Gửi ngay
             </button>
@@ -206,7 +184,7 @@ export const AssistantComposer: React.FC<AssistantComposerProps> = ({
           onClick={handleMicClick}
           className={`p-3 rounded-xl border transition-all ${
             isListening
-              ? 'bg-rose-500 text-white border-rose-600 animate-pulse'
+              ? 'bg-rose-500 text-white border-rose-600 animate-pulse shadow-2xs'
               : 'bg-surface-raised text-text-secondary border-default hover:text-primary hover:border-primary'
           }`}
           title={isListening ? 'Bấm để hoàn tất và gửi câu nói' : 'Nói chuyện bằng giọng nói'}
@@ -229,7 +207,7 @@ export const AssistantComposer: React.FC<AssistantComposerProps> = ({
           type="text"
           value={input}
           onChange={(e) => setInput(e.target.value)}
-          placeholder="Nhắn hoặc dặn dò Lovira..."
+          placeholder="Nhắn hoặc hỏi Lovira (ví dụ: gợi ý cho chú đi)..."
           disabled={isLoading}
           className="flex-1 px-4 py-3 rounded-xl bg-surface-raised border border-default text-text-primary text-sm focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition-all"
         />
@@ -246,3 +224,4 @@ export const AssistantComposer: React.FC<AssistantComposerProps> = ({
     </div>
   );
 };
+

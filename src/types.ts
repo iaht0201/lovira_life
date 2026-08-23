@@ -82,6 +82,8 @@ export interface LifeTask {
   source?: 'template' | 'ai' | 'user';
   parentTaskId?: string;       // undefined = task cha (top-level)
   subtasks?: LifeTask[];       // chỉ populate ở task cha; rỗng/undefined nếu task không cần chia nhỏ
+  completionSource?: 'explicit' | 'inferred' | 'outcome'; // Nguồn hoàn thành: trực tiếp, suy luận qua ngữ cảnh hội thoại, hoặc qua kết quả chung của phiên
+  completedAt?: string;
 }
 
 export interface RecommendedAction {

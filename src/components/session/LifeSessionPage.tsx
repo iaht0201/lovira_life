@@ -26,6 +26,7 @@ interface LifeSessionPageProps {
   isLoading?: boolean;
   voiceStatus?: VoiceInteractionState;
   interimTranscript?: string;
+  userName?: string;
   onStartVoice?: () => void;
   onStopVoice?: () => void;
   onCancelVoice?: () => void;
@@ -50,6 +51,7 @@ export const LifeSessionPage: React.FC<LifeSessionPageProps> = ({
   isLoading = false,
   voiceStatus = 'idle',
   interimTranscript = '',
+  userName = 'Bạn',
   onStartVoice,
   onStopVoice,
   onCancelVoice,
@@ -107,6 +109,7 @@ export const LifeSessionPage: React.FC<LifeSessionPageProps> = ({
         scenarioType={session.scenarioType}
         voiceStatus={voiceStatus}
         interimTranscript={interimTranscript}
+        userName={userName}
         onStartVoice={onStartVoice}
         onStopVoice={onStopVoice}
         onCancelVoice={onCancelVoice}

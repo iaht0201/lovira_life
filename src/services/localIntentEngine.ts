@@ -8,6 +8,8 @@ import {
   resolveCurrentStep,
   calculateNextRecommendedAction,
   resolveCompletionTarget,
+  resolveMultiTaskCompletionTargets,
+  resolveSemanticTaskMatches,
   applyAgentActionBatch,
 } from './actionEngine';
 import { deduceHonorifics, formatSoftNextStepGuidance } from './conversationStyle';
@@ -65,6 +67,42 @@ export function parseLocalIntent(
     };
   }
 
+  // 1.1 Terminal Real-World Goal Outcomes (Outcome overrides workflow: "Chú ăn xong rồi", "Chú phỏng vấn xong rồi", "Máy sửa xong rồi"...)
+  const isGoalOutcomePhrase = (txt: string) => {
+    const tl = txt.toLowerCase().trim();
+    return (
+      tl.includes('ăn xong rồi') ||
+      tl.includes('ăn xong rồi nhé') ||
+      tl.includes('ăn xong rồi nha') ||
+      tl.includes('ăn xong rồi nè') ||
+      tl.includes('ăn xong rồi ạ') ||
+      tl.includes('phỏng vấn xong rồi') ||
+      tl.includes('phỏng vấn xong rồi nhé') ||
+      tl.includes('phỏng vấn xong rồi nè') ||
+      tl.includes('làm giấy tờ xong rồi') ||
+      tl.includes('nộp hồ sơ xong rồi') ||
+      tl.includes('làm thủ tục xong rồi') ||
+      tl.includes('xong thủ tục rồi') ||
+      tl.includes('sửa máy xong rồi') ||
+      tl.includes('máy sửa xong rồi') ||
+      tl.includes('khám bệnh xong rồi') ||
+      tl.includes('khám xong rồi') ||
+      tl.includes('mua sắm xong rồi') ||
+      tl.includes('mua đồ xong rồi') ||
+      tl.includes('mua xong rồi')
+    );
+  };
+
+  if (isGoalOutcomePhrase(text)) {
+    return {
+      reply: `${praise} ${me.charAt(0).toUpperCase() + me.slice(1)} chúc mừng ${addressing} đã hoàn thành xuất sắc mục tiêu "${session.title}" rồi ạ! ${me} đã đối chiếu và hoàn tất toàn bộ các công việc trong phiên. Chúc ${addressing} có những trải nghiệm thật tuyệt vời! 🎉`,
+      speech: `${praise} Chúc mừng ${addressing} đã hoàn thành mục tiêu rồi ạ. ${me} rất vui được đồng hành cùng ${addressing}!`,
+      actions: [{ type: 'COMPLETE_SESSION', payload: {} }],
+      confidence: 0.98,
+      suggestedReplies: ['Cảm ơn Lovira', 'Tạo phiên việc mới'],
+    };
+  }
+
   // 2. Query Next Step ("Giờ làm gì?", "Bước tiếp theo là gì?", "Làm gì tiếp?")
   if (
     tLower.includes('giờ làm gì') ||
@@ -93,7 +131,7 @@ export function parseLocalIntent(
     };
   }
 
-  // 3. Universal "Xong rồi" / "Làm xong rồi" / "Chuẩn bị rồi" / "Hoàn thành bước này"
+  // 3. Universal "Xong rồi" / "Làm xong rồi" / "Chuẩn bị rồi" / "Hoàn thành bước này" / Specific task completions
   if (
     tLower === 'xong rồi' ||
     tLower === 'xong' ||
@@ -112,11 +150,67 @@ export function parseLocalIntent(
     tLower.startsWith('hoàn thành bước') ||
     tLower.endsWith('chuẩn bị rồi') ||
     tLower.endsWith('chuẩn bị rồi nhé') ||
-    tLower.endsWith('chuẩn bị rồi nha')
+    tLower.endsWith('chuẩn bị rồi nha') ||
+    tLower.endsWith('xong rồi') ||
+    tLower.endsWith('xong rồi ạ') ||
+    tLower.endsWith('xong rồi nè')
   ) {
-    const compResult = resolveCompletionTarget(session, text);
-    const target = compResult.subtask || compResult.task;
+    // Check for multi-task completion first
+    const multiResults = resolveMultiTaskCompletionTargets(session, text);
 
+    if (multiResults.length > 0) {
+      const actions: AgentAction[] = multiResults.map((res) => {
+        const isSubtask = !!res.subtask;
+        const taskId = res.parentTask?.id || res.task?.id || '';
+        const subtaskId = res.subtask?.id;
+        return {
+          type: isSubtask ? 'COMPLETE_SUBTASK' : 'COMPLETE_TASK',
+          payload: {
+            taskId,
+            subtaskId,
+          },
+        };
+      });
+
+      // Dynamically calculate new state and next step
+      const { newState } = applyAgentActionBatch(session, actions);
+      const nextRec = calculateNextRecommendedAction(newState);
+
+      const taskNames = multiResults
+        .map((r) => `"${(r.subtask || r.task)?.title}"`)
+        .join(', ');
+
+      let replyText = '';
+      if (nextRec && nextRec.title && !nextRec.title.includes('Hoàn thành tất cả')) {
+        const softGuidance = formatSoftNextStepGuidance(nextRec, honorifics, session.goal);
+        replyText = `${praise} ${me.charAt(0).toUpperCase() + me.slice(1)} đã ghi nhận hoàn thành ${taskNames} rồi ạ.\n\n${softGuidance}`;
+      } else {
+        replyText = `${praise} ${me.charAt(0).toUpperCase() + me.slice(1)} đã ghi nhận xong ${taskNames}. Tất cả các công việc trong phiên "${session.title}" đã hoàn thành trọn vẹn rồi ${addressing} ơi! 🎉`;
+      }
+
+      return {
+        reply: replyText,
+        speech: replyText.replace(/👉/g, '').replace(/\n/g, ' '),
+        actions,
+        confidence: 0.95,
+        suggestedReplies: ['Xong bước tiếp theo rồi', 'Tôi tới nơi rồi', 'Cần tư vấn thêm'],
+      };
+    }
+
+    const compResult = resolveCompletionTarget(session, text);
+
+    if (compResult.isAmbiguous && compResult.candidateTasks && compResult.candidateTasks.length > 1) {
+      const options = compResult.candidateTasks.map((t) => `"${t.title}"`).join(' hay ');
+      return {
+        reply: `Dạ ${addressing}, ${addressing} vừa hoàn thành ${options} ạ? ${addressing.charAt(0).toUpperCase() + addressing.slice(1)} nói rõ để ${me} đánh dấu chính xác nhé!`,
+        speech: `Dạ ${addressing}, ${addressing} vừa hoàn thành việc nào ạ?`,
+        actions: [],
+        confidence: 0.9,
+        suggestedReplies: compResult.candidateTasks.map((t) => `Xong "${t.title}"`),
+      };
+    }
+
+    const target = compResult.subtask || compResult.task;
     if (target) {
       const isSubtask = !!compResult.subtask;
       const taskId = compResult.parentTask?.id || compResult.task?.id || '';
@@ -131,14 +225,13 @@ export function parseLocalIntent(
         },
       ];
 
-      // Dynamically calculate new state and next step
       const { newState } = applyAgentActionBatch(session, actions);
       const nextRec = calculateNextRecommendedAction(newState);
 
       let replyText = '';
       if (nextRec && nextRec.title && !nextRec.title.includes('Hoàn thành tất cả')) {
         const softGuidance = formatSoftNextStepGuidance(nextRec, honorifics, session.goal);
-        replyText = `${praise} ${me.charAt(0).toUpperCase() + me.slice(1)} đã đánh dấu hoàn thành xong rồi ạ.\n\n${softGuidance}`;
+        replyText = `${praise} ${me.charAt(0).toUpperCase() + me.slice(1)} đã đánh dấu xong "${target.title}" rồi ạ.\n\n${softGuidance}`;
       } else {
         replyText = `${praise} Tất cả các công việc trong phiên "${session.title}" đã hoàn thành trọn vẹn rồi ${addressing} ơi! 🎉`;
       }
@@ -151,41 +244,9 @@ export function parseLocalIntent(
         suggestedReplies: ['Xong bước tiếp theo rồi', 'Tôi tới nơi rồi', 'Cần tư vấn thêm'],
       };
     }
-
-    // Default active task completion if no specific target found
-    const currentStep = resolveCurrentStep(session);
-    if (currentStep && (currentStep.subtask || currentStep.task)) {
-      const target = currentStep.subtask || currentStep.task;
-      const actions: AgentAction[] = [
-        {
-          type: currentStep.subtask ? 'COMPLETE_SUBTASK' : 'COMPLETE_TASK',
-          payload: {
-            taskId: currentStep.task?.id,
-            subtaskId: currentStep.subtask?.id,
-          },
-        },
-      ];
-
-      const { newState } = applyAgentActionBatch(session, actions);
-      const nextRec = calculateNextRecommendedAction(newState);
-
-      let replyText = `${praise} ${me.charAt(0).toUpperCase() + me.slice(1)} đã ghi nhận xong bước "${target?.title}" rồi nhé${a}!`;
-      if (nextRec && nextRec.title && !nextRec.title.includes('Hoàn thành tất cả')) {
-        const softGuidance = formatSoftNextStepGuidance(nextRec, honorifics, session.goal);
-        replyText += `\n\n${softGuidance}`;
-      }
-
-      return {
-        reply: replyText,
-        speech: replyText.replace(/👉/g, '').replace(/\n/g, ' '),
-        actions,
-        confidence: 0.95,
-        suggestedReplies: ['Xong rồi', 'Tôi tới nơi rồi'],
-      };
-    }
   }
 
-  // 4. Universal Arrival / Movement ("Tôi tới rồi", "Đã đến nơi", "Bác đến rồi", "Đến quầy rồi")
+  // 4. Universal Arrival / Movement ("Tôi tới rồi", "Đã đến nơi", "Bác đến rồi", "Đến quầy rồi", "Tới quán rồi")
   if (
     tLower.includes('tới rồi') ||
     tLower.includes('đến rồi') ||
@@ -199,31 +260,84 @@ export function parseLocalIntent(
     tLower.includes('sang phòng') ||
     tLower.includes('tới phòng') ||
     tLower.includes('đến cửa hàng') ||
+    tLower.includes('tới cửa hàng') ||
     tLower.includes('đến ngân hàng') ||
-    tLower.includes('tới ngân hàng')
+    tLower.includes('tới ngân hàng') ||
+    tLower.includes('tới quán') ||
+    tLower.includes('đến quán') ||
+    tLower.includes('đến bệnh viện') ||
+    tLower.includes('tới bệnh viện')
   ) {
     const isMovementTitle = (title: string) => {
       const tl = title.toLowerCase();
       return (
         tl.startsWith('đến') ||
         tl.startsWith('di chuyển') ||
+        tl.startsWith('đi') ||
+        tl.startsWith('tới') ||
         tl.includes('sang phòng') ||
         tl.includes('đến phòng') ||
         tl.includes('đến quầy') ||
-        tl.includes('tới nơi')
+        tl.includes('tới quầy') ||
+        tl.includes('tới nơi') ||
+        tl.includes('đến nơi') ||
+        tl.includes('quán') ||
+        tl.includes('cửa hàng') ||
+        tl.includes('ngân hàng') ||
+        tl.includes('bệnh viện')
       );
     };
 
-    const resolvedStep = resolveCurrentStep(session);
-    const currentTaskOrSub = resolvedStep?.subtask || resolvedStep?.task;
+    // First scan all tasks/subtasks across session for a matching movement task
+    let matchedMovementTarget: { task?: any; subtask?: any; parentTask?: any } | null = null;
+    const semanticMatches = resolveSemanticTaskMatches(session, text);
 
-    if (currentTaskOrSub && isMovementTitle(currentTaskOrSub.title) && currentTaskOrSub.status !== 'completed') {
+    for (const m of semanticMatches) {
+      const cand = m.subtask || m.task;
+      if (cand && cand.status !== 'completed' && isMovementTitle(cand.title)) {
+        matchedMovementTarget = m;
+        break;
+      }
+    }
+
+    // If semantic match didn't find one, search any pending movement task in session
+    if (!matchedMovementTarget) {
+      for (const t of session.tasks) {
+        if (t.subtasks) {
+          const st = t.subtasks.find((s) => s.status !== 'completed' && isMovementTitle(s.title));
+          if (st) {
+            matchedMovementTarget = { subtask: st, parentTask: t };
+            break;
+          }
+        }
+        if (t.status !== 'completed' && isMovementTitle(t.title)) {
+          matchedMovementTarget = { task: t };
+          break;
+        }
+      }
+    }
+
+    // Fallback to current step if it is a movement task
+    if (!matchedMovementTarget) {
+      const resolvedStep = resolveCurrentStep(session);
+      const currentTaskOrSub = resolvedStep?.subtask || resolvedStep?.task;
+      if (currentTaskOrSub && currentTaskOrSub.status !== 'completed' && isMovementTitle(currentTaskOrSub.title)) {
+        matchedMovementTarget = resolvedStep;
+      }
+    }
+
+    if (matchedMovementTarget) {
+      const target = matchedMovementTarget.subtask || matchedMovementTarget.task;
+      const isSubtask = !!matchedMovementTarget.subtask;
+      const taskId = matchedMovementTarget.parentTask?.id || matchedMovementTarget.task?.id || target?.id;
+      const subtaskId = matchedMovementTarget.subtask?.id;
+
       const actions: AgentAction[] = [
         {
-          type: resolvedStep?.subtask ? 'COMPLETE_SUBTASK' : 'COMPLETE_TASK',
+          type: isSubtask ? 'COMPLETE_SUBTASK' : 'COMPLETE_TASK',
           payload: {
-            taskId: resolvedStep?.task?.id || currentTaskOrSub.id,
-            subtaskId: resolvedStep?.subtask?.id,
+            taskId,
+            subtaskId,
           },
         },
       ];
@@ -231,7 +345,7 @@ export function parseLocalIntent(
       const { newState } = applyAgentActionBatch(session, actions);
       const nextRec = calculateNextRecommendedAction(newState);
 
-      let replyText = `${da}, ${addressing} đã đến nơi an toàn rồi, mừng quá ạ!`;
+      let replyText = `${da}, ${addressing} đã đến nơi an toàn rồi, mừng quá ạ! ${me.charAt(0).toUpperCase() + me.slice(1)} đã đánh dấu xong "${target?.title}".`;
       if (nextRec && nextRec.title && !nextRec.title.includes('Hoàn thành tất cả')) {
         const softGuidance = formatSoftNextStepGuidance(nextRec, honorifics, session.goal);
         replyText += `\n\n${softGuidance}`;

@@ -31,6 +31,7 @@ export async function callGroqAgent(
     userProfile,
     inputMode,
     appContext,
+    message,
   });
 
   const jsonInstruction = `
@@ -38,8 +39,8 @@ export async function callGroqAgent(
 ĐỊNH DẠNG ĐẦU RA BẮT BUỘC:
 Bạn PHẢI trả về duy nhất một đối tượng JSON hợp lệ (không kèm theo văn bản giải thích ngoài JSON) theo đúng cấu trúc sau:
 {
-  "reply": "Câu trả lời thân thiện, ấm áp bằng tiếng Việt (không dùng dấu sao markdown **)",
-  "speech": "Lời đọc to ngắn gọn, tự nhiên",
+  "reply": "Câu trả lời thân thiện, ấm áp bằng tiếng Việt (sử dụng gạch đầu dòng • và **in đậm** cho tiêu đề các mục gợi ý rõ ràng)",
+  "speech": "Lời đọc to ngắn gọn, tự nhiên, không chứa ký tự kỹ thuật",
   "suggestedReplies": ["Gợi ý nhanh 1", "Gợi ý nhanh 2"],
   "actions": [
     {
