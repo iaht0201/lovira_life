@@ -1,5 +1,5 @@
 import React from 'react';
-import { LoviraMascot } from './LoviraMascot';
+import { Sparkles } from 'lucide-react';
 
 interface HomeHeroProps {
   userName?: string;
@@ -28,14 +28,9 @@ export const HomeHero: React.FC<HomeHeroProps> = ({
         </p>
       </div>
 
-      {/* Mascot Positioned Right on Desktop */}
-      <div className="hidden sm:block absolute right-4 md:right-10 bottom-0 pointer-events-none select-none z-10">
-        <LoviraMascot size="md" className="md:scale-110 transform origin-bottom-right" />
-      </div>
-
-      {/* Mobile Mascot Header Card */}
-      <div className="sm:hidden mt-4 flex justify-center">
-        <LoviraMascot size="sm" />
+      {/* Decorative Icon Badge Positioned Right on Desktop */}
+      <div className="hidden sm:flex absolute right-6 md:right-10 top-1/2 -translate-y-1/2 pointer-events-none select-none z-10 items-center justify-center w-20 h-20 rounded-3xl bg-primary/10 border border-primary/20 text-primary">
+        <Sparkles className="w-10 h-10" />
       </div>
     </section>
   );

@@ -70,7 +70,7 @@ export const HomePage: React.FC<HomePageProps> = ({
         <div className="space-y-6">
           <UpcomingReminders onAddReminder={onOpenReminders} />
           <DailyProgress completedTasks={3} totalTasks={7} />
-          <WeatherMiniCard location="Hà Nội" temp="28°C" condition="Trời nắng nhẹ ☀️" />
+          <WeatherMiniCard />
         </div>
       </div>
 

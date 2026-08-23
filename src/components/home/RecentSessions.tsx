@@ -1,8 +1,7 @@
 import React from 'react';
-import { ArrowRight, Plus } from 'lucide-react';
+import { ArrowRight, Plus, Sparkles } from 'lucide-react';
 import { BriefSessionHeader } from '../../services/storageService';
 import { RecentSessionItem } from './RecentSessionItem';
-import { LoviraMascot } from './LoviraMascot';
 
 interface RecentSessionsProps {
   sessions: BriefSessionHeader[];
@@ -52,7 +51,9 @@ export const RecentSessions: React.FC<RecentSessionsProps> = ({
       ) : (
         /* Empty State */
         <div className="py-8 px-4 text-center flex flex-col items-center justify-center space-y-3">
-          <LoviraMascot size="sm" />
+          <div className="w-12 h-12 rounded-2xl bg-lovira-badge-purple text-lovira-purple flex items-center justify-center">
+            <Sparkles className="w-6 h-6" />
+          </div>
           <div className="max-w-sm space-y-1">
             <h4 className="text-[16px] font-[700] text-lovira-title">
               Chưa có phiên nào

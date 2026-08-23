@@ -1,17 +1,14 @@
-import React, { useState } from 'react';
-import { LifeSession, SessionStatus, VoiceInteractionState, BriefSessionHeader } from '../../types';
-import { SessionListSidebar } from '../chat/SessionListSidebar';
-import { SessionConversationHeader } from '../chat/SessionConversationHeader';
-import { ConversationPane } from '../chat/ConversationPane';
-import { SessionDetailDrawer } from '../chat/SessionDetailDrawer';
-import { X } from 'lucide-react';
+import React from 'react';
+import { LifeSession, SessionStatus, VoiceInteractionState } from '../../types';
+import { SessionHeader } from './SessionHeader';
+import { NextRecommendedAction } from './NextRecommendedAction';
+import { TaskProgressPanel } from './TaskProgressPanel';
+import { ImportantFactsPanel } from './ImportantFactsPanel';
+import { SessionResourcePanel } from './SessionResourcePanel';
+import { AssistantComposer } from './AssistantComposer';
 
 interface LifeSessionPageProps {
   session: LifeSession;
-  sessionsList?: (BriefSessionHeader | LifeSession)[];
-  onOpenSession?: (id: string) => void;
-  onCreateNewSession?: () => void;
-  onOpenHistory?: () => void;
   onBack: () => void;
   onUpdateStatus: (status: SessionStatus) => void;
   onDeleteSession: () => void;
@@ -33,14 +30,14 @@ interface LifeSessionPageProps {
   onStartVoice?: () => void;
   onStopVoice?: () => void;
   onCancelVoice?: () => void;
+  sessionsList?: any[];
+  onOpenSession?: (id: string) => void;
+  onCreateNewSession?: () => void;
+  onOpenHistory?: () => void;
 }
 
 export const LifeSessionPage: React.FC<LifeSessionPageProps> = ({
   session,
-  sessionsList = [],
-  onOpenSession,
-  onCreateNewSession,
-  onOpenHistory,
   onBack,
   onUpdateStatus,
   onDeleteSession,
@@ -63,110 +60,68 @@ export const LifeSessionPage: React.FC<LifeSessionPageProps> = ({
   onStopVoice,
   onCancelVoice,
 }) => {
-  const [isDetailsDrawerOpen, setIsDetailsDrawerOpen] = useState(false);
-  const [isSessionListDrawerOpen, setIsSessionListDrawerOpen] = useState(false);
-
-  // Task calculation
-  let completedTasksCount = 0;
-  let totalTasksCount = 0;
-  session.tasks.forEach((t) => {
-    if (t.subtasks && t.subtasks.length > 0) {
-      t.subtasks.forEach((st) => {
-        totalTasksCount += 1;
-        if (st.status === 'completed' || st.status === 'skipped') completedTasksCount += 1;
-      });
-    } else {
-      totalTasksCount += 1;
-      if (t.status === 'completed' || t.status === 'skipped') completedTasksCount += 1;
-    }
-  });
-
   return (
-    <div className="flex h-[calc(100dvh-64px)] w-full overflow-hidden bg-lovira-card transition-colors">
-      {/* 1. Desktop Session List Column (Visible on >= 1280px xl) */}
-      <div className="hidden xl:block">
-        <SessionListSidebar
-          sessions={sessionsList.length > 0 ? sessionsList : [session]}
-          activeSessionId={session.id}
-          onSelectSession={(id) => onOpenSession && onOpenSession(id)}
-          onCreateNewSession={onCreateNewSession}
-          onOpenHistory={onOpenHistory}
-        />
-      </div>
+    <div className="max-w-5xl mx-auto space-y-6 pb-12">
+      {/* Session Header */}
+      <SessionHeader
+        session={session}
+        onBack={onBack}
+        onUpdateStatus={onUpdateStatus}
+        onDeleteSession={onDeleteSession}
+      />
 
-      {/* 2. Slide-over Session List Drawer (Medium Desktop 1024-1279px) */}
-      {isSessionListDrawerOpen && (
-        <div className="fixed inset-0 z-50 flex justify-start bg-black/50 backdrop-blur-xs xl:hidden">
-          <div className="relative w-[320px] h-full bg-lovira-card border-r border-lovira z-10 flex flex-col animate-in slide-in-from-left duration-200">
-            <div className="p-3 border-b border-lovira flex justify-end">
-              <button
-                onClick={() => setIsSessionListDrawerOpen(false)}
-                className="w-8 h-8 rounded-full bg-lovira-badge-purple text-lovira-purple flex items-center justify-center"
-              >
-                <X className="w-4 h-4" />
-              </button>
-            </div>
-            <SessionListSidebar
-              sessions={sessionsList.length > 0 ? sessionsList : [session]}
-              activeSessionId={session.id}
-              onSelectSession={(id) => {
-                onOpenSession && onOpenSession(id);
-                setIsSessionListDrawerOpen(false);
-              }}
-              onCreateNewSession={() => {
-                onCreateNewSession && onCreateNewSession();
-                setIsSessionListDrawerOpen(false);
-              }}
-              onOpenHistory={onOpenHistory}
-            />
-          </div>
-          <div className="flex-1" onClick={() => setIsSessionListDrawerOpen(false)} />
-        </div>
+      {/* Next Recommended Action */}
+      {session.recommendedAction && (
+        <NextRecommendedAction
+          action={session.recommendedAction}
+          onCompleteCurrentTask={onCompleteCurrentTask}
+          onOpenCamera={onOpenCamera}
+        />
       )}
 
-      {/* 3. Main Conversation Canvas Column (Flex-1) */}
-      <div className="flex-1 flex flex-col h-full min-w-0 bg-lovira-card">
-        {/* Chat Conversation Header */}
-        <SessionConversationHeader
-          session={session}
-          onBack={onBack}
-          onToggleSessionDrawer={() => setIsSessionListDrawerOpen(true)}
-          onOpenDetails={() => setIsDetailsDrawerOpen(true)}
-          completedTasksCount={completedTasksCount}
-          totalTasksCount={totalTasksCount}
-        />
+      {/* Main Grid Layout: Tasks & Chat */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        {/* Left Column: Tasks & Progress */}
+        <div className="space-y-6">
+          <TaskProgressPanel
+            tasks={session.tasks}
+            onToggleTask={onToggleTask}
+            onToggleSubtask={onToggleSubtask}
+            onAddTask={onAddTask}
+            onAddSubtask={onAddSubtask}
+            onDeleteTask={onDeleteTask}
+          />
 
-        {/* Conversation Stream & Composer */}
-        <ConversationPane
-          session={session}
-          onSendMessage={onSendMessage}
-          onOpenCamera={onOpenCamera}
-          isLoading={isLoading}
-          voiceStatus={voiceStatus}
-          interimTranscript={interimTranscript}
-          userName={userName}
-          onStartVoice={onStartVoice}
-          onStopVoice={onStopVoice}
-          onCancelVoice={onCancelVoice}
-        />
+          <ImportantFactsPanel
+            facts={session.importantFacts}
+            onAddFact={onAddFact}
+            onDeleteFact={onDeleteFact}
+          />
+
+          <SessionResourcePanel
+            resources={session.resources}
+            onDeleteResource={onDeleteResource}
+            onOpenCamera={onOpenCamera}
+          />
+        </div>
+
+        {/* Right Column: AI Conversation Assistant */}
+        <div>
+          <AssistantComposer
+            messages={session.messages}
+            onSendMessage={onSendMessage}
+            onOpenCamera={onOpenCamera}
+            isLoading={isLoading}
+            scenarioType={session.scenarioType}
+            voiceStatus={voiceStatus}
+            interimTranscript={interimTranscript}
+            userName={userName}
+            onStartVoice={onStartVoice}
+            onStopVoice={onStopVoice}
+            onCancelVoice={onCancelVoice}
+          />
+        </div>
       </div>
-
-      {/* 4. Session Detail Drawer (Tasks, Facts, Resources Side-panel) */}
-      <SessionDetailDrawer
-        isOpen={isDetailsDrawerOpen}
-        onClose={() => setIsDetailsDrawerOpen(false)}
-        session={session}
-        onUpdateStatus={onUpdateStatus}
-        onToggleTask={onToggleTask}
-        onToggleSubtask={onToggleSubtask}
-        onAddTask={onAddTask}
-        onAddSubtask={onAddSubtask}
-        onDeleteTask={onDeleteTask}
-        onAddFact={onAddFact}
-        onDeleteFact={onDeleteFact}
-        onDeleteResource={onDeleteResource}
-        onOpenCamera={onOpenCamera}
-      />
     </div>
   );
 };

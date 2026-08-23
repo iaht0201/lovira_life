@@ -1,6 +1,6 @@
 {
   "name": "Lovira Life",
   "description": "Trợ lý Đời sống thông minh dành cho người khuyết tật, người cao tuổi và người cần hỗ trợ trong các hoạt động đời sống",
-  "requestFramePermissions": ["camera", "microphone"],
+  "requestFramePermissions": ["camera", "microphone", "geolocation"],
   "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
 }
