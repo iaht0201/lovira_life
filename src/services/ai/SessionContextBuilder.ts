@@ -3,6 +3,7 @@ import { getRelevantConditions } from '../../utils/filterRelevantConditions';
 import { resolveCurrentStep } from '../actionEngine';
 import { getCapabilityGroundingPrompt } from '../interaction/CapabilityRegistry';
 import { deduceHonorifics } from '../conversationStyle';
+import { BehaviorService } from '../behaviorService';
 
 export interface PromptContextOptions {
   session?: LifeSession | null;
@@ -58,6 +59,8 @@ CHẾ ĐỘ NHẬP LIỆU: GIỌNG NÓI (VOICE INPUT)
 - Khi người dùng muốn chuyển trang (về trang chủ, mở cài đặt, mở hồ sơ, mở camera), phát hành appActions tương ứng.`;
   }
 
+  const fewShotSnippet = BehaviorService.getFewShotPromptSnippet(currentMessage || '');
+
   // If outside session (Dashboard or Other page)
   if (!session) {
     const availableSessionsFormatted = (appContext?.availableSessions || [])
@@ -94,6 +97,11 @@ NGUYÊN TẮC KHI Ở NGOÀI PHIÊN (DASHBOARD):
    - "Bật đọc to câu trả lời" -> appActions: [{ type: "UPDATE_ACCESSIBILITY_SETTING", payload: { setting: "speakResponse", value: true } }]
 4. TRÒ CHUYỆN & TƯ VẤN ĐỜI SỐNG THÔNG THƯỜNG:
    - Nếu hỏi đáp chung (ẩm thực, giải thích, mẹo vặt), trả lời ấm áp, thân thiện, actions: [], appActions: [].
+
+HƯỚNG DẪN BẮT BUỘC KHÔNG BỊA CHỨC NĂNG (CAPABILITY CONTRACT):
+${getCapabilityGroundingPrompt()}
+
+${fewShotSnippet}
 `;
   }
 
@@ -224,5 +232,7 @@ TODO = Kế hoạch dự kiến / gợi ý, KHÔNG PHẢI quy trình bắt buộ
    - LỜI NÓI CHO GIỌNG ĐỌC (speech): Đọc diễn cảm, trôi chảy, không chứa các ký tự kỹ thuật (*, -, •).
 
 ${getCapabilityGroundingPrompt()}
+
+${fewShotSnippet}
 `;
 }
