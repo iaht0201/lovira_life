@@ -29,17 +29,25 @@ const selfRefPatterns: { regex: RegExp; pronoun: string }[] = [
   { regex: /\b(?:cho|giúp|chỉ|nói|hỏi|tư\s+vấn\s+(?:cho\s+)?|gợi\s+ý\s+(?:cho\s+)?|bảo|dặn)\s+ông\b/i, pronoun: 'ông' },
   { regex: /\b(?:cho|giúp|chỉ|nói|hỏi|tư\s+vấn\s+(?:cho\s+)?|gợi\s+ý\s+(?:cho\s+)?|bảo|dặn)\s+bà\b/i, pronoun: 'bà' },
   { regex: /\b(?:cho|giúp|chỉ|nói|hỏi|tư\s+vấn\s+(?:cho\s+)?|gợi\s+ý\s+(?:cho\s+)?|bảo|dặn)\s+cô\b/i, pronoun: 'cô' },
+  { regex: /\b(?:cho|giúp|chỉ|nói|hỏi|tư\s+vấn\s+(?:cho\s+)?|gợi\s+ý\s+(?:cho\s+)?|bảo|dặn)\s+thím\b/i, pronoun: 'thím' },
+  { regex: /\b(?:cho|giúp|chỉ|nói|hỏi|tư\s+vấn\s+(?:cho\s+)?|gợi\s+ý\s+(?:cho\s+)?|bảo|dặn)\s+cậu\b/i, pronoun: 'cậu' },
+  { regex: /\b(?:cho|giúp|chỉ|nói|hỏi|tư\s+vấn\s+(?:cho\s+)?|gợi\s+ý\s+(?:cho\s+)?|bảo|dặn)\s+dì\b/i, pronoun: 'dì' },
+  { regex: /\b(?:cho|giúp|chỉ|nói|hỏi|tư\s+vấn\s+(?:cho\s+)?|gợi\s+ý\s+(?:cho\s+)?|bảo|dặn)\s+dượng\b/i, pronoun: 'dượng' },
   { regex: /\b(?:cho|giúp|chỉ|nói|hỏi|tư\s+vấn\s+(?:cho\s+)?|gợi\s+ý\s+(?:cho\s+)?|bảo|dặn)\s+anh\b/i, pronoun: 'anh' },
   { regex: /\b(?:cho|giúp|chỉ|nói|hỏi|tư\s+vấn\s+(?:cho\s+)?|gợi\s+ý\s+(?:cho\s+)?|bảo|dặn)\s+chị\b/i, pronoun: 'chị' },
 
   // 2. Pronoun followed by verbs or sentence particles: "chú làm rồi", "chú đi nhé", "chú nè", "chú ơi"
-  { regex: /\bchú\s+(chưa|mua|đang|đã|sẽ|muốn|đi|có|làm|bận|nhờ|thấy|không|tới|cần|định|tự|hỏi|thích|nè|đây|này|ơi|nhé|nha|ạ)\b/i, pronoun: 'chú' },
-  { regex: /\bbác\s+(chưa|mua|đang|đã|sẽ|muốn|đi|có|làm|bận|nhờ|thấy|không|tới|cần|định|tự|hỏi|thích|nè|đây|này|ơi|nhé|nha|ạ)\b/i, pronoun: 'bác' },
-  { regex: /\bông\s+(chưa|mua|đang|đã|sẽ|muốn|đi|có|làm|bận|nhờ|thấy|không|tới|cần|định|tự|hỏi|thích|nè|đây|này|ơi|nhé|nha|ạ)\b/i, pronoun: 'ông' },
-  { regex: /\bbà\s+(chưa|mua|đang|đã|sẽ|muốn|đi|có|làm|bận|nhờ|thấy|không|tới|cần|định|tự|hỏi|thích|nè|đây|này|ơi|nhé|nha|ạ)\b/i, pronoun: 'bà' },
-  { regex: /\bcô\s+(chưa|mua|đang|đã|sẽ|muốn|đi|có|làm|bận|nhờ|thấy|không|tới|cần|định|tự|hỏi|thích|nè|đây|này|ơi|nhé|nha|ạ)\b/i, pronoun: 'cô' },
-  { regex: /\banh\s+(chưa|mua|đang|đã|sẽ|muốn|đi|có|làm|bận|nhờ|thấy|không|tới|cần|định|tự|hỏi|thích|nè|đây|này|ơi|nhé|nha|ạ)\b/i, pronoun: 'anh' },
-  { regex: /\bchị\s+(chưa|mua|đang|đã|sẽ|muốn|đi|có|làm|bận|nhờ|thấy|không|tới|cần|định|tự|hỏi|thích|nè|đây|này|ơi|nhé|nha|ạ)\b/i, pronoun: 'chị' },
+  { regex: /\bchú\s+(chưa|mua|đang|đã|sẽ|muốn|đi|có|làm|bận|nhờ|thấy|không|tới|cần|định|tự|hỏi|thích|nè|đây|này|ơi|nhé|nha|ạ|rùi|nhen)\b/i, pronoun: 'chú' },
+  { regex: /\bbác\s+(chưa|mua|đang|đã|sẽ|muốn|đi|có|làm|bận|nhờ|thấy|không|tới|cần|định|tự|hỏi|thích|nè|đây|này|ơi|nhé|nha|ạ|rùi|nhen)\b/i, pronoun: 'bác' },
+  { regex: /\bông\s+(chưa|mua|đang|đã|sẽ|muốn|đi|có|làm|bận|nhờ|thấy|không|tới|cần|định|tự|hỏi|thích|nè|đây|này|ơi|nhé|nha|ạ|rùi|nhen)\b/i, pronoun: 'ông' },
+  { regex: /\bbà\s+(chưa|mua|đang|đã|sẽ|muốn|đi|có|làm|bận|nhờ|thấy|không|tới|cần|định|tự|hỏi|thích|nè|đây|này|ơi|nhé|nha|ạ|rùi|nhen)\b/i, pronoun: 'bà' },
+  { regex: /\bcô\s+(chưa|mua|đang|đã|sẽ|muốn|đi|có|làm|bận|nhờ|thấy|không|tới|cần|định|tự|hỏi|thích|nè|đây|này|ơi|nhé|nha|ạ|rùi|nhen)\b/i, pronoun: 'cô' },
+  { regex: /\bthím\s+(chưa|mua|đang|đã|sẽ|muốn|đi|có|làm|bận|nhờ|thấy|không|tới|cần|định|tự|hỏi|thích|nè|đây|này|ơi|nhé|nha|ạ|rùi|nhen)\b/i, pronoun: 'thím' },
+  { regex: /\bcậu\s+(chưa|mua|đang|đã|sẽ|muốn|đi|có|làm|bận|nhờ|thấy|không|tới|cần|định|tự|hỏi|thích|nè|đây|này|ơi|nhé|nha|ạ|rùi|nhen)\b/i, pronoun: 'cậu' },
+  { regex: /\bdì\s+(chưa|mua|đang|đã|sẽ|muốn|đi|có|làm|bận|nhờ|thấy|không|tới|cần|định|tự|hỏi|thích|nè|đây|này|ơi|nhé|nha|ạ|rùi|nhen)\b/i, pronoun: 'dì' },
+  { regex: /\bdượng\s+(chưa|mua|đang|đã|sẽ|muốn|đi|có|làm|bận|nhờ|thấy|không|tới|cần|định|tự|hỏi|thích|nè|đây|này|ơi|nhé|nha|ạ|rùi|nhen)\b/i, pronoun: 'dượng' },
+  { regex: /\banh\s+(chưa|mua|đang|đã|sẽ|muốn|đi|có|làm|bận|nhờ|thấy|không|tới|cần|định|tự|hỏi|thích|nè|đây|này|ơi|nhé|nha|ạ|rùi|nhen)\b/i, pronoun: 'anh' },
+  { regex: /\bchị\s+(chưa|mua|đang|đã|sẽ|muốn|đi|có|làm|bận|nhờ|thấy|không|tới|cần|định|tự|hỏi|thích|nè|đây|này|ơi|nhé|nha|ạ|rùi|nhen)\b/i, pronoun: 'chị' },
 ];
 
 /**
@@ -81,7 +89,7 @@ export function deduceHonorifics(userProfile?: UserProfile | null, textContext?:
     addressing = 'bạn';
   }
 
-  const isElderly = ['bác', 'ông', 'bà', 'cô', 'chú'].some((p) => addressing.startsWith(p));
+  const isElderly = ['bác', 'ông', 'bà', 'cô', 'chú', 'thím', 'cậu', 'dì', 'dượng'].some((p) => addressing.startsWith(p));
   const isYoungerSenior = ['anh', 'chị'].some((p) => addressing.startsWith(p));
 
   const me = isElderly ? 'con' : isYoungerSenior ? 'em' : 'Lovira';

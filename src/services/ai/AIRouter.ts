@@ -1,6 +1,7 @@
 import { LifeSession } from '../../types';
+import { GroqModel } from './GroqProvider';
 
-export function selectGroqModel(message: string, session?: LifeSession | null): string {
+export function selectGroqModel(message: string, session?: LifeSession | null): GroqModel {
   const text = message.toLowerCase();
 
   // 1. Deep reasoning required (Conflict resolution, planning, multi-step tradeoff)
@@ -12,7 +13,7 @@ export function selectGroqModel(message: string, session?: LifeSession | null): 
     text.includes('ưu tiên') ||
     (text.length > 150 && (text.includes('và') || text.includes('hoặc')))
   ) {
-    return 'openai/gpt-oss-120b';
+    return GroqModel.GPT_OSS_120B;
   }
 
   // 2. Complex natural language interpretation / dialect / ambiguous phrasing
@@ -23,14 +24,16 @@ export function selectGroqModel(message: string, session?: LifeSession | null): 
     text.includes('bước vừa rồi') ||
     text.includes('chuyển tôi sang')
   ) {
-    return 'qwen/qwen3.6-27b';
+    return GroqModel.QWEN_3_6_27B;
   }
 
   // 3. Fast lightweight responses for short commands or simple prompts
   if (text.length < 15) {
-    return 'groq/compound-mini';
+    return GroqModel.COMPOUND_MINI;
   }
 
-  // 4. Default fast text model on user's Groq tier
-  return 'openai/gpt-oss-20b';
+  // 4. Default fast text model
+  return GroqModel.GPT_OSS_20B;
 }
+
+

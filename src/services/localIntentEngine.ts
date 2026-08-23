@@ -79,17 +79,26 @@ export function parseLocalIntent(
       tl.includes('phỏng vấn xong rồi') ||
       tl.includes('phỏng vấn xong rồi nhé') ||
       tl.includes('phỏng vấn xong rồi nè') ||
+      tl.includes('đậu phỏng vấn rồi') ||
       tl.includes('làm giấy tờ xong rồi') ||
       tl.includes('nộp hồ sơ xong rồi') ||
       tl.includes('làm thủ tục xong rồi') ||
       tl.includes('xong thủ tục rồi') ||
+      tl.includes('xong thủ tục về') ||
       tl.includes('sửa máy xong rồi') ||
       tl.includes('máy sửa xong rồi') ||
       tl.includes('khám bệnh xong rồi') ||
       tl.includes('khám xong rồi') ||
+      tl.includes('khám xong đi về') ||
       tl.includes('mua sắm xong rồi') ||
       tl.includes('mua đồ xong rồi') ||
-      tl.includes('mua xong rồi')
+      tl.includes('mua xong rồi') ||
+      tl.includes('về đến nhà rồi') ||
+      tl.includes('về tới nhà rồi') ||
+      tl.includes('về nhà rồi') ||
+      tl.includes('lấy thuốc về rồi') ||
+      tl.includes('mua xong đem về rồi') ||
+      tl.includes('lấy được hộ chiếu về')
     );
   };
 
@@ -100,6 +109,30 @@ export function parseLocalIntent(
       actions: [{ type: 'COMPLETE_SESSION', payload: {} }],
       confidence: 0.98,
       suggestedReplies: ['Cảm ơn Lovira', 'Tạo phiên việc mới'],
+    };
+  }
+
+  // 1.2 Emotional Support & Anxiety Handling (Theme 3: "Chú hơi run", "Không biết có làm được không", "Ngại quá con ơi", "Hồi hộp quá"...)
+  if (
+    tLower.includes('hơi run') ||
+    tLower.includes('run quá') ||
+    tLower.includes('hồi hộp quá') ||
+    tLower.includes('ngại quá') ||
+    tLower.includes('lo quá') ||
+    tLower.includes('sợ không làm được') ||
+    tLower.includes('sợ bị la') ||
+    tLower.includes('không biết có làm được không') ||
+    tLower.includes('đông người quá') ||
+    tLower.includes('lần đầu đi nên') ||
+    tLower.includes('lo lo trong người') ||
+    tLower.includes('tim đập nhanh')
+  ) {
+    return {
+      reply: `Dạ ${addressing}, ${addressing} cứ hít một hơi thật sâu nhen! Lần đầu ai cũng có chút hồi hộp cả, đó là hoàn toàn bình thường ạ. ${me.charAt(0).toUpperCase() + me.slice(1)} luôn ở đây đồng hành cùng ${addressing}, mọi thứ đều đã chuẩn bị sẵn sàng rồi. ${addressing.charAt(0).toUpperCase() + addressing.slice(1)} cứ tự tin và thong thả thực hiện nhé!`,
+      speech: `Dạ ${addressing}, ${addressing} cứ hít thở sâu và yên tâm nhen. ${me.charAt(0).toUpperCase() + me.slice(1)} luôn ở đây đồng hành cùng ${addressing}!`,
+      actions: [],
+      confidence: 0.98,
+      suggestedReplies: ['Cảm ơn Lovira', 'Giờ làm gì tiếp theo?'],
     };
   }
 
@@ -131,7 +164,7 @@ export function parseLocalIntent(
     };
   }
 
-  // 3. Universal "Xong rồi" / "Làm xong rồi" / "Chuẩn bị rồi" / "Hoàn thành bước này" / Specific task completions
+  // 3. Universal "Xong rồi" / "Làm xong rồi" / "Chuẩn bị rồi" / "Hoàn thành bước này" / Specific task completions / Dialect confirmations ("rùi nè", "xong xuôi rùi nhen", "có ví rồi")
   if (
     tLower === 'xong rồi' ||
     tLower === 'xong' ||
@@ -141,9 +174,20 @@ export function parseLocalIntent(
     tLower === 'làm xong rồi' ||
     tLower.includes('chuẩn bị rồi') ||
     tLower.includes('chuẩn bị xong') ||
+    tLower.includes('chuẩn bị đủ') ||
     tLower.includes('sẵn sàng rồi') ||
     tLower.includes('xong rồi nhé') ||
     tLower.includes('xong rồi nha') ||
+    tLower.includes('xong xuôi') ||
+    tLower.includes('có ví rồi') ||
+    tLower.includes('lấy rùi') ||
+    tLower.includes('đem theo rùi') ||
+    tLower.includes('rùi nè') ||
+    tLower.includes('rùi nhen') ||
+    tLower.includes('rùi nha') ||
+    tLower.includes('sẵn rồi') ||
+    tLower.includes('lấy số rồi') ||
+    tLower.includes('bốc số rồi') ||
     tLower.startsWith('xong rồi ') ||
     tLower.startsWith('đã làm xong') ||
     tLower.startsWith('xong bước') ||
@@ -153,7 +197,10 @@ export function parseLocalIntent(
     tLower.endsWith('chuẩn bị rồi nha') ||
     tLower.endsWith('xong rồi') ||
     tLower.endsWith('xong rồi ạ') ||
-    tLower.endsWith('xong rồi nè')
+    tLower.endsWith('xong rồi nè') ||
+    tLower.endsWith('xong rồi nghen') ||
+    tLower.endsWith('xong rùi nè') ||
+    tLower.endsWith('xong rùi nhen')
   ) {
     // Check for multi-task completion first
     const multiResults = resolveMultiTaskCompletionTargets(session, text);

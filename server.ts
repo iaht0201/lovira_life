@@ -425,32 +425,33 @@ async function startServer() {
               messages: [
                 {
                   role: 'system',
-                  content: `Bạn là Lovira Life Planner. Hãy lập kế hoạch cho mục tiêu của người dùng.
-Quy tắc:
-1. Nhiệm vụ (tasks) và bước con (subtasks) phải là HÀNH ĐỘNG CỤ THỂ THỰC TẾ, không dùng câu chung chung như "Rà soát yêu cầu".
-2. Trích xuất Important Facts từ thông tin người dùng nêu (thời gian, địa điểm, giấy tờ, người liên quan). Tuyệt đối không bịa thông tin không có trong yêu cầu.
-3. Trả về DUY NHẤT JSON đúng schema sau (không bọc markdown):
+                  content: `Bạn là Trợ lý Lovira Life Planner. Hãy lập kế hoạch cho mục tiêu của người dùng.
+QUY TẮC NGÔN NGỮ BẮT BUỘC:
+1. TẤT CẢ VĂN BẢN (tiêu đề phiên "title", mục tiêu "goal", tên nhiệm vụ "tasks", tên bước con "subtasks", thông tin "importantFacts", "firstRecommendedAction") BẮT BUỘC 100% BẰNG TIẾNG VIỆT (VIETNAMESE). TUYỆT ĐỐI KHÔNG DÙNG TIẾNG ANH.
+2. Nhiệm vụ (tasks) và bước con (subtasks) phải là HÀNH ĐỘNG CỤ THỂ THỰC TẾ tiếng Việt, không dùng câu chung chung.
+3. Trích xuất Important Facts bằng tiếng Việt từ thông tin người dùng nêu (thời gian, địa điểm, giấy tờ, người liên quan). Tuyệt đối không bịa thông tin không có trong yêu cầu.
+4. Trả về DUY NHẤT JSON đúng schema sau (không bọc markdown):
 {
-  "title": "Tiêu đề ngắn gọn kèm icon",
-  "goal": "Mục tiêu đầy đủ",
+  "title": "Tiêu đề ngắn gọn bằng tiếng Việt kèm icon",
+  "goal": "Mục tiêu đầy đủ bằng tiếng Việt",
   "scenarioType": "custom",
   "scenarioFamily": "${routing.family}",
   "secondaryFamilies": [],
   "tags": [],
   "tasks": [
     {
-      "title": "Tên công việc chính",
+      "title": "Tên công việc chính bằng tiếng Việt",
       "order": 1,
       "important": true,
       "subtasks": [
-        { "title": "Tên bước con", "order": 1 }
+        { "title": "Tên bước con bằng tiếng Việt", "order": 1 }
       ]
     }
   ],
   "importantFacts": [
-    { "type": "requirement", "title": "Tiêu đề", "value": "Nội dung" }
+    { "type": "requirement", "title": "Tiêu đề bằng tiếng Việt", "value": "Nội dung bằng tiếng Việt" }
   ],
-  "firstRecommendedAction": "Tên bước con đầu tiên hoặc công việc đầu tiên"
+  "firstRecommendedAction": "Tên bước con đầu tiên bằng tiếng Việt"
 }`,
                 },
                 { role: 'user', content: prompt },
@@ -481,37 +482,40 @@ Quy tắc:
 
       // Priority 2: Gemini if GEMINI_API_KEY is available
       if (ai && !isDemoMode) {
-        const systemPrompt = `Bạn là Lovira. Người dùng vừa mô tả một mục tiêu họ cần hoàn thành.
-Hãy tạo một kế hoạch phiên hỗ trợ gồm:
-- Tiêu đề ngắn gọn, dễ hiểu kèm icon
-- Mục tiêu phiên đầy đủ
-- Danh sách 3-6 công việc chính (tasks), có thể chia subtasks cho các bước phức tạp.
-- Trích xuất Important Facts (thời gian, địa điểm, giấy tờ liên quan).
+        const systemPrompt = `Bạn là Trợ lý Lovira Life Planner. Người dùng vừa mô tả một mục tiêu họ cần hoàn thành.
+QUY TẮC NGÔN NGỮ TUYỆT ĐỐI (100% TIẾNG VIỆT):
+- TẤT CẢ VĂN BẢN (tiêu đề phiên "title", mục tiêu "goal", tên công việc "tasks", tên bước con "subtasks", thông tin "importantFacts", "firstRecommendedAction") BẮT BUỘC 100% BẰNG TIẾNG VIỆT (VIETNAMESE). TUYỆT ĐỐI KHÔNG BỎ TIẾNG ANH VÀO DÙ BẤT KỲ TRƯỜNG HỢP NÀO.
 
-Tránh các task chung chung vô nghĩa. Mọi việc phải cụ thể.
+Hãy tạo một kế hoạch phiên hỗ trợ gồm:
+- Tiêu đề ngắn gọn bằng tiếng Việt kèm icon
+- Mục tiêu phiên đầy đủ bằng tiếng Việt
+- Danh sách 3-6 công việc chính (tasks) bằng tiếng Việt, có thể chia subtasks bằng tiếng Việt cho các bước phức tạp.
+- Trích xuất Important Facts bằng tiếng Việt (thời gian, địa điểm, giấy tờ liên quan).
+
+Tránh các task chung chung vô nghĩa. Mọi việc phải cụ thể bằng tiếng Việt.
 
 Trả về DUY NHẤT JSON đúng schema:
 {
-  "title": "Tiêu đề ngắn gọn kèm icon",
-  "goal": "Mục tiêu phiên đầy đủ",
+  "title": "Tiêu đề ngắn gọn bằng tiếng Việt kèm icon",
+  "goal": "Mục tiêu phiên đầy đủ bằng tiếng Việt",
   "scenarioType": "custom",
   "scenarioFamily": "${routing.family}",
   "secondaryFamilies": [],
   "tags": [],
   "tasks": [
     {
-      "title": "Tên công việc cha",
+      "title": "Tên công việc cha bằng tiếng Việt",
       "order": 1,
       "important": true,
       "subtasks": [
-        { "title": "Tên bước con 1", "order": 1 }
+        { "title": "Tên bước con bằng tiếng Việt", "order": 1 }
       ]
     }
   ],
   "importantFacts": [
-    { "type": "requirement", "title": "Tên giấy tờ/thông tin", "value": "Nội dung chi tiết" }
+    { "type": "requirement", "title": "Tên giấy tờ/thông tin bằng tiếng Việt", "value": "Nội dung chi tiết bằng tiếng Việt" }
   ],
-  "firstRecommendedAction": "Tên bước con 1"
+  "firstRecommendedAction": "Tên bước con 1 bằng tiếng Việt"
 }`;
 
         try {
