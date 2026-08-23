@@ -61,15 +61,15 @@ export const MobileBottomNav: React.FC<MobileBottomNavProps> = ({
 
   return (
     <nav
-      className="md:hidden fixed bottom-0 left-0 right-0 z-40 bg-[#FFFFFF]/95 backdrop-blur-md border-t border-[#ECE8F5] h-[76px] px-2 flex items-center justify-around shadow-lg select-none"
+      className="md:hidden fixed bottom-0 left-0 right-0 z-40 bg-lovira-topbar backdrop-blur-md border-t border-lovira-subtle h-[76px] px-2 flex items-center justify-around shadow-lg select-none"
       aria-label="Điều hướng di động"
     >
       {/* 1. Trang chủ */}
       <button
         onClick={() => onTabChange('dashboard')}
         aria-current={activeTab === 'dashboard' ? 'page' : undefined}
-        className={`flex flex-col items-center justify-center min-w-[56px] min-h-[48px] px-1 py-1 rounded-[12px] text-[11px] font-[600] transition-colors ${
-          activeTab === 'dashboard' ? 'text-[#7C4DFF] font-[700]' : 'text-[#667085]'
+        className={`flex flex-col items-center justify-center min-w-[56px] min-h-[48px] px-1 py-1 rounded-[12px] text-[11px] font-[600] transition-colors cursor-pointer ${
+          activeTab === 'dashboard' ? 'text-lovira-purple font-[700]' : 'text-lovira-muted'
         }`}
       >
         <LayoutDashboard className="w-[22px] h-[22px] mb-0.5" />
@@ -80,8 +80,8 @@ export const MobileBottomNav: React.FC<MobileBottomNavProps> = ({
       <button
         onClick={() => onTabChange('chat')}
         aria-current={activeTab === 'chat' ? 'page' : undefined}
-        className={`flex flex-col items-center justify-center min-w-[56px] min-h-[48px] px-1 py-1 rounded-[12px] text-[11px] font-[600] transition-colors ${
-          activeTab === 'chat' ? 'text-[#7C4DFF] font-[700]' : 'text-[#667085]'
+        className={`flex flex-col items-center justify-center min-w-[56px] min-h-[48px] px-1 py-1 rounded-[12px] text-[11px] font-[600] transition-colors cursor-pointer ${
+          activeTab === 'chat' ? 'text-lovira-purple font-[700]' : 'text-lovira-muted'
         }`}
       >
         <MessageSquare className="w-[22px] h-[22px] mb-0.5" />
@@ -93,7 +93,7 @@ export const MobileBottomNav: React.FC<MobileBottomNavProps> = ({
         <button
           onClick={onVoiceClick}
           aria-label="Nói chuyện bằng giọng nói với Lovira"
-          className={`w-[64px] h-[64px] rounded-full bg-gradient-to-tr from-[#7C4DFF] to-[#A45CFF] text-white flex flex-col items-center justify-center shadow-lovira-lg ring-[6px] ring-white dark:ring-[#1B152B] transition-transform active:scale-95 cursor-pointer ${
+          className={`w-[64px] h-[64px] rounded-full bg-gradient-to-tr from-[#7C4DFF] to-[#A45CFF] text-white flex flex-col items-center justify-center shadow-lovira-lg ring-[6px] ring-lovira-base transition-transform active:scale-95 cursor-pointer ${
             isVoiceActive ? 'animate-pulse ring-[#FF5CA8]/40' : 'hover:scale-105'
           }`}
         >
@@ -105,8 +105,8 @@ export const MobileBottomNav: React.FC<MobileBottomNavProps> = ({
       <button
         onClick={() => onTabChange('tasks')}
         aria-current={activeTab === 'tasks' ? 'page' : undefined}
-        className={`flex flex-col items-center justify-center min-w-[56px] min-h-[48px] px-1 py-1 rounded-[12px] text-[11px] font-[600] transition-colors ${
-          activeTab === 'tasks' ? 'text-[#7C4DFF] font-[700]' : 'text-[#667085]'
+        className={`flex flex-col items-center justify-center min-w-[56px] min-h-[48px] px-1 py-1 rounded-[12px] text-[11px] font-[600] transition-colors cursor-pointer ${
+          activeTab === 'tasks' ? 'text-lovira-purple font-[700]' : 'text-lovira-muted'
         }`}
       >
         <CheckSquare className="w-[22px] h-[22px] mb-0.5" />
@@ -117,8 +117,8 @@ export const MobileBottomNav: React.FC<MobileBottomNavProps> = ({
       <button
         onClick={() => onTabChange('settings')}
         aria-current={activeTab === 'settings' ? 'page' : undefined}
-        className={`flex flex-col items-center justify-center min-w-[56px] min-h-[48px] px-1 py-1 rounded-[12px] text-[11px] font-[600] transition-colors ${
-          activeTab === 'settings' ? 'text-[#7C4DFF] font-[700]' : 'text-[#667085]'
+        className={`flex flex-col items-center justify-center min-w-[56px] min-h-[48px] px-1 py-1 rounded-[12px] text-[11px] font-[600] transition-colors cursor-pointer ${
+          activeTab === 'settings' ? 'text-lovira-purple font-[700]' : 'text-lovira-muted'
         }`}
       >
         <Settings className="w-[22px] h-[22px] mb-0.5" />

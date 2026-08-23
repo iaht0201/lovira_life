@@ -38,8 +38,25 @@ export const GlobalVoiceButton: React.FC<GlobalVoiceButtonProps> = ({
     }
   }, [errorMessage]);
 
+  // Trigger haptic feedback on state changes
+  useEffect(() => {
+    if (typeof window !== 'undefined' && 'vibrate' in navigator) {
+      if (status === 'listening') {
+        navigator.vibrate([50, 30, 50]);
+      } else if (status === 'speaking') {
+        navigator.vibrate(40);
+      } else if (status === 'error') {
+        navigator.vibrate([100, 50, 100]);
+      }
+    }
+  }, [status]);
+
   const triggerVoiceAction = () => {
     if (disabled || status === 'processing') return;
+
+    if (typeof window !== 'undefined' && 'vibrate' in navigator) {
+      navigator.vibrate(30);
+    }
 
     if (status === 'listening') {
       // Finalize and submit speech
@@ -109,14 +126,16 @@ export const GlobalVoiceButton: React.FC<GlobalVoiceButtonProps> = ({
           className="pointer-events-auto max-w-xs md:max-w-md p-3.5 rounded-2xl bg-surface-raised/95 backdrop-blur-md border border-default shadow-xl text-text-primary text-xs md:text-sm font-medium transition-all"
         >
           {status === 'listening' && (
-            <div className="flex items-center justify-between gap-2 mb-1">
+            <div className="flex items-center justify-between gap-3 mb-1.5">
               <div className="flex items-center gap-2 text-primary font-bold">
-                <span className="relative flex h-2.5 w-2.5">
-                  {!reducedMotion && (
-                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-primary opacity-75"></span>
-                  )}
-                  <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-primary"></span>
-                </span>
+                {/* Voice Wave Animation Bars */}
+                <div className="flex items-center gap-0.5 h-6 px-1">
+                  <span className="w-1 bg-lovira-purple rounded-full animate-voice-bar-1 inline-block"></span>
+                  <span className="w-1 bg-lovira-purple rounded-full animate-voice-bar-2 inline-block"></span>
+                  <span className="w-1 bg-lovira-purple rounded-full animate-voice-bar-3 inline-block"></span>
+                  <span className="w-1 bg-lovira-purple rounded-full animate-voice-bar-4 inline-block"></span>
+                  <span className="w-1 bg-lovira-purple rounded-full animate-voice-bar-5 inline-block"></span>
+                </div>
                 <span>Đang nghe bạn nói...</span>
               </div>
 
@@ -124,7 +143,7 @@ export const GlobalVoiceButton: React.FC<GlobalVoiceButtonProps> = ({
                 <button
                   type="button"
                   onClick={onCancelListening}
-                  className="text-text-secondary hover:text-rose-500 p-1 rounded-md"
+                  className="text-text-secondary hover:text-rose-500 p-1 rounded-md cursor-pointer"
                   title="Hủy bỏ"
                   aria-label="Hủy bỏ thu âm"
                 >
