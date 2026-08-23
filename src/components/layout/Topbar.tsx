@@ -11,6 +11,7 @@ import {
   Sparkles,
   ChevronDown,
   SlidersHorizontal,
+  Menu,
 } from 'lucide-react';
 import { AccessibilitySettings } from '../../types';
 
@@ -21,6 +22,7 @@ interface TopbarProps {
   onOpenSettings?: () => void;
   onOpenNotifications?: () => void;
   onOpenProfile?: () => void;
+  onOpenMobileMenu?: () => void;
   hasNotifications?: boolean;
 }
 
@@ -31,6 +33,7 @@ export const Topbar: React.FC<TopbarProps> = ({
   onOpenSettings,
   onOpenNotifications,
   onOpenProfile,
+  onOpenMobileMenu,
   hasNotifications = true,
 }) => {
   const [searchQuery, setSearchQuery] = useState('');
@@ -88,7 +91,23 @@ export const Topbar: React.FC<TopbarProps> = ({
       accessibility.vslEnabled);
 
   return (
-    <header className="h-[64px] bg-lovira-topbar backdrop-blur-md border-b border-lovira-subtle px-3.5 sm:px-6 md:px-8 flex items-center justify-between sticky top-0 z-30 shrink-0 transition-colors">
+    <header className="h-[48px] sm:h-[64px] bg-lovira-topbar backdrop-blur-md border-b border-lovira-subtle px-2.5 sm:px-6 md:px-8 flex items-center justify-between sticky top-0 z-30 shrink-0 transition-colors">
+      {/* Mobile Hamburger Menu & Brand Name */}
+      <div className="md:hidden flex items-center gap-2">
+        <button
+          onClick={onOpenMobileMenu}
+          className="w-[34px] h-[34px] sm:w-[38px] sm:h-[38px] rounded-[10px] sm:rounded-[12px] bg-lovira-card border border-lovira hover:bg-lovira-card-hover text-lovira-title flex items-center justify-center transition-colors cursor-pointer"
+          title="Mở menu điều hướng"
+          aria-label="Mở menu điều hướng"
+        >
+          <Menu className="w-[18px] h-[18px] sm:w-[20px] sm:h-[20px] text-lovira-purple" />
+        </button>
+        <div className="flex items-center gap-1">
+          <span className="text-[17px] sm:text-[20px] font-[900] text-lovira-purple tracking-tight">Lovira</span>
+          <span className="text-[14px] sm:text-[16px] text-[#FF5CA8] font-black">♥</span>
+        </div>
+      </div>
+
       {/* Search Input (Desktop & Tablet) */}
       <div className="relative flex-1 max-w-[240px] sm:max-w-[280px] lg:max-w-[320px] hidden sm:block">
         <Search className="w-[18px] h-[18px] text-lovira-sub absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none" />
@@ -101,20 +120,14 @@ export const Topbar: React.FC<TopbarProps> = ({
         />
       </div>
 
-      {/* Mobile Title if small screen */}
-      <div className="sm:hidden flex items-center gap-1.5">
-        <span className="text-[20px] font-[900] text-lovira-purple">Lovira</span>
-        <span className="text-[16px] text-[#FF5CA8] font-black">♥</span>
-      </div>
-
       {/* Right Controls Area */}
       <div className="flex items-center gap-1.5 sm:gap-2 ml-auto">
-        {/* Unified Accessibility & Display Dropdown */}
+        {/* Unified Accessibility & Display Dropdown (Desktop/Tablet only) */}
         {accessibility && onUpdateAccessibility && (
-          <div className="relative" ref={dropdownRef}>
+          <div className="relative hidden sm:block" ref={dropdownRef}>
             <button
               onClick={() => setShowDropdown(!showDropdown)}
-              className={`h-[38px] px-2.5 sm:px-3 rounded-[12px] border transition-all flex items-center gap-1.5 cursor-pointer text-[12px] font-[700] ${
+              className={`h-[38px] px-3 rounded-[12px] border transition-all flex items-center gap-1.5 cursor-pointer text-[12px] font-[700] ${
                 isCustomAccessActive
                   ? 'bg-lovira-badge-purple border-lovira-purple text-lovira-purple shadow-2xs'
                   : 'bg-lovira-card border-lovira text-lovira-muted hover:text-lovira-title hover:bg-lovira-card-hover'
@@ -123,8 +136,7 @@ export const Topbar: React.FC<TopbarProps> = ({
               aria-expanded={showDropdown}
             >
               <SlidersHorizontal className="w-[15px] h-[15px] text-lovira-purple" />
-              <span className="hidden sm:inline">Trợ năng & Giao diện</span>
-              <span className="sm:hidden">{Math.round(accessibility.fontScale * 100)}%</span>
+              <span>Trợ năng & Giao diện</span>
               <ChevronDown
                 className={`w-[13px] h-[13px] transition-transform duration-200 ${
                   showDropdown ? 'rotate-180' : ''
@@ -262,34 +274,34 @@ export const Topbar: React.FC<TopbarProps> = ({
         {/* Notification Button */}
         <button
           onClick={onOpenNotifications}
-          className="relative w-[38px] h-[38px] sm:w-[40px] sm:h-[40px] rounded-[12px] bg-lovira-card border border-lovira hover:bg-lovira-card-hover text-lovira-muted hover:text-lovira-main flex items-center justify-center transition-colors cursor-pointer"
+          className="relative w-[34px] h-[34px] sm:w-[40px] sm:h-[40px] rounded-[10px] sm:rounded-[12px] bg-lovira-card border border-lovira hover:bg-lovira-card-hover text-lovira-muted hover:text-lovira-main flex items-center justify-center transition-colors cursor-pointer"
           title="Thông báo"
           aria-label="Thông báo"
         >
-          <Bell className="w-[18px] h-[18px] sm:w-[20px] sm:h-[20px]" />
+          <Bell className="w-[16px] h-[16px] sm:w-[20px] sm:h-[20px]" />
           {hasNotifications && (
-            <span className="absolute top-2 right-2 w-[8px] h-[8px] rounded-full bg-[#FF5CA8] ring-2 ring-white dark:ring-[#1E1830]" />
+            <span className="absolute top-1.5 right-1.5 w-[7px] h-[7px] sm:w-[8px] sm:h-[8px] rounded-full bg-[#FF5CA8] ring-2 ring-white dark:ring-[#1E1830]" />
           )}
         </button>
 
-        {/* Settings Button */}
+        {/* Settings Button (Desktop/Tablet only) */}
         <button
           onClick={onOpenSettings}
-          className="w-[38px] h-[38px] sm:w-[40px] sm:h-[40px] rounded-[12px] bg-lovira-card border border-lovira hover:bg-lovira-card-hover text-lovira-muted hover:text-lovira-main flex items-center justify-center transition-colors cursor-pointer"
+          className="hidden sm:flex w-[40px] h-[40px] rounded-[12px] bg-lovira-card border border-lovira hover:bg-lovira-card-hover text-lovira-muted hover:text-lovira-main items-center justify-center transition-colors cursor-pointer"
           title="Cài đặt"
           aria-label="Cài đặt"
         >
-          <Settings className="w-[18px] h-[18px] sm:w-[20px] sm:h-[20px]" />
+          <Settings className="w-[20px] h-[20px]" />
         </button>
 
         {/* User Avatar Button */}
         <button
           onClick={onOpenProfile}
-          className="w-[38px] h-[38px] sm:w-[40px] sm:h-[40px] rounded-full bg-lovira-badge-purple border border-lovira-purple hover:ring-2 hover:ring-lovira-purple/30 flex items-center justify-center overflow-hidden transition-all cursor-pointer ml-0.5"
+          className="w-[34px] h-[34px] sm:w-[40px] sm:h-[40px] rounded-full bg-lovira-badge-purple border border-lovira-purple hover:ring-2 hover:ring-lovira-purple/30 flex items-center justify-center overflow-hidden transition-all cursor-pointer ml-0.5"
           title="Hồ sơ cá nhân"
           aria-label="Hồ sơ cá nhân"
         >
-          <span className="text-[18px] sm:text-[20px]">👴</span>
+          <span className="text-[16px] sm:text-[20px]">👴</span>
         </button>
       </div>
     </header>

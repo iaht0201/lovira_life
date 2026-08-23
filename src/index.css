@@ -88,6 +88,8 @@
 .border-lovira { border-color: var(--border-default); }
 .border-lovira-subtle { border-color: var(--border-subtle); }
 .border-lovira-purple { border-color: var(--border-brand); }
+.border-default { border-color: var(--border-default); }
+.border-subtle { border-color: var(--border-subtle); }
 
 /* Custom Lovira Shadows */
 .shadow-lovira {

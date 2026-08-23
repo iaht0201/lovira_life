@@ -1,7 +1,8 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { DesktopSidebar, NavTab } from './DesktopSidebar';
 import { Topbar } from './Topbar';
 import { MobileBottomNav } from './MobileBottomNav';
+import { MobileSidebarDrawer } from './MobileSidebarDrawer';
 import { VoiceInteractionState, AccessibilitySettings } from '../../types';
 
 interface AppShellProps {
@@ -29,6 +30,7 @@ export const AppShell: React.FC<AppShellProps> = ({
   onUpdateAccessibility,
   children,
 }) => {
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const isChatTab = activeTab === 'chat' || activeTab === 'session';
 
   return (
@@ -42,6 +44,19 @@ export const AppShell: React.FC<AppShellProps> = ({
         planName={planName}
       />
 
+      {/* Mobile Slide-over Navigation Sidebar Drawer */}
+      <MobileSidebarDrawer
+        isOpen={isMobileMenuOpen}
+        onClose={() => setIsMobileMenuOpen(false)}
+        activeTab={activeTab}
+        onTabChange={onTabChange}
+        onCreateSession={onCreateSession}
+        userName={userName}
+        planName={planName}
+        accessibility={accessibility}
+        onUpdateAccessibility={onUpdateAccessibility}
+      />
+
       {/* Main Content Area */}
       <div className="flex-1 flex flex-col min-w-0 min-h-screen pb-[76px] md:pb-0">
         {/* Topbar Header */}
@@ -50,6 +65,7 @@ export const AppShell: React.FC<AppShellProps> = ({
           onUpdateAccessibility={onUpdateAccessibility}
           onOpenSettings={() => onTabChange('settings')}
           onOpenProfile={() => onTabChange('profile')}
+          onOpenMobileMenu={() => setIsMobileMenuOpen(true)}
         />
 
         {/* Page Main Content */}

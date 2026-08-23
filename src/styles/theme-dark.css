@@ -18,9 +18,9 @@ html.dark {
   --text-brand: #A45CFF;
   --text-on-hero: #FFFFFF;
 
-  --border-default: #31274A;
-  --border-subtle: #271E3D;
-  --border-brand: #4E3B75;
+  --border-default: rgba(255, 255, 255, 0.08);
+  --border-subtle: rgba(255, 255, 255, 0.05);
+  --border-brand: rgba(164, 92, 255, 0.25);
 
   --color-primary: #9D75FF;
   --color-primary-hover: #B594FF;

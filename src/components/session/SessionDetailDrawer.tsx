@@ -133,7 +133,7 @@ export const SessionDetailDrawer: React.FC<SessionDetailDrawerProps> = ({
             {session.status === 'active' ? (
               <button
                 onClick={() => onUpdateStatus('paused')}
-                className="py-2.5 px-3 rounded-xl bg-amber-100 dark:bg-amber-950 text-amber-800 dark:text-amber-300 font-bold text-xs flex items-center justify-center gap-1.5 border border-amber-300 dark:border-amber-800 transition-all cursor-pointer hover:bg-amber-200"
+                className="py-2.5 px-3 rounded-xl bg-amber-100 dark:bg-amber-950/60 text-amber-800 dark:text-amber-300 font-bold text-xs flex items-center justify-center gap-1.5 border border-amber-500/20 transition-all cursor-pointer hover:bg-amber-200"
               >
                 <PauseCircle className="w-4 h-4" />
                 <span>Tạm dừng phiên</span>
@@ -141,7 +141,7 @@ export const SessionDetailDrawer: React.FC<SessionDetailDrawerProps> = ({
             ) : (
               <button
                 onClick={() => onUpdateStatus('active')}
-                className="py-2.5 px-3 rounded-xl bg-purple-100 dark:bg-purple-950 text-[#7C4DFF] dark:text-purple-300 font-bold text-xs flex items-center justify-center gap-1.5 border border-purple-300 dark:border-purple-800 transition-all cursor-pointer hover:bg-purple-200"
+                className="py-2.5 px-3 rounded-xl bg-purple-100 dark:bg-purple-950/60 text-[#7C4DFF] dark:text-purple-300 font-bold text-xs flex items-center justify-center gap-1.5 border border-purple-500/20 transition-all cursor-pointer hover:bg-purple-200"
               >
                 <PlayCircle className="w-4 h-4" />
                 <span>Tiếp tục phiên</span>
@@ -150,7 +150,7 @@ export const SessionDetailDrawer: React.FC<SessionDetailDrawerProps> = ({
 
             <button
               onClick={() => onUpdateStatus('completed')}
-              className="py-2.5 px-3 rounded-xl bg-emerald-100 dark:bg-emerald-950 text-emerald-800 dark:text-emerald-300 font-bold text-xs flex items-center justify-center gap-1.5 border border-emerald-300 dark:border-emerald-800 transition-all cursor-pointer hover:bg-emerald-200"
+              className="py-2.5 px-3 rounded-xl bg-emerald-100 dark:bg-emerald-950/60 text-emerald-800 dark:text-emerald-300 font-bold text-xs flex items-center justify-center gap-1.5 border border-emerald-500/20 transition-all cursor-pointer hover:bg-emerald-200"
             >
               <CheckCircle2 className="w-4 h-4" />
               <span>Hoàn thành phiên</span>
@@ -159,7 +159,7 @@ export const SessionDetailDrawer: React.FC<SessionDetailDrawerProps> = ({
 
           <button
             onClick={onDeleteSession}
-            className="w-full py-2 rounded-xl text-rose-600 dark:text-rose-400 bg-rose-50 dark:bg-rose-950/50 hover:bg-rose-100 dark:hover:bg-rose-900 border border-rose-200 dark:border-rose-900 font-bold text-xs flex items-center justify-center gap-1.5 transition-all cursor-pointer"
+            className="w-full py-2 rounded-xl text-rose-600 dark:text-rose-400 bg-rose-50 dark:bg-rose-950/50 hover:bg-rose-100 dark:hover:bg-rose-900 border border-rose-500/20 font-bold text-xs flex items-center justify-center gap-1.5 transition-all cursor-pointer"
           >
             <Trash2 className="w-3.5 h-3.5" />
             <span>Xóa phiên này</span>

@@ -79,7 +79,7 @@ export const ChatMessageRenderer: React.FC<ChatMessageRendererProps> = ({
   if (isSystemEvent) {
     return (
       <div className="flex justify-center my-3 w-full animate-in fade-in">
-        <div className="inline-flex items-center gap-1.5 px-3.5 py-1 rounded-full bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300 border border-emerald-300 dark:border-emerald-800 text-[11px] font-bold shadow-2xs">
+        <div className="inline-flex items-center gap-1.5 px-3.5 py-1 rounded-full bg-emerald-100 text-emerald-800 dark:bg-emerald-950/60 dark:text-emerald-300 border border-emerald-500/20 text-[11px] font-bold shadow-2xs">
           <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400 shrink-0" />
           <span>{message.text}</span>
         </div>
@@ -161,7 +161,7 @@ export const ChatMessageRenderer: React.FC<ChatMessageRendererProps> = ({
           className={`p-3.5 sm:p-4 rounded-2xl text-xs sm:text-sm leading-relaxed transition-all relative ${
             isUser
               ? 'bg-[#7C4DFF] text-white rounded-tr-xs shadow-2xs font-medium'
-              : 'bg-[#F4EEFF] dark:bg-[#28203E] text-[#1E1830] dark:text-[#E8E2FA] rounded-tl-xs border border-purple-200 dark:border-purple-900 shadow-2xs'
+              : 'bg-[#F4EEFF] dark:bg-[#28203E] text-[#1E1830] dark:text-[#E8E2FA] rounded-tl-xs border border-lovira-subtle shadow-2xs'
           }`}
         >
           <div className="space-y-2">
@@ -173,7 +173,7 @@ export const ChatMessageRenderer: React.FC<ChatMessageRendererProps> = ({
                     className={`flex items-start gap-2 p-1.5 rounded-xl ${
                       isUser
                         ? 'bg-purple-700 text-white'
-                        : 'bg-white dark:bg-[#1E1830] text-text-primary border border-purple-100 dark:border-purple-900'
+                        : 'bg-white dark:bg-[#1E1830] text-text-primary border border-lovira-subtle'
                     }`}
                   >
                     <span
@@ -220,7 +220,7 @@ export const ChatMessageRenderer: React.FC<ChatMessageRendererProps> = ({
             className={`flex items-center gap-2 pt-2 mt-1 text-[10px] ${
               isUser
                 ? 'text-purple-100 justify-end'
-                : 'text-text-secondary justify-between border-t border-purple-200 dark:border-purple-900'
+                : 'text-text-secondary justify-between border-t border-lovira-subtle'
             }`}
           >
             {!isUser && (

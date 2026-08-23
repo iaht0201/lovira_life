@@ -113,7 +113,7 @@ export const SessionListSidebar: React.FC<SessionListSidebarProps> = ({
                 <div
                   className={`w-9 h-9 rounded-xl flex items-center justify-center shrink-0 border ${
                     isActive
-                      ? 'bg-white dark:bg-[#1E1830] border-purple-300 dark:border-purple-800 shadow-2xs'
+                      ? 'bg-white dark:bg-[#1E1830] border-purple-500/30 shadow-2xs'
                       : 'bg-surface-raised border-default group-hover:bg-surface'
                   }`}
                 >
@@ -157,7 +157,7 @@ export const SessionListSidebar: React.FC<SessionListSidebarProps> = ({
       <div className="p-3 border-t border-default bg-surface shrink-0">
         <button
           onClick={onCreateNewSession}
-          className="w-full py-2.5 px-3 rounded-xl bg-[#F5F0FF] dark:bg-[#28203E] hover:bg-[#EBE2FF] dark:hover:bg-[#32284E] text-[#7C4DFF] dark:text-purple-300 font-bold text-xs flex items-center justify-center gap-2 border border-purple-300 dark:border-purple-800 transition-all cursor-pointer"
+          className="w-full py-2.5 px-3 rounded-xl bg-[#F5F0FF] dark:bg-[#28203E] hover:bg-[#EBE2FF] dark:hover:bg-[#32284E] text-[#7C4DFF] dark:text-purple-300 font-bold text-xs flex items-center justify-center gap-2 border border-purple-500/30 transition-all cursor-pointer"
         >
           <Plus className="w-4 h-4" />
           <span>Tạo phiên làm việc mới</span>

@@ -22,21 +22,21 @@ export const SessionConversationHeader: React.FC<SessionConversationHeaderProps>
     switch (status) {
       case 'completed':
         return (
-          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-emerald-100 dark:bg-emerald-950 text-emerald-800 dark:text-emerald-300 border border-emerald-300 dark:border-emerald-800">
+          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-emerald-100 dark:bg-emerald-950/60 text-emerald-800 dark:text-emerald-300 border border-emerald-500/20">
             <CheckCircle2 className="w-3 h-3" />
             Đã hoàn thành
           </span>
         );
       case 'paused':
         return (
-          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-amber-100 dark:bg-amber-950 text-amber-800 dark:text-amber-300 border border-amber-300 dark:border-amber-800">
+          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-amber-100 dark:bg-amber-950/60 text-amber-800 dark:text-amber-300 border border-amber-500/20">
             <PauseCircle className="w-3 h-3" />
             Tạm dừng
           </span>
         );
       default:
         return (
-          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-purple-100 dark:bg-purple-950 text-[#7C4DFF] dark:text-purple-300 border border-purple-300 dark:border-purple-800">
+          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-purple-100 dark:bg-purple-950/60 text-[#7C4DFF] dark:text-purple-300 border border-purple-500/20">
             <PlayCircle className="w-3 h-3" />
             Đang thực hiện
           </span>
@@ -45,7 +45,7 @@ export const SessionConversationHeader: React.FC<SessionConversationHeaderProps>
   };
 
   return (
-    <div className="h-[64px] px-3.5 sm:px-6 bg-surface border-b border-default flex items-center justify-between shrink-0 sticky top-0 z-20 shadow-2xs">
+    <div className="h-[50px] sm:h-[64px] px-3 sm:px-6 bg-surface border-b border-lovira-subtle flex items-center justify-between shrink-0 sticky top-0 z-20 shadow-2xs">
       {/* Left: Back (Mobile), Mobile Sessions Toggle, Title & Status */}
       <div className="flex items-center gap-2.5 min-w-0">
         {onBack && (
@@ -89,7 +89,7 @@ export const SessionConversationHeader: React.FC<SessionConversationHeaderProps>
       <div className="flex items-center gap-1.5 shrink-0">
         <button
           onClick={onToggleDetailDrawer}
-          className="p-2.5 rounded-xl bg-surface-raised border border-default hover:border-[#7C4DFF] text-text-secondary hover:text-[#7C4DFF] transition-all flex items-center gap-1.5 cursor-pointer shadow-2xs"
+          className="p-2.5 rounded-xl bg-surface-raised border border-lovira-subtle hover:border-[#7C4DFF] text-text-secondary hover:text-[#7C4DFF] transition-all flex items-center gap-1.5 cursor-pointer shadow-2xs"
           title="Xem Chi tiết Phiên & Công việc"
           aria-label="Mở chi tiết phiên"
         >

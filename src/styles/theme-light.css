@@ -18,9 +18,9 @@
   --text-brand: #7C4DFF;
   --text-on-hero: #17151F;
 
-  --border-default: #ECE8F5;
-  --border-subtle: #F0ECF8;
-  --border-brand: #E5D9FF;
+  --border-default: rgba(124, 77, 255, 0.12);
+  --border-subtle: rgba(124, 77, 255, 0.08);
+  --border-brand: rgba(124, 77, 255, 0.25);
 
   --color-primary: #7C4DFF;
   --color-primary-hover: #6D3CF0;
