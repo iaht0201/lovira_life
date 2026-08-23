@@ -1,0 +1,916 @@
+import React, { useState, useEffect, useRef, useCallback } from 'react';
+import {
+  LifeSession,
+  SessionStatus,
+  ScenarioType,
+  ImportantFactType,
+  GeneratedSessionPlan,
+  UserProfile,
+  ScenarioFamily,
+  AgentAction,
+  AppAction,
+  AppInteractionContext,
+  InteractionInputMode,
+  PendingInteraction,
+  AccessibilityContext,
+} from '../types';
+import { storageService, BriefSessionHeader } from '../services/storageService';
+import { indexedDbService } from '../services/indexedDbService';
+import { SCENARIO_TEMPLATES } from '../data/initialData';
+import {
+  applyAgentActionBatch,
+  calculateNextRecommendedAction,
+  reconcileSessionDerivedState,
+  resolveCurrentStep,
+} from '../services/actionEngine';
+import { buildPartialSuccessReply, deduceHonorifics, formatInitialSessionGreeting } from '../services/conversationStyle';
+import { parseLocalIntent } from '../services/localIntentEngine';
+import { createLifeSessionFromPlan } from '../services/sessionFactory';
+import { validateAppAction } from '../services/interaction/appActionValidator';
+import { applyAppAction } from '../services/interaction/appActionEngine';
+import { resolvePendingInteraction } from '../services/interaction/pendingInteractionResolver';
+
+interface UseSessionManagerProps {
+  userProfile: UserProfile | null;
+  aiSettings: any;
+  accessibilitySettings: any;
+  showToast: (msg: string) => void;
+  speakWithVoiceStatus: (text: string, onEnd?: () => void) => void;
+  setVoiceStatus: (status: any) => void;
+  setActiveTab: (tab: any) => void;
+  setCameraModalOpen: (open: boolean) => void;
+  setProfileSetupOpen: (open: boolean) => void;
+  setAccessibility: React.Dispatch<React.SetStateAction<any>>;
+}
+
+export function useSessionManager({
+  userProfile,
+  aiSettings,
+  accessibilitySettings,
+  showToast,
+  speakWithVoiceStatus,
+  setVoiceStatus,
+  setActiveTab,
+  setCameraModalOpen,
+  setProfileSetupOpen,
+  setAccessibility,
+}: UseSessionManagerProps) {
+  const [activeSession, setActiveSession] = useState<LifeSession | null>(null);
+  const [sessionsList, setSessionsList] = useState<BriefSessionHeader[]>([]);
+  const [isLoading, setIsLoading] = useState(false);
+  const [pendingInteraction, setPendingInteraction] = useState<PendingInteraction | null>(null);
+
+  // AbortController for cancelling stale fetch requests
+  const abortControllerRef = useRef<AbortController | null>(null);
+
+  const refreshSessionsList = useCallback(() => {
+    setSessionsList(storageService.getSessionsList());
+  }, []);
+
+  // Initialize storage & active session on mount
+  useEffect(() => {
+    storageService.init();
+    refreshSessionsList();
+
+    const activeId = storageService.getActiveSessionId();
+    if (activeId) {
+      const session = storageService.getSession(activeId);
+      if (session) {
+        setActiveSession(session);
+      }
+    }
+  }, [refreshSessionsList]);
+
+  const saveUpdatedSession = useCallback((session: LifeSession) => {
+    setActiveSession(session);
+    storageService.saveSession(session);
+    refreshSessionsList();
+  }, [refreshSessionsList]);
+
+  const handleOpenSession = useCallback((id: string) => {
+    const session = storageService.getSession(id);
+    if (session) {
+      setActiveSession(session);
+      storageService.setActiveSessionId(id);
+      setActiveTab('session');
+    }
+  }, [setActiveTab]);
+
+  const handleCreateSessionFromTemplate = useCallback(
+    async (type: ScenarioType, customGoal?: string) => {
+      const now = new Date().toISOString();
+      const newId = `session-${type}-${Date.now()}`;
+
+      if (type === 'custom' && customGoal) {
+        showToast('🤖 AI Lovira đang phân tích và lập kế hoạch phiên hỗ trợ...');
+        setIsLoading(true);
+
+        if (abortControllerRef.current) {
+          abortControllerRef.current.abort();
+        }
+        const controller = new AbortController();
+        abortControllerRef.current = controller;
+
+        try {
+          const res = await fetch('/api/generate-session', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              prompt: customGoal,
+              isDemoMode: aiSettings.demoMode || aiSettings.provider === 'demo',
+            }),
+            signal: controller.signal,
+          });
+
+          const plan: GeneratedSessionPlan = await res.json();
+          const accessibilityCtx: AccessibilityContext = {
+            preferredInteraction: accessibilitySettings.speakResponse ? 'voice' : 'text',
+            oneStepMode: accessibilitySettings.reducedMotion,
+          };
+          const newCustomSession = createLifeSessionFromPlan(
+            plan,
+            customGoal,
+            'custom',
+            accessibilityCtx,
+            userProfile
+          );
+
+          saveUpdatedSession(newCustomSession);
+          storageService.setActiveSessionId(newCustomSession.id);
+          setActiveTab('session');
+          showToast(`✨ Đã khởi tạo thành công phiên AI: "${newCustomSession.title}"`);
+          if (accessibilitySettings.speakResponse) {
+            speakWithVoiceStatus(`Lovira đã tạo xong kế hoạch cho ${newCustomSession.title}`);
+          }
+        } catch (err: any) {
+          if (err.name !== 'AbortError') {
+            console.error('Error generating AI session plan:', err);
+            showToast('Không thể tạo phiên AI, vui lòng thử lại.');
+          }
+        } finally {
+          setIsLoading(false);
+        }
+        return;
+      }
+
+      // Default template handling for standard scenarios
+      const tmpl = SCENARIO_TEMPLATES.find((t) => t.type === type) || SCENARIO_TEMPLATES[0];
+      let family: ScenarioFamily = 'custom';
+      if (type === 'medical') family = 'healthcare';
+      else if (type === 'administrative') family = 'administrative';
+      else if (type === 'shopping') family = 'shopping';
+      else if (type === 'document') family = 'documents';
+
+      const newSession: LifeSession = {
+        id: newId,
+        title: tmpl.title,
+        scenarioType: type,
+        scenarioFamily: family,
+        status: 'active',
+        goal: tmpl.defaultGoal,
+        createdAt: now,
+        updatedAt: now,
+        currentStepId: 'task-1',
+        importantFacts: tmpl.defaultFacts.map((f, i) => ({
+          id: `fact-${i + 1}`,
+          type: f.type,
+          title: f.title,
+          value: f.value,
+          createdAt: now,
+          updatedAt: now,
+        })),
+        tasks: tmpl.defaultTasks.map((t, i) => ({
+          id: `task-${i + 1}`,
+          title: t,
+          order: i + 1,
+          status: 'pending' as const,
+        })),
+        resources: [],
+        messages: [
+          {
+            id: `msg-${Date.now()}`,
+            sender: 'lovira',
+            text: formatInitialSessionGreeting(
+              tmpl.title,
+              tmpl.defaultTasks.map((t) => ({ title: t })),
+              deduceHonorifics(userProfile, tmpl.title),
+              tmpl.defaultGoal
+            ),
+            timestamp: now,
+          },
+        ],
+        actionLog: [
+          {
+            id: `log-${Date.now()}`,
+            timestamp: now,
+            actionType: 'CREATE_SESSION',
+            summary: `Khởi tạo phiên ${tmpl.title}`,
+            triggeredBy: 'system',
+          },
+        ],
+      };
+
+      newSession.nextRecommendedAction = calculateNextRecommendedAction(newSession);
+
+      saveUpdatedSession(newSession);
+      storageService.setActiveSessionId(newId);
+      setActiveTab('session');
+      showToast(`Đã khởi tạo phiên "${newSession.title}"`);
+    },
+    [aiSettings, accessibilitySettings, userProfile, saveUpdatedSession, setActiveTab, showToast, speakWithVoiceStatus]
+  );
+
+  const handleDeleteSession = useCallback((id: string, onConfirmModalShow: (modal: any) => void) => {
+    onConfirmModalShow({
+      isOpen: true,
+      title: 'Xoá phiên hỗ trợ',
+      message: 'Bạn có chắc chắn muốn xoá toàn bộ dữ liệu phiên này? Thao tác này không thể hoàn tác.',
+      onConfirm: () => {
+        storageService.deleteSession(id);
+        indexedDbService.deleteSessionBlobs(id);
+        if (activeSession?.id === id) {
+          setActiveSession(null);
+          storageService.clearActiveSessionId();
+          setActiveTab('dashboard');
+        }
+        refreshSessionsList();
+        onConfirmModalShow({ isOpen: false, message: '', onConfirm: () => {} });
+        showToast('Đã xoá phiên hỗ trợ');
+      },
+    });
+  }, [activeSession, refreshSessionsList, setActiveTab, showToast]);
+
+  const handleUpdateStatus = useCallback((newStatus: SessionStatus) => {
+    if (!activeSession) return;
+    const now = new Date().toISOString();
+    const updated: LifeSession = {
+      ...activeSession,
+      status: newStatus,
+      updatedAt: now,
+      actionLog: [
+        {
+          id: `log-${Date.now()}`,
+          timestamp: now,
+          actionType: 'UPDATE_STATUS',
+          summary: `Chuyển trạng thái sang ${newStatus}`,
+          triggeredBy: 'manual',
+        },
+        ...activeSession.actionLog,
+      ],
+    };
+    saveUpdatedSession(updated);
+    showToast(`Đã chuyển trạng thái sang: ${newStatus}`);
+  }, [activeSession, saveUpdatedSession, showToast]);
+
+  const handleToggleTask = useCallback((taskId: string) => {
+    if (!activeSession) return;
+    const now = new Date().toISOString();
+
+    const updatedTasks = activeSession.tasks.map((t) => {
+      if (t.id === taskId) {
+        const nextStatus = t.status === 'completed' ? 'pending' : 'completed';
+        const updatedSubs = (t.subtasks || []).map((st) => ({
+          ...st,
+          status: nextStatus === 'completed' ? ('completed' as const) : st.status,
+        }));
+        return {
+          ...t,
+          status: nextStatus as any,
+          completedAt: nextStatus === 'completed' ? now : undefined,
+          subtasks: updatedSubs,
+        };
+      }
+      return t;
+    });
+
+    let updatedSession: LifeSession = {
+      ...activeSession,
+      tasks: updatedTasks,
+      updatedAt: now,
+    };
+
+    updatedSession = reconcileSessionDerivedState(updatedSession);
+    saveUpdatedSession(updatedSession);
+  }, [activeSession, saveUpdatedSession]);
+
+  const handleToggleSubtask = useCallback((parentTaskId: string, subtaskId: string) => {
+    if (!activeSession) return;
+    const now = new Date().toISOString();
+
+    const updatedTasks = activeSession.tasks.map((t) => {
+      if (t.id === parentTaskId && t.subtasks) {
+        const updatedSubs = t.subtasks.map((st) => {
+          if (st.id === subtaskId) {
+            const nextStatus = st.status === 'completed' ? 'pending' : 'completed';
+            return {
+              ...st,
+              status: nextStatus as any,
+              completedAt: nextStatus === 'completed' ? now : undefined,
+            };
+          }
+          return st;
+        });
+
+        const allDone = updatedSubs.every((s) => s.status === 'completed');
+        const anyDone = updatedSubs.some((s) => s.status === 'completed');
+        const parentStatus = allDone
+          ? ('completed' as const)
+          : anyDone
+          ? ('active' as const)
+          : t.status === 'completed'
+          ? ('active' as const)
+          : t.status;
+
+        return {
+          ...t,
+          status: parentStatus,
+          subtasks: updatedSubs,
+        };
+      }
+      return t;
+    });
+
+    let updatedSession: LifeSession = {
+      ...activeSession,
+      tasks: updatedTasks,
+      updatedAt: now,
+    };
+
+    updatedSession = reconcileSessionDerivedState(updatedSession);
+    saveUpdatedSession(updatedSession);
+  }, [activeSession, saveUpdatedSession]);
+
+  const handleAddTask = useCallback((title: string, important = false) => {
+    if (!activeSession || !title.trim()) return;
+    const now = new Date().toISOString();
+    const newTask = {
+      id: `task-${Date.now()}`,
+      title: title.trim(),
+      order: activeSession.tasks.length + 1,
+      status: 'pending' as const,
+      important,
+    };
+
+    const updated: LifeSession = {
+      ...activeSession,
+      tasks: [...activeSession.tasks, newTask],
+      updatedAt: now,
+    };
+
+    const reconciled = reconcileSessionDerivedState(updated);
+    saveUpdatedSession(reconciled);
+    showToast(`Đã thêm việc: "${title}"`);
+  }, [activeSession, saveUpdatedSession, showToast]);
+
+  const handleAddSubtask = useCallback((parentTaskId: string, title: string) => {
+    if (!activeSession || !title.trim()) return;
+    const now = new Date().toISOString();
+    const newSubtask = {
+      id: `sub-${Date.now()}`,
+      title: title.trim(),
+      order: 1,
+      status: 'pending' as const,
+    };
+
+    const updatedTasks = activeSession.tasks.map((t) => {
+      if (t.id === parentTaskId) {
+        const subs = t.subtasks || [];
+        return {
+          ...t,
+          subtasks: [...subs, { ...newSubtask, order: subs.length + 1 }],
+        };
+      }
+      return t;
+    });
+
+    const updated: LifeSession = {
+      ...activeSession,
+      tasks: updatedTasks,
+      updatedAt: now,
+    };
+
+    const reconciled = reconcileSessionDerivedState(updated);
+    saveUpdatedSession(reconciled);
+    showToast(`Đã thêm việc con: "${title}"`);
+  }, [activeSession, saveUpdatedSession, showToast]);
+
+  const handleDeleteTask = useCallback((taskId: string) => {
+    if (!activeSession) return;
+    const updated: LifeSession = {
+      ...activeSession,
+      tasks: activeSession.tasks.filter((t) => t.id !== taskId),
+      updatedAt: new Date().toISOString(),
+    };
+    const reconciled = reconcileSessionDerivedState(updated);
+    saveUpdatedSession(reconciled);
+    showToast('Đã xoá công việc');
+  }, [activeSession, saveUpdatedSession, showToast]);
+
+  const handleAddFact = useCallback((fact: { title: string; value: string; type: ImportantFactType }) => {
+    if (!activeSession || !fact.title.trim()) return;
+    const now = new Date().toISOString();
+    const newFact = {
+      id: `fact-${Date.now()}`,
+      type: fact.type,
+      title: fact.title.trim(),
+      value: fact.value.trim(),
+      createdAt: now,
+      updatedAt: now,
+    };
+
+    const updated: LifeSession = {
+      ...activeSession,
+      importantFacts: [newFact, ...activeSession.importantFacts],
+      updatedAt: now,
+    };
+    saveUpdatedSession(updated);
+    showToast(`Đã thêm thông tin: "${fact.title}"`);
+  }, [activeSession, saveUpdatedSession, showToast]);
+
+  const handleDeleteFact = useCallback((factId: string, onConfirmModalShow: (modal: any) => void) => {
+    if (!activeSession) return;
+    const targetFact = activeSession.importantFacts.find((f) => f.id === factId);
+    if (!targetFact) return;
+
+    if (targetFact.type === 'warning' || targetFact.type === 'requirement') {
+      onConfirmModalShow({
+        isOpen: true,
+        title: 'Xác nhận xoá thông tin quan trọng',
+        message: `Thông tin "${targetFact.title}: ${targetFact.value}" rất quan trọng. Lovira cần bạn xác nhận trước khi xoá khỏi phiên!`,
+        onConfirm: () => {
+          const updated: LifeSession = {
+            ...activeSession,
+            importantFacts: activeSession.importantFacts.filter((f) => f.id !== factId),
+            updatedAt: new Date().toISOString(),
+          };
+          saveUpdatedSession(updated);
+          onConfirmModalShow({ isOpen: false, message: '', onConfirm: () => {} });
+          showToast(`Đã xoá thông tin "${targetFact.title}"`);
+        },
+      });
+    } else {
+      const updated: LifeSession = {
+        ...activeSession,
+        importantFacts: activeSession.importantFacts.filter((f) => f.id !== factId),
+        updatedAt: new Date().toISOString(),
+      };
+      saveUpdatedSession(updated);
+      showToast(`Đã xoá thông tin "${targetFact.title}"`);
+    }
+  }, [activeSession, saveUpdatedSession, showToast]);
+
+  const handleCompleteCurrentTask = useCallback(() => {
+    if (!activeSession) return;
+    const resolvedStep = resolveCurrentStep(activeSession);
+    if (!resolvedStep) return;
+
+    if (resolvedStep.subtask && resolvedStep.parentTask) {
+      handleToggleSubtask(resolvedStep.parentTask.id, resolvedStep.subtask.id);
+      showToast(`Đã đánh dấu hoàn thành: "${resolvedStep.subtask.title}"`);
+    } else if (resolvedStep.task) {
+      handleToggleTask(resolvedStep.task.id);
+      showToast(`Đã đánh dấu hoàn thành: "${resolvedStep.task.title}"`);
+    }
+  }, [activeSession, handleToggleSubtask, handleToggleTask, showToast]);
+
+  const handleDeleteResource = useCallback((id: string) => {
+    if (!activeSession) return;
+    indexedDbService.deleteResourceBlob(id);
+    const updated: LifeSession = {
+      ...activeSession,
+      resources: activeSession.resources.filter((r) => r.id !== id),
+      updatedAt: new Date().toISOString(),
+    };
+    saveUpdatedSession(updated);
+    showToast('Đã xoá tài nguyên ảnh');
+  }, [activeSession, saveUpdatedSession, showToast]);
+
+  const executeValidatedAppAction = useCallback(async (
+    rawAction: AppAction,
+    appCtx: AppInteractionContext,
+    rtCtx: any
+  ): Promise<boolean> => {
+    const val = validateAppAction(rawAction, appCtx);
+    if (!val.valid || !val.action) {
+      if (val.reason) {
+        showToast(`⚠️ ${val.reason}`);
+      }
+      return false;
+    }
+
+    const actionToApply = { ...val.action };
+    if (actionToApply.type === 'OPEN_SESSION' && val.resolvedSessionId) {
+      actionToApply.payload = {
+        ...actionToApply.payload,
+        sessionId: val.resolvedSessionId,
+      };
+    }
+
+    return await applyAppAction(actionToApply, rtCtx);
+  }, [showToast]);
+
+  const sendInteraction = useCallback(async (
+    userText: string,
+    options: { inputMode?: InteractionInputMode; activeTab: any }
+  ) => {
+    const inputMode = options.inputMode || 'text';
+    const activeTab = options.activeTab;
+    if (!userText.trim() || isLoading) return;
+
+    const trimmedText = userText.trim();
+    setIsLoading(true);
+    setVoiceStatus('processing');
+
+    // Cancel old pending request if user sends new message
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort();
+    }
+    const controller = new AbortController();
+    abortControllerRef.current = controller;
+
+    const runtimeContext = {
+      goHome: () => setActiveTab('dashboard'),
+      goBack: () => setActiveTab('dashboard'),
+      openSettings: () => setActiveTab('settings'),
+      openProfile: () => setProfileSetupOpen(true),
+      openSession: (sId: string) => handleOpenSession(sId),
+      createSession: async (goal: string) => {
+        await handleCreateSessionFromTemplate('custom', goal);
+      },
+      openCamera: () => setCameraModalOpen(true),
+      updateAccessibilitySetting: (key: string, value: any) => {
+        setAccessibility((prev: any) => ({ ...prev, [key]: value }));
+      },
+      showToast,
+    };
+
+    const appContext: AppInteractionContext = {
+      page: activeTab,
+      activeSessionId: activeSession?.id,
+      activeSessionTitle: activeSession?.title,
+      hasActiveSession: !!activeSession,
+      availableSessions: sessionsList,
+    };
+
+    // A. Check Pending Interaction FIRST
+    if (pendingInteraction) {
+      const pendingRes = resolvePendingInteraction(trimmedText, pendingInteraction);
+      if (pendingRes.clearPending) {
+        setPendingInteraction(null);
+      }
+      if (pendingRes.resolved) {
+        if (pendingRes.appAction) {
+          await executeValidatedAppAction(pendingRes.appAction, appContext, runtimeContext);
+        }
+        if (pendingRes.reply) {
+          if (inputMode === 'voice' || accessibilitySettings.speakResponse) {
+            speakWithVoiceStatus(pendingRes.reply);
+          } else {
+            showToast(pendingRes.reply);
+            setVoiceStatus('idle');
+          }
+        } else {
+          setVoiceStatus('idle');
+        }
+        setIsLoading(false);
+        return;
+      }
+    }
+
+    // B. Inside Active Session
+    if (activeSession && activeTab === 'session') {
+      const now = new Date().toISOString();
+      const userMsg = {
+        id: `msg-${Date.now()}`,
+        sender: 'user' as const,
+        text: trimmedText,
+        timestamp: now,
+        inputMode,
+      };
+
+      const sessionWithUserMsg = {
+        ...activeSession,
+        messages: [...activeSession.messages, userMsg],
+        updatedAt: now,
+      };
+
+      setActiveSession(sessionWithUserMsg);
+
+      try {
+        const res = await fetch('/api/chat', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            session: sessionWithUserMsg,
+            message: trimmedText,
+            isDemoMode: aiSettings.demoMode || aiSettings.provider === 'demo',
+            provider: aiSettings.provider,
+            userProfile,
+            inputMode,
+            appContext,
+          }),
+          signal: controller.signal,
+        });
+
+        if (!res.ok) {
+          throw new Error(`Server returned ${res.status}`);
+        }
+
+        const data = await res.json();
+        const replyText = data.reply || 'Lovira đã nhận thông tin của bạn.';
+        const speechText = data.speech || replyText;
+        const actions: AgentAction[] = data.actions || [];
+        const appActions: AppAction[] = data.appActions || [];
+        const suggestedReplies: string[] | undefined = data.suggestedReplies;
+
+        const batchTrigger = inputMode === 'voice' ? 'voice' : 'chat';
+        const batchRes = applyAgentActionBatch(sessionWithUserMsg, actions, batchTrigger);
+
+        if (batchRes.status === 'full' || batchRes.status === 'partial') {
+          const finalSession = batchRes.newState;
+          let consistentReply = replyText;
+          let finalSuggestedReplies = suggestedReplies;
+
+          if (batchRes.status === 'partial' && batchRes.rejectedActions.length > 0) {
+            const honorifics = deduceHonorifics(userProfile, trimmedText);
+            consistentReply = buildPartialSuccessReply(
+              batchRes.appliedActions,
+              batchRes.rejectedActions,
+              replyText,
+              honorifics
+            );
+            finalSuggestedReplies = ['Kiểm tra lại bước hiện tại', 'Giờ tôi cần làm gì?'];
+          }
+
+          const loviraMsg = {
+            id: `msg-${Date.now()}`,
+            sender: 'lovira' as const,
+            text: consistentReply,
+            timestamp: new Date().toISOString(),
+            actionsApplied: batchRes.appliedActions,
+            suggestedReplies: finalSuggestedReplies,
+          };
+
+          finalSession.messages.push(loviraMsg);
+          saveUpdatedSession(finalSession);
+
+          if (appActions.length > 0) {
+            for (const appAct of appActions) {
+              await executeValidatedAppAction(appAct, appContext, runtimeContext);
+            }
+          }
+
+          if (inputMode === 'voice' || accessibilitySettings.speakResponse) {
+            speakWithVoiceStatus(speechText || consistentReply);
+          } else {
+            setVoiceStatus('idle');
+          }
+
+          if (actions.some((a) => a.type === 'OPEN_CAMERA')) {
+            setCameraModalOpen(true);
+          }
+        } else {
+          const loviraMsg = {
+            id: `msg-${Date.now()}`,
+            sender: 'lovira' as const,
+            text: replyText,
+            timestamp: new Date().toISOString(),
+            suggestedReplies: suggestedReplies || ['Tiếp tục trò chuyện', 'Giờ tôi cần làm gì?'],
+          };
+
+          const fallbackSession = { ...sessionWithUserMsg };
+          fallbackSession.messages = [...fallbackSession.messages, loviraMsg];
+          saveUpdatedSession(fallbackSession);
+
+          if (appActions.length > 0) {
+            for (const appAct of appActions) {
+              await executeValidatedAppAction(appAct, appContext, runtimeContext);
+            }
+          }
+
+          if (inputMode === 'voice' || accessibilitySettings.speakResponse) {
+            speakWithVoiceStatus(speechText || replyText);
+          } else {
+            setVoiceStatus('idle');
+          }
+        }
+      } catch (e: any) {
+        if (e.name === 'AbortError') return;
+
+        console.warn('Backend chat unreachable, trying offline local fallback:', e);
+        const localResult = parseLocalIntent(trimmedText, sessionWithUserMsg, userProfile);
+        if (localResult) {
+          const batchTrigger = inputMode === 'voice' ? 'voice' : 'chat';
+          const batchRes = applyAgentActionBatch(sessionWithUserMsg, localResult.actions, batchTrigger);
+          const finalSession = batchRes.newState;
+
+          const loviraMsg = {
+            id: `msg-${Date.now() + 1}`,
+            sender: 'lovira' as const,
+            text: localResult.reply,
+            timestamp: new Date().toISOString(),
+            actionsApplied: localResult.actions,
+            suggestedReplies: localResult.suggestedReplies,
+          };
+
+          finalSession.messages.push(loviraMsg);
+          saveUpdatedSession(finalSession);
+
+          if (inputMode === 'voice' || accessibilitySettings.speakResponse) {
+            speakWithVoiceStatus(localResult.speech || localResult.reply);
+          } else {
+            setVoiceStatus('idle');
+          }
+        } else {
+          showToast('Không có kết nối mạng. Lovira vẫn lưu trữ cục bộ an toàn!');
+          setVoiceStatus('idle');
+        }
+      } finally {
+        setIsLoading(false);
+      }
+      return;
+    }
+
+    // C. Outside Session
+    try {
+      const res = await fetch('/api/chat', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          session: null,
+          message: trimmedText,
+          isDemoMode: aiSettings.demoMode || aiSettings.provider === 'demo',
+          provider: aiSettings.provider,
+          userProfile,
+          inputMode,
+          appContext,
+        }),
+        signal: controller.signal,
+      });
+
+      if (!res.ok) {
+        throw new Error(`Server returned ${res.status}`);
+      }
+
+      const data = await res.json();
+      const replyText = data.reply || 'Lovira đang lắng nghe bạn.';
+      const speechText = data.speech || replyText;
+      const appActions: AppAction[] = data.appActions || [];
+
+      if (appActions.length > 0) {
+        for (const appAct of appActions) {
+          await executeValidatedAppAction(appAct, appContext, runtimeContext);
+        }
+      } else if (data.pendingInteraction) {
+        setPendingInteraction(data.pendingInteraction);
+      } else {
+        const hasCreateProposal =
+          replyText.toLowerCase().includes('mở một phiên') ||
+          replyText.toLowerCase().includes('tạo một phiên') ||
+          replyText.toLowerCase().includes('có muốn tạo') ||
+          replyText.toLowerCase().includes('hướng dẫn từng bước');
+
+        if (hasCreateProposal) {
+          setPendingInteraction({
+            type: 'create_session',
+            data: { goal: trimmedText },
+            createdAt: new Date().toISOString(),
+            expiresAt: Date.now() + 180000,
+          });
+        }
+      }
+
+      showToast(replyText);
+
+      if (inputMode === 'voice' || accessibilitySettings.speakResponse) {
+        speakWithVoiceStatus(speechText);
+      } else {
+        setVoiceStatus('idle');
+      }
+    } catch (e: any) {
+      if (e.name === 'AbortError') return;
+      console.warn('Dashboard interaction error:', e);
+      showToast('Lovira chưa thể kết nối lúc này. Bạn thử lại nhé!');
+      setVoiceStatus('idle');
+    } finally {
+      setIsLoading(false);
+    }
+  }, [
+    isLoading,
+    pendingInteraction,
+    activeSession,
+    sessionsList,
+    aiSettings,
+    userProfile,
+    accessibilitySettings,
+    setActiveTab,
+    setProfileSetupOpen,
+    handleOpenSession,
+    handleCreateSessionFromTemplate,
+    setCameraModalOpen,
+    setAccessibility,
+    showToast,
+    setVoiceStatus,
+    executeValidatedAppAction,
+    speakWithVoiceStatus,
+    saveUpdatedSession,
+  ]);
+
+  const handleCaptureCameraImage = useCallback(async (dataUrl: string) => {
+    if (!activeSession) return;
+
+    const now = new Date().toISOString();
+    const resId = `res-${Date.now()}`;
+
+    await indexedDbService.saveResourceBlob({
+      id: resId,
+      sessionId: activeSession.id,
+      dataUrl,
+      mimeType: 'image/jpeg',
+      createdAt: now,
+    });
+
+    const newResource = {
+      id: resId,
+      type: 'image' as const,
+      title: `Ảnh chụp ${new Date().toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })}`,
+      data: dataUrl,
+      createdAt: now,
+    };
+
+    const sessionWithRes = {
+      ...activeSession,
+      resources: [newResource, ...activeSession.resources],
+      updatedAt: now,
+    };
+
+    setActiveSession(sessionWithRes);
+    showToast('Đã lưu ảnh chụp vào tài nguyên phiên. Đang đọc ảnh...');
+
+    try {
+      const res = await fetch('/api/vision', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          imageBase64: dataUrl,
+          session: sessionWithRes,
+        }),
+      });
+
+      const data = await res.json();
+      const replyText = data.reply || 'Lovira đã nhận và phân tích ảnh tài liệu.';
+      const actions: AgentAction[] = data.actions || [];
+
+      const batchRes = applyAgentActionBatch(sessionWithRes, actions, 'camera');
+      const finalSession = batchRes.newState;
+
+      const loviraMsg = {
+        id: `msg-${Date.now()}`,
+        sender: 'lovira' as const,
+        text: replyText,
+        timestamp: new Date().toISOString(),
+        actionsApplied: actions,
+      };
+
+      finalSession.messages.push(loviraMsg);
+      saveUpdatedSession(finalSession);
+
+      if (batchRes.logSummaries.length > 0) {
+        showToast(batchRes.logSummaries.join(' • '));
+      } else {
+        showToast('Lovira đã cập nhật thông tin từ ảnh!');
+      }
+
+      if (accessibilitySettings.speakResponse) {
+        speakWithVoiceStatus(replyText);
+      }
+    } catch (e) {
+      console.warn('Vision extraction failed', e);
+      showToast('Đã lưu ảnh vào phiên.');
+    }
+  }, [activeSession, showToast, saveUpdatedSession, accessibilitySettings, speakWithVoiceStatus]);
+
+  return {
+    activeSession,
+    setActiveSession,
+    sessionsList,
+    isLoading,
+    refreshSessionsList,
+    saveUpdatedSession,
+    handleOpenSession,
+    handleCreateSessionFromTemplate,
+    handleDeleteSession,
+    handleUpdateStatus,
+    handleToggleTask,
+    handleToggleSubtask,
+    handleAddTask,
+    handleAddSubtask,
+    handleDeleteTask,
+    handleAddFact,
+    handleDeleteFact,
+    handleCompleteCurrentTask,
+    handleDeleteResource,
+    sendInteraction,
+    handleCaptureCameraImage,
+  };
+}
