@@ -1,0 +1,32 @@
+/* Lovira Light Theme Palette */
+:root {
+  --bg-base: #F8F5FF;
+  --bg-surface: #FFFFFF;
+  --bg-surface-raised: #FAF6FF;
+  --bg-card: #FFFFFF;
+  --bg-card-hover: #F6F2FE;
+  --bg-sidebar: #FFFFFF;
+  --bg-sidebar-active: #F2EAFF;
+  --bg-topbar: rgba(255, 255, 255, 0.92);
+  --bg-input: #FFFFFF;
+  --bg-hero: linear-gradient(135deg, #FFFFFF 0%, #FAF6FF 50%, #FFF0F7 100%);
+  --bg-badge-purple: #F1E9FF;
+
+  --text-primary: #17151F;
+  --text-secondary: #667085;
+  --text-muted: #98A2B3;
+  --text-brand: #7C4DFF;
+  --text-on-hero: #17151F;
+
+  --border-default: #ECE8F5;
+  --border-subtle: #F0ECF8;
+  --border-brand: #E5D9FF;
+
+  --color-primary: #7C4DFF;
+  --color-primary-hover: #6D3CF0;
+  --color-accent: #FF5CA8;
+  --color-success: #28C795;
+  --color-warning: #FF8C42;
+  --color-danger: #FF4D4D;
+  --color-focus-ring: #A45CFF;
+}

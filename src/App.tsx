@@ -43,11 +43,15 @@ import { applyAppAction } from './services/interaction/appActionEngine';
 import { resolvePendingInteraction } from './services/interaction/pendingInteractionResolver';
 
 import { Header } from './components/common/Header';
-import { Navigation, NavTab } from './components/common/Navigation';
+import { Navigation } from './components/common/Navigation';
 import { AccessibilityToolbar } from './components/common/AccessibilityToolbar';
 import { ConfirmDialog } from './components/common/ConfirmDialog';
 import { Toast } from './components/common/Toast';
 
+import { AppShell } from './components/layout/AppShell';
+import { NavTab } from './components/layout/DesktopSidebar';
+import { HomePage } from './components/home/HomePage';
+import { UpcomingReminders } from './components/home/UpcomingReminders';
 import { LifeDashboard } from './components/dashboard/LifeDashboard';
 import { LifeSessionPage } from './components/session/LifeSessionPage';
 import { CameraModal } from './components/camera/CameraModal';
@@ -1045,142 +1049,147 @@ export default function App() {
   };
 
   return (
-    <div className="min-h-screen bg-bg-base text-text-primary flex flex-col font-sans">
-      {/* Top Application Header */}
-      <Header
-        onNewSession={() => handleCreateSessionFromTemplate('medical')}
-        onOpenSettings={() => setActiveTab('settings')}
-        accessibility={accessibility}
+    <AppShell
+      activeTab={activeTab}
+      onTabChange={setActiveTab}
+      onCreateSession={() => handleCreateSessionFromTemplate('medical')}
+      userName={userProfile?.preferredName || 'Chú Ba'}
+      planName="Gói miễn phí"
+      voiceStatus={voiceStatus}
+      onVoiceClick={
+        voiceStatus === 'listening' ? handleStopVoiceListening : handleStartVoiceListening
+      }
+    >
+      {/* Quick Accessibility Toolbar Bar */}
+      <AccessibilityToolbar
+        settings={accessibility}
+        onUpdate={setAccessibility}
       />
 
-      <div className="flex-1 max-w-7xl w-full mx-auto flex">
-        {/* Responsive Desktop Sidebar / Mobile Navigation */}
-        <Navigation
-          activeTab={activeTab}
-          onTabChange={setActiveTab}
-          hasActiveSession={!!activeSession}
-        />
-
-        {/* Main Content Workspace */}
-        <main className="flex-1 p-4 md:p-6 overflow-x-hidden min-w-0 pb-24 md:pb-6">
-          {/* Quick Accessibility Toolbar Bar */}
-          <AccessibilityToolbar
-            settings={accessibility}
-            onUpdate={setAccessibility}
+      {/* Profile Invite Banner (Layer 2 Onboarding) */}
+      {!userProfile &&
+        !bannerDismissed &&
+        (sessionsList.filter((s) => s.status === 'completed').length >= 1 ||
+          storageService.getAppOpenCount() >= 3) && (
+          <ProfileInviteBanner
+            onOpenSetup={() => setProfileSetupOpen(true)}
+            onDismiss={() => {
+              storageService.setProfileBannerDismissed(true);
+              setBannerDismissed(true);
+            }}
           />
+        )}
 
-          {/* Profile Invite Banner (Layer 2 Onboarding) */}
-          {!userProfile &&
-            !bannerDismissed &&
-            (sessionsList.filter((s) => s.status === 'completed').length >= 1 ||
-              storageService.getAppOpenCount() >= 3) && (
-              <ProfileInviteBanner
-                onOpenSetup={() => setProfileSetupOpen(true)}
-                onDismiss={() => {
-                  storageService.setProfileBannerDismissed(true);
-                  setBannerDismissed(true);
-                }}
-              />
-            )}
+      {/* Tab 1: Full Homepage (Specification-Compliant) */}
+      {activeTab === 'dashboard' && (
+        <HomePage
+          userName={userProfile?.preferredName || 'Chú Ba'}
+          sessionsList={sessionsList}
+          onOpenSession={handleOpenSession}
+          onCreateSessionFromTemplate={handleCreateSessionFromTemplate}
+          onDeleteSession={handleDeleteSession}
+          onOpenTasks={() => setActiveTab('tasks')}
+          onOpenReminders={() => setActiveTab('reminders')}
+          onOpenChat={() => {
+            if (activeSession) {
+              setActiveTab('session');
+            } else if (sessionsList.length > 0) {
+              handleOpenSession(sessionsList[0].id);
+            } else {
+              handleCreateSessionFromTemplate('custom', 'Trò chuyện cùng Lovira');
+            }
+          }}
+        />
+      )}
 
-          {/* Tab 1: Dashboard */}
-          {activeTab === 'dashboard' && (
-            <LifeDashboard
-              activeSession={activeSession}
-              sessionsList={sessionsList}
-              onOpenSession={handleOpenSession}
-              onCreateSessionFromTemplate={handleCreateSessionFromTemplate}
-              onDeleteSession={handleDeleteSession}
-              onOpenCamera={() => setCameraModalOpen(true)}
-            />
-          )}
+      {/* Tab 2: Life Session Active Screen / Chat */}
+      {(activeTab === 'session' || activeTab === 'chat') && activeSession && (
+        <LifeSessionPage
+          session={activeSession}
+          onBack={() => setActiveTab('dashboard')}
+          onUpdateStatus={handleUpdateStatus}
+          onDeleteSession={() => handleDeleteSession(activeSession.id)}
+          onCompleteCurrentTask={handleCompleteCurrentTask}
+          onToggleTask={handleToggleTask}
+          onToggleSubtask={handleToggleSubtask}
+          onAddTask={handleAddTask}
+          onAddSubtask={handleAddSubtask}
+          onDeleteTask={handleDeleteTask}
+          onAddFact={handleAddFact}
+          onDeleteFact={handleDeleteFact}
+          onDeleteResource={handleDeleteResource}
+          onSendMessage={(text, opts) => sendInteraction(text, opts)}
+          onOpenCamera={() => setCameraModalOpen(true)}
+          isLoading={isLoading}
+          voiceStatus={voiceStatus}
+          interimTranscript={interimTranscript}
+          userName={userProfile?.preferredName || 'Chú Ba'}
+          onStartVoice={handleStartVoiceListening}
+          onStopVoice={handleStopVoiceListening}
+          onCancelVoice={handleCancelVoiceListening}
+        />
+      )}
 
-          {/* Tab 2: Life Session Active Screen */}
-          {activeTab === 'session' && activeSession && (
-            <LifeSessionPage
-              session={activeSession}
-              onBack={() => setActiveTab('dashboard')}
-              onUpdateStatus={handleUpdateStatus}
-              onDeleteSession={() => handleDeleteSession(activeSession.id)}
-              onCompleteCurrentTask={handleCompleteCurrentTask}
-              onToggleTask={handleToggleTask}
-              onToggleSubtask={handleToggleSubtask}
-              onAddTask={handleAddTask}
-              onAddSubtask={handleAddSubtask}
-              onDeleteTask={handleDeleteTask}
-              onAddFact={handleAddFact}
-              onDeleteFact={handleDeleteFact}
-              onDeleteResource={handleDeleteResource}
-              onSendMessage={(text, opts) => sendInteraction(text, opts)}
-              onOpenCamera={() => setCameraModalOpen(true)}
-              isLoading={isLoading}
-              voiceStatus={voiceStatus}
-              interimTranscript={interimTranscript}
-              userName={userProfile?.preferredName || 'Bạn'}
-              onStartVoice={handleStartVoiceListening}
-              onStopVoice={handleStopVoiceListening}
-              onCancelVoice={handleCancelVoiceListening}
-            />
-          )}
+      {/* Fallback if session/chat tab opened with no session */}
+      {(activeTab === 'session' || activeTab === 'chat') && !activeSession && (
+        <div className="p-8 text-center bg-surface border border-dashed border-default rounded-2xl space-y-4 max-w-lg mx-auto my-8">
+          <p className="text-base font-bold text-text-primary">Chưa mở phiên hỗ trợ nào.</p>
+          <p className="text-xs text-text-secondary">Hãy tạo một phiên mới để trò chuyện và được Lovira trợ giúp nhen.</p>
+          <button
+            onClick={() => handleCreateSessionFromTemplate('medical')}
+            className="px-5 py-2.5 bg-[#7C4DFF] hover:bg-[#6D3CF0] text-white font-bold text-sm rounded-xl transition-all shadow-xs"
+          >
+            + Tạo phiên Đi khám bệnh mẫu ngay
+          </button>
+        </div>
+      )}
 
-          {/* Fallback if session tab opened with no session */}
-          {activeTab === 'session' && !activeSession && (
-            <div className="p-8 text-center bg-surface border border-dashed border-default rounded-2xl space-y-3">
-              <p className="text-base font-bold text-text-primary">Chưa mở phiên hỗ trợ nào.</p>
-              <button
-                onClick={() => handleCreateSessionFromTemplate('medical')}
-                className="px-5 py-2.5 bg-primary text-white font-bold text-sm rounded-xl"
-              >
-                Mở phiên Đi khám bệnh mẫu ngay
-              </button>
-            </div>
-          )}
+      {/* Tab 3: Tasks & Session Management Dashboard */}
+      {(activeTab === 'tasks' || activeTab === 'history') && (
+        <LifeDashboard
+          activeSession={activeSession}
+          sessionsList={sessionsList}
+          onOpenSession={handleOpenSession}
+          onCreateSessionFromTemplate={handleCreateSessionFromTemplate}
+          onDeleteSession={handleDeleteSession}
+          onOpenCamera={() => setCameraModalOpen(true)}
+        />
+      )}
 
-          {/* Tab 3: Camera Assistant Shortcut */}
-          {activeTab === 'camera' && (
-            <div className="p-8 text-center bg-surface border border-default rounded-2xl space-y-4">
-              <h2 className="text-xl font-bold text-text-primary">
-                Nhìn giúp tôi — Quét ảnh & Tài liệu
-              </h2>
-              <p className="text-xs text-text-secondary max-w-md mx-auto">
-                Chụp phiếu khám, số thứ tự, đơn thuốc hay nhãn hàng hoá để Lovira trích xuất thông tin tự động vào phiên làm việc.
-              </p>
-              <button
-                onClick={() => setCameraModalOpen(true)}
-                className="px-6 py-3 rounded-xl bg-amber-500 text-white font-bold text-sm shadow-md hover:bg-amber-600"
-              >
-                Mở Camera ngay
-              </button>
-            </div>
-          )}
+      {/* Tab 4: Reminders */}
+      {activeTab === 'reminders' && (
+        <div className="max-w-2xl mx-auto space-y-6">
+          <h2 className="text-2xl font-bold text-[#17151F]">Quản lý Nhắc nhở</h2>
+          <UpcomingReminders />
+        </div>
+      )}
 
-          {/* Tab 4: Settings */}
-          {activeTab === 'settings' && (
-            <SettingsPage
-              accessibility={accessibility}
-              aiSettings={aiSettings}
-              userProfile={userProfile}
-              onUpdateAccessibility={setAccessibility}
-              onUpdateAISettings={setAiSettings}
-              onUpdateUserProfile={setUserProfile}
-              onOpenProfileSetup={() => setProfileSetupOpen(true)}
-            />
-          )}
-        </main>
-      </div>
+      {/* Tab 5: Settings */}
+      {activeTab === 'settings' && (
+        <SettingsPage
+          accessibility={accessibility}
+          aiSettings={aiSettings}
+          userProfile={userProfile}
+          onUpdateAccessibility={setAccessibility}
+          onUpdateAISettings={setAiSettings}
+          onUpdateUserProfile={setUserProfile}
+          onOpenProfileSetup={() => setProfileSetupOpen(true)}
+        />
+      )}
 
-      {/* Global Floating Voice Action Button (Version 2) */}
-      <GlobalVoiceButton
-        status={voiceStatus}
-        interimTranscript={interimTranscript}
-        errorMessage={voiceError}
-        onStartListening={handleStartVoiceListening}
-        onStopListening={handleStopVoiceListening}
-        onCancelListening={handleCancelVoiceListening}
-        onStopSpeaking={handleStopSpeaking}
-        disabled={isLoading}
-        reducedMotion={accessibility.reducedMotion}
-      />
+      {/* Tab 6: Profile Setup */}
+      {activeTab === 'profile' && (
+        <div className="max-w-2xl mx-auto p-6 bg-surface border border-[#ECE8F5] rounded-3xl space-y-4">
+          <h2 className="text-2xl font-bold text-[#17151F]">Hồ sơ cá nhân</h2>
+          <p className="text-sm text-text-secondary">Cập nhật xưng hô, vai trò và thông tin cá nhân của chú để Lovira hỗ trợ chu đáo nhất.</p>
+          <button
+            onClick={() => setProfileSetupOpen(true)}
+            className="px-6 py-2.5 bg-[#7C4DFF] text-white font-bold text-sm rounded-xl shadow-xs"
+          >
+            Chỉnh sửa hồ sơ ngay
+          </button>
+        </div>
+      )}
 
       {/* Profile Setup Flow Modal */}
       {profileSetupOpen && (
@@ -1223,6 +1232,6 @@ export default function App() {
 
       {/* Toast Notification */}
       {toastMessage && <Toast message={toastMessage} />}
-    </div>
+    </AppShell>
   );
 }

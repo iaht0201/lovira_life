@@ -1,0 +1,32 @@
+/* Lovira Dark Theme Palette */
+html.dark {
+  --bg-base: #0F0C1B;
+  --bg-surface: #1B152B;
+  --bg-surface-raised: #241D38;
+  --bg-card: #1E1832;
+  --bg-card-hover: #292042;
+  --bg-sidebar: #161124;
+  --bg-sidebar-active: #2F2252;
+  --bg-topbar: rgba(27, 21, 43, 0.92);
+  --bg-input: #231B3A;
+  --bg-hero: linear-gradient(135deg, #1E1735 0%, #271C45 50%, #301B3A 100%);
+  --bg-badge-purple: #2F2154;
+
+  --text-primary: #F4EEFF;
+  --text-secondary: #B8AFCD;
+  --text-muted: #857A9E;
+  --text-brand: #A45CFF;
+  --text-on-hero: #FFFFFF;
+
+  --border-default: #31274A;
+  --border-subtle: #271E3D;
+  --border-brand: #4E3B75;
+
+  --color-primary: #9D75FF;
+  --color-primary-hover: #B594FF;
+  --color-accent: #FF70B5;
+  --color-success: #34D399;
+  --color-warning: #FFA066;
+  --color-danger: #FF6666;
+  --color-focus-ring: #B594FF;
+}

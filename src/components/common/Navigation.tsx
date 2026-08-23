@@ -1,7 +1,8 @@
 import React from 'react';
 import { LayoutDashboard, Stethoscope, Camera, Settings, FolderHeart } from 'lucide-react';
+import { NavTab } from '../layout/DesktopSidebar';
 
-export type NavTab = 'dashboard' | 'session' | 'camera' | 'settings';
+export type { NavTab };
 
 interface NavigationProps {
   activeTab: NavTab;
