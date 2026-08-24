@@ -46,16 +46,16 @@ export const SessionPlanDetailContent: React.FC<SessionPlanDetailContentProps> =
   return (
     <div className="flex flex-col h-full w-full bg-white dark:bg-[#152020] overflow-hidden">
       {/* Plan Header */}
-      <div className="p-4 border-b border-[#F0EDE4] dark:border-[#202E2E] flex items-center justify-between shrink-0 bg-white dark:bg-[#182424]">
+      <div className="h-[56px] sm:h-[64px] px-4 border-b border-[#EAEFEF] dark:border-[#202E2E] flex items-center justify-between shrink-0 bg-white dark:bg-[#182424]">
         <div className="flex items-center gap-2.5 min-w-0">
           <div className="p-2 rounded-xl bg-[#E4F0EF] dark:bg-[#1B2D2C] text-[#287C78] dark:text-[#42A39E] shrink-0">
             <Sliders className="w-4 h-4" />
           </div>
           <div className="min-w-0">
-            <h2 className="text-sm sm:text-base font-extrabold text-[#1C2226] dark:text-[#F2F7F7] truncate tracking-tight">
-              Chi tiết kế hoạch
+            <h2 className="text-sm sm:text-base font-extrabold text-[#11181C] dark:text-[#F2F7F7] truncate tracking-tight">
+              Kế hoạch
             </h2>
-            <p className="text-[11px] font-medium text-[#7A848B] dark:text-[#8E9E9E] truncate">
+            <p className="text-[11px] font-medium text-[#586268] dark:text-[#8E9E9E] truncate">
               {session.title}
             </p>
           </div>
@@ -63,7 +63,7 @@ export const SessionPlanDetailContent: React.FC<SessionPlanDetailContentProps> =
         {onClose && (
           <button
             onClick={onClose}
-            className="p-1.5 rounded-xl hover:bg-[#F6F4EF] dark:hover:bg-[#202E2E] text-[#7A848B] hover:text-[#1C2226] dark:hover:text-[#F2F7F7] transition-colors cursor-pointer shrink-0"
+            className="p-1.5 rounded-xl hover:bg-[#F0F5F4] dark:hover:bg-[#202E2E] text-[#586268] hover:text-[#11181C] dark:hover:text-[#F2F7F7] transition-colors cursor-pointer shrink-0"
             aria-label="Thu gọn kế hoạch"
             title="Thu gọn kế hoạch"
           >
@@ -73,18 +73,18 @@ export const SessionPlanDetailContent: React.FC<SessionPlanDetailContentProps> =
       </div>
 
       {/* Plan Body - Scrollable */}
-      <div className="flex-1 overflow-y-auto p-4 space-y-5 custom-scrollbar bg-[#FAF9F6] dark:bg-[#121A1A]">
+      <div className="flex-1 overflow-y-auto p-4 space-y-5 custom-scrollbar bg-[#F8FAFA] dark:bg-[#121A1A]">
         {/* Visual Progress Header */}
-        <div className="p-3.5 rounded-2xl bg-white dark:bg-[#182424] border border-[#EDEAE1] dark:border-[#202E2E] space-y-2 shadow-2xs">
+        <div className="p-3.5 rounded-2xl bg-white dark:bg-[#182424] border border-[#EAEFEF] dark:border-[#202E2E] space-y-2 shadow-2xs">
           <div className="flex items-center justify-between text-xs font-bold">
-            <span className="text-[#1C2226] dark:text-[#F2F7F7]">Tiến độ công việc</span>
-            <span className="text-[#287C78] dark:text-[#42A39E]">
+            <span className="text-[#11181C] dark:text-[#F2F7F7]">Tiến độ công việc</span>
+            <span className="text-[#165653] dark:text-[#42A39E]">
               {completedTasks}/{totalTasks} ({progressPercent}%)
             </span>
           </div>
-          <div className="w-full h-2 rounded-full bg-[#EAE8DF] dark:bg-[#202E2E] overflow-hidden">
+          <div className="w-full h-2 rounded-full bg-[#E5EBEA] dark:bg-[#202E2E] overflow-hidden">
             <div
-              className="h-full rounded-full bg-gradient-to-r from-[#287C78] to-[#1F625F] transition-all duration-300"
+              className="h-full rounded-full bg-[#287C78] transition-all duration-300"
               style={{ width: `${progressPercent}%` }}
             />
           </div>
@@ -125,7 +125,7 @@ export const SessionPlanDetailContent: React.FC<SessionPlanDetailContentProps> =
       </div>
 
       {/* Plan Footer Actions */}
-      <div className="p-3.5 border-t border-[#F0EDE4] dark:border-[#202E2E] bg-white dark:bg-[#182424] space-y-2 shrink-0">
+      <div className="p-3.5 border-t border-[#EAEFEF] dark:border-[#202E2E] bg-white dark:bg-[#182424] space-y-2 shrink-0">
         <div className="grid grid-cols-2 gap-2">
           {session.status === 'active' ? (
             <button

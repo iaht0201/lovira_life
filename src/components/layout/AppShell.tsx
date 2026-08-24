@@ -95,16 +95,18 @@ export const AppShell: React.FC<AppShellProps> = ({
             : 'min-h-screen pb-[calc(86px+env(safe-area-inset-bottom,0px))] md:pb-0'
         }`}
       >
-        {/* Topbar Header */}
-        <Topbar
-          accessibility={accessibility}
-          onUpdateAccessibility={onUpdateAccessibility}
-          onOpenSettings={() => onTabChange('settings')}
-          onOpenProfile={() => onTabChange('profile')}
-          onOpenMobileMenu={() => setIsMobileMenuOpen(true)}
-          onOpenNotifications={onOpenNotifications}
-          hasNotifications={hasNotifications}
-        />
+        {/* Topbar Header (Only rendered for non-chat pages; Chat tab uses dedicated per-column Messenger headers) */}
+        {!isChatTab && (
+          <Topbar
+            accessibility={accessibility}
+            onUpdateAccessibility={onUpdateAccessibility}
+            onOpenSettings={() => onTabChange('settings')}
+            onOpenProfile={() => onTabChange('profile')}
+            onOpenMobileMenu={() => setIsMobileMenuOpen(true)}
+            onOpenNotifications={onOpenNotifications}
+            hasNotifications={hasNotifications}
+          />
+        )}
 
         {/* Page Main Content */}
         <main

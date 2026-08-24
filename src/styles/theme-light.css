@@ -1,26 +1,26 @@
-/* Lovira Light Theme Palette - Clean, Harmonized Teal & Warm Cream (Borderless Aesthetic) */
+/* Lovira Light Theme Palette - Clean Pure White, High Contrast Black & Signature Teal */
 :root {
-  --bg-base: #F6F4EF;
+  --bg-base: #FFFFFF;
   --bg-surface: #FFFFFF;
-  --bg-surface-raised: #FAF8F3;
+  --bg-surface-raised: #F8FAFA;
   --bg-card: #FFFFFF;
-  --bg-card-hover: #F0EDE4;
+  --bg-card-hover: #F0F5F4;
   --bg-sidebar: #FFFFFF;
-  --bg-sidebar-active: #E4F0EF;
-  --bg-topbar: rgba(246, 244, 239, 0.98);
-  --bg-input: #EDEAE1;
-  --bg-hero: linear-gradient(135deg, #FFFFFF 0%, #FAF8F3 50%, #FDF2F5 100%);
+  --bg-sidebar-active: #EAF4F3;
+  --bg-topbar: rgba(255, 255, 255, 0.98);
+  --bg-input: #F4F7F6;
+  --bg-hero: linear-gradient(135deg, #FFFFFF 0%, #F4F8F7 50%, #EDF6F5 100%);
   --bg-badge-purple: #E4F0EF;
 
-  --text-primary: #1C2226;
+  --text-primary: #11181C;
   --text-secondary: #586268;
   --text-muted: #7A848B;
   --text-brand: #287C78;
-  --text-on-hero: #1C2226;
+  --text-on-hero: #11181C;
 
-  --border-default: transparent;
-  --border-subtle: transparent;
-  --border-brand: transparent;
+  --border-default: #EAEFEF;
+  --border-subtle: #F0F4F4;
+  --border-brand: #287C78;
 
   --color-primary: #287C78;
   --color-primary-hover: #1F625F;

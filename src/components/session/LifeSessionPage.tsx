@@ -68,10 +68,16 @@ export const LifeSessionPage: React.FC<LifeSessionPageProps> = ({
   const [isMobileSessionsOpen, setIsMobileSessionsOpen] = useState(false);
 
   return (
-    <div className="flex-1 h-full min-h-0 flex flex-col bg-white dark:bg-[#141E1E] overflow-hidden relative border border-[#F0EDE4] dark:border-[#1F2E2E] shadow-lovira sm:rounded-2xl">
-      {/* Multi-Column Layout (3 Independent Columns like Messenger) */}
-      <div className="flex-1 flex min-h-0 h-full relative overflow-hidden">
-        {/* Column 1: Desktop Session List Sidebar (Independent Header + Scrollable Chat List) */}
+    <div className="w-full h-full min-h-0 overflow-hidden bg-transparent">
+      {/* Multi-Column Layout (3 Independent Sibling Columns like Messenger) */}
+      <div
+        className={`w-full h-full min-h-0 overflow-hidden ${
+          isDetailOpen
+            ? 'xl:grid xl:grid-cols-[minmax(230px,2fr)_minmax(0,7fr)_minmax(300px,3fr)] lg:grid lg:grid-cols-[minmax(230px,2fr)_minmax(0,8fr)] flex flex-col'
+            : 'lg:grid lg:grid-cols-[minmax(230px,2fr)_minmax(0,10fr)] flex flex-col'
+        }`}
+      >
+        {/* Column 1: Desktop Session List (2/12 ratio on desktop, independent scroll) */}
         <SessionListSidebar
           sessionsList={sessionsList}
           activeSessionId={session.id}
@@ -83,7 +89,7 @@ export const LifeSessionPage: React.FC<LifeSessionPageProps> = ({
             onCreateNewSession?.();
             setIsMobileSessionsOpen(false);
           }}
-          className="hidden lg:flex w-[280px] xl:w-[320px] shrink-0"
+          className="hidden lg:flex w-full h-full border-r border-[#EAEFEF] dark:border-[#202E2E] bg-white dark:bg-[#101818]"
         />
 
         {/* Mobile / Tablet Sessions Drawer Overlay (< 1024px) */}
@@ -135,8 +141,12 @@ export const LifeSessionPage: React.FC<LifeSessionPageProps> = ({
           </div>
         )}
 
-        {/* Column 2: Center Main Conversation Area (Independent Active Chat Header + Message Stream + Input Composer) */}
-        <div className="flex-1 flex flex-col min-w-0 h-full relative overflow-hidden bg-white dark:bg-[#121818]">
+        {/* Column 2: Main Conversation Area (7/12 ratio, active chat header + message stream + fixed composer) */}
+        <div
+          className={`flex-1 flex flex-col min-w-0 h-full relative overflow-hidden bg-white dark:bg-[#121818] ${
+            isDetailOpen ? 'xl:border-r border-[#EAEFEF] dark:border-[#202E2E]' : ''
+          }`}
+        >
           <SessionConversationHeader
             session={session}
             onBack={onBack}
@@ -144,7 +154,7 @@ export const LifeSessionPage: React.FC<LifeSessionPageProps> = ({
             onToggleMobileSessionsList={() => setIsMobileSessionsOpen((prev) => !prev)}
             isDetailOpen={isDetailOpen}
           />
-          <div className="flex-1 flex flex-col min-h-0 overflow-hidden">
+          <div className="flex-1 flex flex-col min-h-0 overflow-hidden bg-white dark:bg-[#121818]">
             <ConversationPane
               messages={session.messages}
               onSendMessage={onSendMessage}
@@ -160,9 +170,9 @@ export const LifeSessionPage: React.FC<LifeSessionPageProps> = ({
           </div>
         </div>
 
-        {/* Column 3: Desktop Inline Plan Details Panel (Independent Header + Scrollable Plan + Footer Actions) */}
+        {/* Column 3: Desktop Inline Plan Details Panel (3/12 ratio on >= 1280px) */}
         {isDetailOpen && (
-          <div className="hidden lg:flex w-[340px] xl:w-[380px] shrink-0 border-l border-[#F0EDE4] dark:border-[#202E2E] bg-white dark:bg-[#152020] flex-col h-full overflow-hidden animate-in slide-in-from-right duration-200">
+          <div className="hidden xl:flex w-full h-full bg-white dark:bg-[#152020] flex-col overflow-hidden animate-in slide-in-from-right duration-200">
             <SessionPlanDetailContent
               session={session}
               onClose={() => setIsDetailOpen(false)}
@@ -182,8 +192,8 @@ export const LifeSessionPage: React.FC<LifeSessionPageProps> = ({
           </div>
         )}
 
-        {/* Mobile / Tablet Plan Details Drawer (< 1024px) */}
-        <div className="lg:hidden">
+        {/* Plan Details Drawer for lg (< 1280px) and Mobile/Tablet (< 1024px) */}
+        <div className="xl:hidden">
           <SessionDetailDrawer
             isOpen={isDetailOpen}
             onClose={() => setIsDetailOpen(false)}

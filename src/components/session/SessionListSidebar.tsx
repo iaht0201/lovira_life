@@ -99,19 +99,17 @@ export const SessionListSidebar: React.FC<SessionListSidebarProps> = ({
 
   return (
     <div
-      className={`shrink-0 bg-white dark:bg-[#141E1E] border-r border-[#F0EDE4] dark:border-[#202E2E] flex flex-col h-full overflow-hidden ${
-        isMobile ? 'w-full' : 'w-[280px] xl:w-[320px]'
-      } ${className}`}
+      className={`shrink-0 bg-white dark:bg-[#101818] border-r border-[#EAEFEF] dark:border-[#202E2E] flex flex-col h-full overflow-hidden w-full ${className}`}
     >
       {/* Column 1 Header (Independent like Messenger) */}
       {showHeader && (
-        <div className="p-3.5 sm:p-4 shrink-0 bg-white dark:bg-[#141E1E] border-b border-[#F0EDE4] dark:border-[#202E2E] space-y-3">
+        <div className="p-3.5 sm:p-4 shrink-0 bg-white dark:bg-[#141E1E] border-b border-[#EAEFEF] dark:border-[#202E2E] space-y-3">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
               <div className="w-7 h-7 rounded-lg bg-[#E4F0EF] dark:bg-[#1B2D2C] text-[#287C78] dark:text-[#42A39E] flex items-center justify-center font-bold text-xs">
                 <MessageSquare className="w-4 h-4" />
               </div>
-              <h2 className="text-base font-extrabold text-[#1C2226] dark:text-[#F2F7F7] tracking-tight">
+              <h2 className="text-base font-extrabold text-[#11181C] dark:text-[#F2F7F7] tracking-tight">
                 Đoạn chat
               </h2>
             </div>
@@ -127,13 +125,13 @@ export const SessionListSidebar: React.FC<SessionListSidebarProps> = ({
 
           {/* Search Box */}
           <div className="relative">
-            <Search className="w-3.5 h-3.5 text-[#8E9E9E] absolute left-3 top-1/2 -translate-y-1/2" />
+            <Search className="w-3.5 h-3.5 text-[#7A848B] absolute left-3 top-1/2 -translate-y-1/2" />
             <input
               type="text"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               placeholder="Tìm kiếm đoạn chat..."
-              className="w-full pl-8.5 pr-3 py-1.5 rounded-xl bg-[#F6F4EF] dark:bg-[#1A2626] text-xs text-[#1C2226] dark:text-[#F2F7F7] placeholder-[#8E9E9E] border border-transparent focus:border-[#287C78]/40 focus:outline-none transition-colors"
+              className="w-full pl-8.5 pr-3 py-1.5 rounded-xl bg-[#F4F7F6] dark:bg-[#1A2626] text-xs text-[#11181C] dark:text-[#F2F7F7] placeholder-[#7A848B] border border-[#D5ECE8] dark:border-transparent focus:border-[#287C78] focus:outline-none transition-colors"
             />
           </div>
 
@@ -143,8 +141,8 @@ export const SessionListSidebar: React.FC<SessionListSidebarProps> = ({
               onClick={() => setActiveFilter('all')}
               className={`px-2.5 py-1 rounded-lg transition-colors cursor-pointer ${
                 activeFilter === 'all'
-                  ? 'bg-[#287C78] text-white'
-                  : 'bg-[#F6F4EF] dark:bg-[#1C2828] text-[#7A848B] hover:text-[#1C2226] dark:text-[#8E9E9E]'
+                  ? 'bg-[#287C78] text-white shadow-2xs'
+                  : 'bg-[#F0F5F4] dark:bg-[#1C2828] text-[#586268] hover:text-[#11181C] dark:text-[#8E9E9E]'
               }`}
             >
               Tất cả
@@ -153,8 +151,8 @@ export const SessionListSidebar: React.FC<SessionListSidebarProps> = ({
               onClick={() => setActiveFilter('active')}
               className={`px-2.5 py-1 rounded-lg transition-colors cursor-pointer ${
                 activeFilter === 'active'
-                  ? 'bg-[#287C78] text-white'
-                  : 'bg-[#F6F4EF] dark:bg-[#1C2828] text-[#7A848B] hover:text-[#1C2226] dark:text-[#8E9E9E]'
+                  ? 'bg-[#287C78] text-white shadow-2xs'
+                  : 'bg-[#F0F5F4] dark:bg-[#1C2828] text-[#586268] hover:text-[#11181C] dark:text-[#8E9E9E]'
               }`}
             >
               Đang làm
@@ -163,8 +161,8 @@ export const SessionListSidebar: React.FC<SessionListSidebarProps> = ({
               onClick={() => setActiveFilter('completed')}
               className={`px-2.5 py-1 rounded-lg transition-colors cursor-pointer ${
                 activeFilter === 'completed'
-                  ? 'bg-[#287C78] text-white'
-                  : 'bg-[#F6F4EF] dark:bg-[#1C2828] text-[#7A848B] hover:text-[#1C2226] dark:text-[#8E9E9E]'
+                  ? 'bg-[#287C78] text-white shadow-2xs'
+                  : 'bg-[#F0F5F4] dark:bg-[#1C2828] text-[#586268] hover:text-[#11181C] dark:text-[#8E9E9E]'
               }`}
             >
               Đã xong
@@ -174,13 +172,13 @@ export const SessionListSidebar: React.FC<SessionListSidebarProps> = ({
       )}
 
       {/* Column 1 Independent Scrollable List */}
-      <div className="flex-1 overflow-y-auto p-2.5 space-y-1.5 custom-scrollbar bg-[#FAF9F6] dark:bg-[#101818]">
+      <div className="flex-1 overflow-y-auto p-2.5 space-y-1.5 custom-scrollbar bg-white dark:bg-[#101818]">
         {filteredSessions.length === 0 ? (
           <div className="text-center py-10 px-4 space-y-3">
             <div className="w-10 h-10 rounded-full bg-[#E4F0EF] text-[#287C78] dark:bg-[#203B3A] dark:text-[#42A39E] flex items-center justify-center mx-auto">
               <Sparkles className="w-5 h-5" />
             </div>
-            <p className="text-xs font-semibold text-[#7A848B] dark:text-[#8E9E9E]">
+            <p className="text-xs font-semibold text-[#586268] dark:text-[#8E9E9E]">
               {searchQuery ? 'Không tìm thấy kết quả phù hợp' : 'Chưa có cuộc trò chuyện nào'}
             </p>
             <button
@@ -201,8 +199,8 @@ export const SessionListSidebar: React.FC<SessionListSidebarProps> = ({
                 onClick={() => onOpenSession(s.id)}
                 className={`w-full p-3 rounded-xl text-left transition-all flex items-start gap-3 group relative cursor-pointer ${
                   isActive
-                    ? 'bg-[#EAF4F3] dark:bg-[#223B3A] text-[#1C2226] dark:text-[#F2F7F7] shadow-xs'
-                    : 'bg-white dark:bg-[#182424] hover:bg-[#F2EFE9] dark:hover:bg-[#1E2E2E] text-[#1C2226] dark:text-[#F2F7F7] border border-[#EDEAE1] dark:border-transparent'
+                    ? 'bg-[#EAF4F3] dark:bg-[#223B3A] text-[#11181C] dark:text-[#F2F7F7] border border-[#C6E2DE] dark:border-transparent shadow-xs'
+                    : 'bg-white dark:bg-[#182424] hover:bg-[#F4F8F7] dark:hover:bg-[#1E2E2E] text-[#11181C] dark:text-[#F2F7F7] border border-[#EAEFEF] dark:border-transparent'
                 }`}
               >
                 {/* Active Accent Bar */}
@@ -215,7 +213,7 @@ export const SessionListSidebar: React.FC<SessionListSidebarProps> = ({
                   className={`w-9 h-9 rounded-xl flex items-center justify-center shrink-0 ${
                     isActive
                       ? 'bg-white dark:bg-[#182424] text-[#287C78] shadow-2xs'
-                      : 'bg-[#F4F3EE] dark:bg-[#202E2E] group-hover:bg-white dark:group-hover:bg-[#182424]'
+                      : 'bg-[#F0F5F4] dark:bg-[#202E2E] group-hover:bg-white dark:group-hover:bg-[#182424]'
                   }`}
                 >
                   {getScenarioIcon(s.scenarioType)}
@@ -226,12 +224,12 @@ export const SessionListSidebar: React.FC<SessionListSidebarProps> = ({
                   <div className="flex items-center justify-between gap-1">
                     <h3
                       className={`text-xs font-bold truncate ${
-                        isActive ? 'text-[#287C78] dark:text-[#42A39E]' : 'text-[#1C2226] dark:text-[#F2F7F7]'
+                        isActive ? 'text-[#165653] dark:text-[#42A39E]' : 'text-[#11181C] dark:text-[#F2F7F7]'
                       }`}
                     >
                       {s.title}
                     </h3>
-                    <span className="text-[10px] font-medium text-[#7A848B] dark:text-[#8E9E9E] shrink-0">
+                    <span className="text-[10px] font-medium text-[#586268] dark:text-[#8E9E9E] shrink-0">
                       {s.updatedAt ? new Date(s.updatedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : ''}
                     </span>
                   </div>
@@ -242,7 +240,7 @@ export const SessionListSidebar: React.FC<SessionListSidebarProps> = ({
                       {progressText && (
                         <>
                           <span className="text-[#A0AAB0]">·</span>
-                          <span className="font-semibold text-[#7A848B] dark:text-[#8E9E9E]">{progressText}</span>
+                          <span className="font-semibold text-[#586268] dark:text-[#8E9E9E]">{progressText}</span>
                         </>
                       )}
                     </div>

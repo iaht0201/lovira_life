@@ -80,22 +80,22 @@ export const TaskProgressPanel: React.FC<TaskProgressPanelProps> = ({
   };
 
   return (
-    <section className="p-5 rounded-2xl bg-surface border border-default shadow-xs space-y-4">
+    <section className="p-4 sm:p-5 rounded-2xl bg-white dark:bg-[#182424] border border-[#EAEFEF] dark:border-[#202E2E] shadow-2xs space-y-4">
       {/* Header & Progress Bar */}
       <div className="space-y-2">
         <div className="flex items-center justify-between">
           <div>
-            <h3 className="text-lg font-bold text-text-primary">
+            <h3 className="text-base sm:text-lg font-bold text-[#11181C] dark:text-[#F2F7F7]">
               Việc cần làm & Giấy tờ
             </h3>
-            <p className="text-xs text-text-secondary">
+            <p className="text-xs text-[#586268] dark:text-[#8E9E9E]">
               Đã hoàn thành {completedUnits} / {totalUnits} bước
             </p>
           </div>
 
           <button
             onClick={() => setShowAdd(!showAdd)}
-            className="flex items-center gap-1 min-h-[44px] px-3 py-1.5 rounded-xl bg-primary/10 text-primary hover:bg-primary hover:text-white font-bold text-xs transition-all"
+            className="flex items-center gap-1 min-h-[40px] px-3 py-1.5 rounded-xl bg-[#E4F0EF] dark:bg-[#1B2D2C] text-[#287C78] dark:text-[#42A39E] hover:bg-[#287C78] hover:text-white font-bold text-xs transition-all cursor-pointer"
             aria-label="Thêm việc cần làm"
           >
             <Plus className="w-4 h-4" aria-hidden="true" />
@@ -104,9 +104,9 @@ export const TaskProgressPanel: React.FC<TaskProgressPanelProps> = ({
         </div>
 
         {/* Progress bar */}
-        <div className="w-full bg-surface-raised h-2.5 rounded-full overflow-hidden border border-default">
+        <div className="w-full bg-[#E5EBEA] dark:bg-[#202E2E] h-2.5 rounded-full overflow-hidden">
           <div
-            className="bg-primary h-full transition-all duration-300 rounded-full"
+            className="bg-[#287C78] dark:bg-[#42A39E] h-full transition-all duration-300 rounded-full"
             style={{ width: `${progressPercent}%` }}
           />
         </div>
@@ -120,13 +120,13 @@ export const TaskProgressPanel: React.FC<TaskProgressPanelProps> = ({
             placeholder="Nhập tên công việc mới..."
             value={newTaskTitle}
             onChange={(e) => setNewTaskTitle(e.target.value)}
-            className="flex-1 p-2.5 rounded-xl border border-default bg-surface text-text-primary text-xs focus:outline-hidden focus:ring-2 focus:ring-primary"
+            className="flex-1 p-2.5 rounded-xl border border-[#D5ECE8] dark:border-[#202E2E] bg-[#F4F7F6] dark:bg-[#1E2B2A] text-[#11181C] dark:text-[#F2F7F7] text-xs focus:outline-hidden focus:border-[#287C78]"
             autoFocus
           />
           <button
             type="submit"
             disabled={!newTaskTitle.trim()}
-            className="px-4 py-2.5 bg-primary text-white font-bold text-xs rounded-xl disabled:opacity-50"
+            className="px-4 py-2.5 bg-[#287C78] hover:bg-[#1F625F] text-white font-bold text-xs rounded-xl disabled:opacity-50 cursor-pointer"
           >
             Lưu
           </button>
@@ -149,16 +149,16 @@ export const TaskProgressPanel: React.FC<TaskProgressPanelProps> = ({
                 key={task.id}
                 className={`rounded-xl border transition-all ${
                   isCompleted
-                    ? 'bg-surface-raised/50 border-default/60 opacity-75'
+                    ? 'bg-[#F8FAFA] dark:bg-[#1A2626]/60 border-[#EAEFEF] dark:border-[#202E2E]/60 opacity-80'
                     : task.status === 'active'
-                    ? 'bg-surface-raised border-primary/40 shadow-2xs'
-                    : 'bg-surface-raised border-default hover:border-primary/60 shadow-2xs'
+                    ? 'bg-[#F4F8F7] dark:bg-[#1E2B2A] border-[#287C78]/50 dark:border-[#42A39E]/50 shadow-2xs'
+                    : 'bg-[#F8FAFA] dark:bg-[#1C2828] border-[#EAEFEF] dark:border-[#253737] hover:border-[#287C78]/40 shadow-2xs'
                 }`}
               >
                 {/* Parent Task Header */}
                 <div
                   onClick={() => onToggleTask(task.id)}
-                  className="p-3.5 flex items-start justify-between gap-3 cursor-pointer select-none"
+                  className="p-3 sm:p-3.5 flex items-start justify-between gap-3 cursor-pointer select-none"
                   role="checkbox"
                   aria-checked={isCompleted}
                   tabIndex={0}
@@ -174,7 +174,7 @@ export const TaskProgressPanel: React.FC<TaskProgressPanelProps> = ({
                     {hasSubtasks ? (
                       <button
                         onClick={(e) => toggleExpand(task.id, e)}
-                        className="p-1 -ml-1 text-text-secondary hover:text-primary rounded-md hover:bg-surface transition-colors shrink-0 min-h-[32px] min-w-[32px] flex items-center justify-center"
+                        className="p-1 -ml-1 text-[#586268] hover:text-[#287C78] dark:text-[#8E9E9E] dark:hover:text-[#42A39E] rounded-md hover:bg-white dark:hover:bg-[#152222] transition-colors shrink-0 min-h-[32px] min-w-[32px] flex items-center justify-center cursor-pointer"
                         title={isExpanded ? 'Thu gọn' : 'Mở rộng bước con'}
                       >
                         {isExpanded ? (
@@ -186,19 +186,19 @@ export const TaskProgressPanel: React.FC<TaskProgressPanelProps> = ({
                     ) : null}
 
                     {/* Checkbox */}
-                    <div className="pt-0.5 shrink-0 text-primary">
+                    <div className="pt-0.5 shrink-0">
                       {isCompleted ? (
                         <CheckSquare className="w-5 h-5 text-emerald-600 dark:text-emerald-400" aria-hidden="true" />
                       ) : (
-                        <Square className="w-5 h-5 text-text-secondary" aria-hidden="true" />
+                        <Square className="w-5 h-5 text-[#7A848B] dark:text-[#8E9E9E]" aria-hidden="true" />
                       )}
                     </div>
 
                     <div className="space-y-0.5 min-w-0 flex-1">
                       <div className="flex items-center gap-2 flex-wrap">
                         <span
-                          className={`text-sm font-bold leading-tight ${
-                            isCompleted ? 'line-through text-text-secondary' : 'text-text-primary'
+                          className={`text-xs sm:text-sm font-bold leading-tight ${
+                            isCompleted ? 'line-through text-[#7A848B] dark:text-[#7A8A8A]' : 'text-[#11181C] dark:text-[#F2F7F7]'
                           }`}
                         >
                           {task.order}. {task.title}
@@ -206,13 +206,13 @@ export const TaskProgressPanel: React.FC<TaskProgressPanelProps> = ({
 
                         {/* Subtasks Progress Badge */}
                         {hasSubtasks && (
-                          <span className="text-[11px] font-semibold px-2 py-0.5 rounded-full bg-primary/10 text-primary">
+                          <span className="text-[11px] font-semibold px-2 py-0.5 rounded-full bg-[#E4F0EF] dark:bg-[#1B2D2C] text-[#287C78] dark:text-[#42A39E]">
                             {doneSubtasksCount}/{subtasksList.length} bước con
                           </span>
                         )}
 
                         {task.important && (
-                          <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-sm bg-red-500/10 text-red-600 dark:text-red-400 text-[10px] font-bold">
+                          <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-sm bg-rose-500/10 text-rose-600 dark:text-rose-400 text-[10px] font-bold">
                             <AlertCircle className="w-3 h-3" aria-hidden="true" />
                             Ưu tiên
                           </span>
@@ -220,7 +220,7 @@ export const TaskProgressPanel: React.FC<TaskProgressPanelProps> = ({
                       </div>
 
                       {task.description && (
-                        <p className="text-xs text-text-secondary leading-snug">
+                        <p className="text-xs text-[#586268] dark:text-[#A0AFAF] leading-snug">
                           {task.description}
                         </p>
                       )}
@@ -233,7 +233,7 @@ export const TaskProgressPanel: React.FC<TaskProgressPanelProps> = ({
                         e.stopPropagation();
                         onDeleteTask(task.id);
                       }}
-                      className="min-h-[36px] min-w-[36px] flex items-center justify-center text-text-secondary hover:text-danger rounded-lg hover:bg-surface transition-colors"
+                      className="min-h-[32px] min-w-[32px] flex items-center justify-center text-[#7A848B] hover:text-rose-600 dark:text-[#8E9E9E] dark:hover:text-rose-400 rounded-lg hover:bg-white dark:hover:bg-[#152222] transition-colors cursor-pointer"
                       aria-label={`Xoá nhiệm vụ ${task.title}`}
                     >
                       <Trash2 className="w-4 h-4" aria-hidden="true" />
@@ -243,7 +243,7 @@ export const TaskProgressPanel: React.FC<TaskProgressPanelProps> = ({
 
                 {/* Subtasks Container */}
                 {hasSubtasks && isExpanded && (
-                  <div className="px-3 pb-3 pt-1 border-t border-default/50 space-y-1.5 bg-surface/40 rounded-b-xl">
+                  <div className="px-3 pb-3 pt-1 border-t border-[#EAEFEF] dark:border-[#202E2E] space-y-1.5 bg-white/60 dark:bg-[#141E1E]/60 rounded-b-xl">
                     {subtasksList
                       .sort((a, b) => a.order - b.order)
                       .map((subtask) => {
@@ -254,19 +254,19 @@ export const TaskProgressPanel: React.FC<TaskProgressPanelProps> = ({
                             onClick={() => onToggleSubtask && onToggleSubtask(task.id, subtask.id)}
                             className={`p-2.5 rounded-lg border flex items-center gap-2.5 cursor-pointer transition-all pl-4 ${
                               isSubDone
-                                ? 'bg-surface-raised/40 border-transparent text-text-secondary'
-                                : 'bg-surface border-default/70 hover:border-primary/50 text-text-primary'
+                                ? 'bg-[#F0F5F4]/60 dark:bg-[#101818]/60 border-transparent text-[#7A848B] dark:text-[#7A8A8A]'
+                                : 'bg-white dark:bg-[#182424] border-[#EAEFEF] dark:border-[#253737] hover:border-[#287C78]/50 text-[#11181C] dark:text-[#F2F7F7]'
                             }`}
                           >
-                            <CornerDownRight className="w-3.5 h-3.5 text-text-secondary shrink-0 opacity-60" aria-hidden="true" />
-                            <div className="shrink-0 text-primary">
+                            <CornerDownRight className="w-3.5 h-3.5 text-[#7A848B] dark:text-[#7A8A8A] shrink-0 opacity-60" aria-hidden="true" />
+                            <div className="shrink-0">
                               {isSubDone ? (
                                 <CheckSquare className="w-4 h-4 text-emerald-600 dark:text-emerald-400" aria-hidden="true" />
                               ) : (
-                                <Square className="w-4 h-4 text-text-secondary" aria-hidden="true" />
+                                <Square className="w-4 h-4 text-[#7A848B] dark:text-[#8E9E9E]" aria-hidden="true" />
                               )}
                             </div>
-                            <span className={`text-xs font-semibold flex-1 ${isSubDone ? 'line-through text-text-secondary' : 'text-text-primary'}`}>
+                            <span className={`text-xs font-semibold flex-1 ${isSubDone ? 'line-through text-[#7A848B] dark:text-[#7A8A8A]' : 'text-[#11181C] dark:text-[#F2F7F7]'}`}>
                               {subtask.title}
                             </span>
                           </div>
@@ -284,20 +284,20 @@ export const TaskProgressPanel: React.FC<TaskProgressPanelProps> = ({
                           placeholder="Nhập tên bước con..."
                           value={newSubtaskTitle}
                           onChange={(e) => setNewSubtaskTitle(e.target.value)}
-                          className="flex-1 p-2 rounded-lg border border-default bg-surface text-text-primary text-xs focus:ring-2 focus:ring-primary"
+                          className="flex-1 p-2 rounded-lg border border-[#D5ECE8] dark:border-[#202E2E] bg-[#F4F7F6] dark:bg-[#1E2B2A] text-[#11181C] dark:text-[#F2F7F7] text-xs focus:outline-hidden focus:border-[#287C78]"
                           autoFocus
                         />
                         <button
                           type="submit"
                           disabled={!newSubtaskTitle.trim()}
-                          className="px-3 py-1.5 bg-primary text-white font-bold text-xs rounded-lg disabled:opacity-50 min-h-[36px]"
+                          className="px-3 py-1.5 bg-[#287C78] hover:bg-[#1F625F] text-white font-bold text-xs rounded-lg disabled:opacity-50 min-h-[36px] cursor-pointer"
                         >
                           Lưu
                         </button>
                         <button
                           type="button"
                           onClick={() => setAddingSubtaskFor(null)}
-                          className="px-2.5 py-1.5 text-xs text-text-secondary hover:bg-surface rounded-lg min-h-[36px]"
+                          className="px-2.5 py-1.5 text-xs text-[#586268] dark:text-[#8E9E9E] hover:bg-[#F0F5F4] dark:hover:bg-[#1A2626] rounded-lg min-h-[36px] cursor-pointer"
                         >
                           Hủy
                         </button>
@@ -305,7 +305,7 @@ export const TaskProgressPanel: React.FC<TaskProgressPanelProps> = ({
                     ) : (
                       <button
                         onClick={() => setAddingSubtaskFor(task.id)}
-                        className="flex items-center gap-1.5 text-[11px] font-bold text-primary hover:underline pt-1 pl-4 min-h-[36px]"
+                        className="flex items-center gap-1.5 text-[11px] font-bold text-[#287C78] dark:text-[#42A39E] hover:underline pt-1 pl-4 min-h-[36px] cursor-pointer"
                       >
                         <Plus className="w-3.5 h-3.5" aria-hidden="true" />
                         <span>Thêm bước con</span>
