@@ -310,61 +310,68 @@ export const LifeDashboard: React.FC<LifeDashboardProps> = ({
           Danh sách các phiên hỗ trợ
         </h3>
 
-        {sessionsList.length === 0 ? (
-          <div className="p-8 text-center bg-surface rounded-2xl border border-dashed border-default space-y-2">
-            <p className="text-sm text-text-secondary">Chưa có phiên hỗ trợ nào được lưu.</p>
-            <button
-              onClick={() => onCreateSessionFromTemplate('medical')}
-              className="px-4 py-2 rounded-xl bg-primary text-white font-bold text-sm"
-            >
-              Tạo phiên Đi khám bệnh đầu tiên
-            </button>
-          </div>
-        ) : (
-          <div className="space-y-3">
-            {sessionsList.map((header) => {
-              const Icon = getScenarioIcon(header.scenarioType);
-              const isActive = activeSession?.id === header.id;
-
-              return (
-                <div
-                  key={header.id}
-                  className={`p-4 rounded-2xl bg-surface border transition-all flex items-center justify-between gap-3 ${
-                    isActive ? 'border-primary ring-1 ring-primary' : 'border-default hover:border-gray-400'
-                  }`}
+        {(() => {
+          const activeSavedSessions = sessionsList.filter((s) => s.status !== 'archived');
+          if (activeSavedSessions.length === 0) {
+            return (
+              <div className="p-8 text-center bg-surface rounded-2xl border border-dashed border-default space-y-2">
+                <p className="text-sm text-text-secondary">Chưa có phiên hỗ trợ nào được lưu.</p>
+                <button
+                  onClick={() => onCreateSessionFromTemplate('medical')}
+                  className="px-4 py-2 rounded-xl bg-primary text-white font-bold text-sm"
                 >
-                  <div className="flex items-center gap-3 truncate">
-                    <div className="p-2.5 rounded-xl bg-primary/10 text-primary shrink-0">
-                      <Icon className="w-5 h-5" aria-hidden="true" />
-                    </div>
-                    <div className="truncate">
-                      <h4 className="font-bold text-text-primary truncate">{header.title}</h4>
-                      <span className="text-xs text-text-secondary">
-                        Thao tác cuối: {new Date(header.updatedAt).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })}
-                      </span>
-                    </div>
-                  </div>
+                  Tạo phiên Đi khám bệnh đầu tiên
+                </button>
+              </div>
+            );
+          }
 
-                  <div className="flex items-center gap-2 shrink-0">
-                    <button
-                      onClick={() => onOpenSession(header.id)}
-                      className="min-h-[44px] px-3.5 py-1.5 rounded-xl bg-primary/10 text-primary hover:bg-primary hover:text-white font-bold text-xs transition-all"
-                    >
-                      Xem phiên
-                    </button>
-                    <button
-                      onClick={() => onDeleteSession(header.id)}
-                      className="min-h-[44px] w-11 flex items-center justify-center rounded-xl border border-default text-text-secondary hover:text-danger hover:border-danger transition-all"
-                      aria-label={`Xoá phiên ${header.title}`}
-                    >
-                      <Trash2 className="w-4 h-4" aria-hidden="true" />
-                    </button>
+          return (
+            <div className="space-y-3">
+              {activeSavedSessions.map((header) => {
+                const Icon = getScenarioIcon(header.scenarioType);
+                const isActive = activeSession?.id === header.id;
+
+                return (
+                  <div
+                    key={header.id}
+                    className={`p-4 rounded-2xl bg-surface border transition-all flex items-center justify-between gap-3 ${
+                      isActive ? 'border-primary ring-1 ring-primary' : 'border-default hover:border-gray-400'
+                    }`}
+                  >
+                    <div className="flex items-center gap-3 truncate">
+                      <div className="p-2.5 rounded-xl bg-primary/10 text-primary shrink-0">
+                        <Icon className="w-5 h-5" aria-hidden="true" />
+                      </div>
+                      <div className="truncate">
+                        <h4 className="font-bold text-text-primary truncate">{header.title}</h4>
+                        <span className="text-xs text-text-secondary">
+                          Thao tác cuối: {new Date(header.updatedAt).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })}
+                        </span>
+                      </div>
+                    </div>
+
+                    <div className="flex items-center gap-2 shrink-0">
+                      <button
+                        onClick={() => onOpenSession(header.id)}
+                        className="min-h-[44px] px-3.5 py-1.5 rounded-xl bg-primary/10 text-primary hover:bg-primary hover:text-white font-bold text-xs transition-all"
+                      >
+                        Xem phiên
+                      </button>
+                      <button
+                        onClick={() => onDeleteSession(header.id)}
+                        className="min-h-[44px] w-11 flex items-center justify-center rounded-xl border border-default text-text-secondary hover:text-danger hover:border-danger transition-all"
+                        aria-label={`Xoá phiên ${header.title}`}
+                      >
+                        <Trash2 className="w-4 h-4" aria-hidden="true" />
+                      </button>
+                    </div>
                   </div>
-                </div>
-              );
-            })}
-          </div>
-        )}
+                );
+              })}
+            </div>
+          );
+        })()}
       </section>
 
       {/* Custom Goal Modal */}

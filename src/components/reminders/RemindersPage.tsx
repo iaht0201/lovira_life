@@ -124,8 +124,8 @@ export const RemindersPage: React.FC<RemindersPageProps> = ({
       if (selectedCategory === 'appointment' && r.category !== 'appointment') return false;
       if (selectedCategory === 'family' && r.category !== 'family') return false;
       if (selectedCategory === 'high_priority' && r.priority !== 'high') return false;
-      if (selectedCategory === 'completed' && !r.completed) return false;
-      if (selectedCategory !== 'completed' && r.completed && selectedCategory !== 'all')
+      if (selectedCategory === 'completed' && r.status !== 'completed') return false;
+      if (selectedCategory !== 'completed' && r.status === 'completed' && selectedCategory !== 'all')
         return false;
 
       return true;
@@ -133,8 +133,8 @@ export const RemindersPage: React.FC<RemindersPageProps> = ({
   }, [reminders, searchQuery, selectedCategory]);
 
   // Group active vs completed
-  const activeReminders = filteredReminders.filter((r) => !r.completed);
-  const completedReminders = filteredReminders.filter((r) => r.completed);
+  const activeReminders = filteredReminders.filter((r) => r.status !== 'completed');
+  const completedReminders = filteredReminders.filter((r) => r.status === 'completed');
 
   const groupedActive = useMemo(
     () => groupRemindersByPeriod(activeReminders),
@@ -143,14 +143,14 @@ export const RemindersPage: React.FC<RemindersPageProps> = ({
 
   // Category counts for badges
   const counts = useMemo(() => {
-    const uncompleted = reminders.filter((r) => !r.completed);
+    const uncompleted = reminders.filter((r) => r.status !== 'completed');
     return {
       all: uncompleted.length,
       medication: uncompleted.filter((r) => r.category === 'medication').length,
       appointment: uncompleted.filter((r) => r.category === 'appointment').length,
       family: uncompleted.filter((r) => r.category === 'family').length,
       high_priority: uncompleted.filter((r) => r.priority === 'high').length,
-      completed: reminders.filter((r) => r.completed).length,
+      completed: reminders.filter((r) => r.status === 'completed').length,
     };
   }, [reminders]);
 

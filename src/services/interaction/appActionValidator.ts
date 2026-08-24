@@ -20,6 +20,43 @@ const ACTIVE_SESSION_KEYWORDS = [
   'active',
 ];
 
+function resolveTargetReminder(
+  payload: any,
+  reminders: any[]
+): { reminderId?: string; errorReason?: string } {
+  if (payload?.reminderId) {
+    const found = reminders.find((r) => r.id === payload.reminderId);
+    if (found) return { reminderId: found.id };
+  }
+
+  const titleQuery = payload?.title?.toLowerCase().trim();
+  const activeReminders = reminders.filter((r) => r.status === 'active');
+
+  if (titleQuery) {
+    const exactMatches = activeReminders.filter((r) => r.title.toLowerCase() === titleQuery);
+    if (exactMatches.length === 1) return { reminderId: exactMatches[0].id };
+
+    const partialMatches = activeReminders.filter((r) => r.title.toLowerCase().includes(titleQuery));
+    if (partialMatches.length === 1) return { reminderId: partialMatches[0].id };
+    if (partialMatches.length > 1) {
+      return {
+        errorReason: `Có ${partialMatches.length} nhắc nhở khớp với "${titleQuery}". Chú muốn thực hiện với nhắc nhở nào cụ thể ạ?`,
+      };
+    }
+  }
+
+  if (activeReminders.length === 1) {
+    return { reminderId: activeReminders[0].id };
+  }
+  if (activeReminders.length > 1) {
+    return {
+      errorReason: 'Dạ chú muốn thực hiện với nhắc nhở nào cụ thể ạ?',
+    };
+  }
+
+  return { errorReason: 'Hiện không có nhắc nhở nào đang hoạt động.' };
+}
+
 export function validateAppAction(
   action: AppAction,
   context: AppInteractionContext
@@ -146,8 +183,7 @@ export function validateAppAction(
       }
 
       if (!scheduledAt) {
-        // Default to next hour if omitted
-        scheduledAt = new Date(Date.now() + 60 * 60 * 1000).toISOString();
+        return { valid: false, reason: 'Dạ chú muốn con nhắc chú vào lúc mấy giờ ạ?' };
       } else {
         const d = new Date(scheduledAt);
         if (isNaN(d.getTime())) {
@@ -173,98 +209,48 @@ export function validateAppAction(
     }
 
     case 'UPDATE_REMINDER': {
-      let reminderId = action.payload?.reminderId;
-      const title = action.payload?.title?.toLowerCase().trim();
       const reminders = reminderService.getReminders();
-
-      if (!reminderId && title) {
-        const found = reminders.find((r) => r.title.toLowerCase().includes(title));
-        if (found) {
-          reminderId = found.id;
-        }
-      }
-
-      if (!reminderId) {
-        // If only 1 active reminder exists, fallback to it
-        const active = reminders.filter((r) => r.status === 'active');
-        if (active.length === 1) {
-          reminderId = active[0].id;
-        }
-      }
-
-      if (!reminderId) {
-        return { valid: false, reason: 'Không tìm thấy nhắc nhở để cập nhật' };
+      const resolved = resolveTargetReminder(action.payload, reminders);
+      if (!resolved.reminderId) {
+        return { valid: false, reason: resolved.errorReason || 'Không tìm thấy nhắc nhở để cập nhật' };
       }
 
       return {
         valid: true,
         action: {
           ...action,
-          payload: { ...action.payload, reminderId },
+          payload: { ...action.payload, reminderId: resolved.reminderId },
         },
       };
     }
 
     case 'DELETE_REMINDER': {
-      let reminderId = action.payload?.reminderId;
-      const title = action.payload?.title?.toLowerCase().trim();
       const reminders = reminderService.getReminders();
-
-      if (!reminderId && title) {
-        const found = reminders.find((r) => r.title.toLowerCase().includes(title));
-        if (found) {
-          reminderId = found.id;
-        }
+      const resolved = resolveTargetReminder(action.payload, reminders);
+      if (!resolved.reminderId) {
+        return { valid: false, reason: resolved.errorReason || 'Không tìm thấy nhắc nhở để xóa' };
       }
 
-      if (!reminderId) {
-        const active = reminders.filter((r) => r.status === 'active');
-        if (active.length === 1) {
-          reminderId = active[0].id;
-        }
-      }
-
-      if (!reminderId) {
-        return { valid: false, reason: 'Không tìm thấy nhắc nhở để xóa' };
-      }
-
-      const targetRem = reminders.find((r) => r.id === reminderId);
+      const targetRem = reminders.find((r) => r.id === resolved.reminderId);
       const remTitle = targetRem ? targetRem.title : 'này';
+      const requiresConfirmation = !action.payload?.skipConfirmation;
 
-      // Always require explicit confirmation before deleting
       return {
         valid: true,
         action: {
           ...action,
-          payload: { ...action.payload, reminderId, title: remTitle },
-          requiresConfirmation: true,
+          payload: { ...action.payload, reminderId: resolved.reminderId, title: remTitle },
+          requiresConfirmation,
           confirmationPrompt: `Chú có chắc muốn xóa nhắc nhở "${remTitle}" không ạ?`,
         },
       };
     }
 
     case 'SNOOZE_REMINDER': {
-      let reminderId = action.payload?.reminderId;
-      const title = action.payload?.title?.toLowerCase().trim();
       const reminders = reminderService.getReminders();
-
-      if (!reminderId && title) {
-        const found = reminders.find((r) => r.title.toLowerCase().includes(title));
-        if (found) {
-          reminderId = found.id;
-        }
-      }
-
-      if (!reminderId) {
-        const active = reminders.filter((r) => r.status === 'active');
-        if (active.length > 0) {
-          // Default to most recently scheduled/due reminder
-          reminderId = active[0].id;
-        }
-      }
-
-      if (!reminderId) {
-        return { valid: false, reason: 'Không tìm thấy nhắc nhở để báo lại' };
+      const resolved = resolveTargetReminder(action.payload, reminders);
+      if (!resolved.reminderId) {
+        return { valid: false, reason: resolved.errorReason || 'Không tìm thấy nhắc nhở để báo lại' };
       }
 
       return {
@@ -273,7 +259,7 @@ export function validateAppAction(
           ...action,
           payload: {
             ...action.payload,
-            reminderId,
+            reminderId: resolved.reminderId,
             snoozePreset: action.payload?.snoozePreset || '10m',
           },
         },
@@ -281,33 +267,17 @@ export function validateAppAction(
     }
 
     case 'COMPLETE_REMINDER': {
-      let reminderId = action.payload?.reminderId;
-      const title = action.payload?.title?.toLowerCase().trim();
       const reminders = reminderService.getReminders();
-
-      if (!reminderId && title) {
-        const found = reminders.find((r) => r.title.toLowerCase().includes(title));
-        if (found) {
-          reminderId = found.id;
-        }
-      }
-
-      if (!reminderId) {
-        const active = reminders.filter((r) => r.status === 'active');
-        if (active.length > 0) {
-          reminderId = active[0].id;
-        }
-      }
-
-      if (!reminderId) {
-        return { valid: false, reason: 'Không tìm thấy nhắc nhở để hoàn thành' };
+      const resolved = resolveTargetReminder(action.payload, reminders);
+      if (!resolved.reminderId) {
+        return { valid: false, reason: resolved.errorReason || 'Không tìm thấy nhắc nhở để hoàn thành' };
       }
 
       return {
         valid: true,
         action: {
           ...action,
-          payload: { ...action.payload, reminderId },
+          payload: { ...action.payload, reminderId: resolved.reminderId },
         },
       };
     }

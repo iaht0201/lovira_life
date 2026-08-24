@@ -70,8 +70,11 @@ export function parseVietnameseReminderText(
     if (lower.includes('ngày mai') || lower.includes('sáng mai') || lower.includes('chiều mai') || lower.includes('tối mai') || lower.includes('trưa mai')) {
       targetDate.setDate(targetDate.getDate() + 1);
       isDateSpecified = true;
-    } else if (lower.includes('ngày mốt') || lower.includes('hôm kia')) {
+    } else if (lower.includes('ngày mốt') || lower.includes('ngày kia')) {
       targetDate.setDate(targetDate.getDate() + 2);
+      isDateSpecified = true;
+    } else if (lower.includes('hôm kia')) {
+      targetDate.setDate(targetDate.getDate() - 2);
       isDateSpecified = true;
     } else if (lower.includes('hôm nay') || lower.includes('tối nay') || lower.includes('chiều nay') || lower.includes('trưa nay') || lower.includes('sáng nay')) {
       // today
@@ -98,15 +101,18 @@ export function parseVietnameseReminderText(
       parsedMinute = timeGiolMatch[2] ? parseInt(timeGiolMatch[2], 10) : 0;
     }
 
-    // AM / PM adjustments
+    // AM / PM / Noon adjustments
     const isPM = lower.includes('chiều') || lower.includes('tối') || lower.includes('đêm');
-    const isAM = lower.includes('sáng') || lower.includes('trưa');
+    const isAM = lower.includes('sáng');
+    const isNoon = lower.includes('trưa');
 
     if (parsedHour !== null) {
       if (isPM && parsedHour < 12) {
         parsedHour += 12;
       } else if (isAM && parsedHour === 12) {
         parsedHour = 0;
+      } else if (isNoon && parsedHour < 12 && parsedHour !== 12) {
+        if (parsedHour < 11) parsedHour += 12; // e.g. "1 giờ trưa" -> 13
       }
       targetDate.setHours(parsedHour, parsedMinute, 0, 0);
 

@@ -184,12 +184,27 @@ class ReminderService {
   }
 
   /**
+   * Clear notified cache markers for a reminder when updated or rescheduled
+   */
+  clearNotifiedCache(id: string): void {
+    for (const key of Array.from(NOTIFIED_CACHE)) {
+      if (key.startsWith(`${id}:`)) {
+        NOTIFIED_CACHE.delete(key);
+      }
+    }
+  }
+
+  /**
    * Update an existing reminder
    */
   updateReminder(id: string, updates: Partial<Reminder>): Reminder | null {
     const list = this.getReminders();
     const index = list.findIndex((r) => r.id === id);
     if (index === -1) return null;
+
+    if (updates.scheduledAt) {
+      this.clearNotifiedCache(id);
+    }
 
     const updated: Reminder = {
       ...list[index],
@@ -540,9 +555,10 @@ class ReminderService {
       const diff = now - scheduledTime;
 
       // Trigger if due in last 2 minutes and not notified yet
+      const cacheKey = `${rem.id}:${rem.scheduledAt}`;
       if (diff >= 0 && diff < 120000) {
-        if (!NOTIFIED_CACHE.has(rem.id)) {
-          NOTIFIED_CACHE.add(rem.id);
+        if (!NOTIFIED_CACHE.has(cacheKey)) {
+          NOTIFIED_CACHE.add(cacheKey);
 
           this.playChimeSound();
 

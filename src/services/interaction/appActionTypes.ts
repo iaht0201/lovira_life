@@ -36,6 +36,7 @@ export interface AppActionPayload {
   notes?: string;
   repeat?: 'once' | 'daily' | 'weekly' | 'monthly';
   priority?: 'normal' | 'high';
+  skipConfirmation?: boolean;
 }
 
 export interface AppAction {

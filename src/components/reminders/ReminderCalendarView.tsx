@@ -29,6 +29,15 @@ interface ReminderCalendarViewProps {
   onShowToast?: (msg: string) => void;
 }
 
+function getLocalDateKey(d: Date | string): string {
+  const dateObj = typeof d === 'string' ? new Date(d) : d;
+  if (isNaN(dateObj.getTime())) return '';
+  const y = dateObj.getFullYear();
+  const m = String(dateObj.getMonth() + 1).padStart(2, '0');
+  const day = String(dateObj.getDate()).padStart(2, '0');
+  return `${y}-${m}-${day}`;
+}
+
 export const ReminderCalendarView: React.FC<ReminderCalendarViewProps> = ({
   reminders,
   sessions,
@@ -78,13 +87,13 @@ export const ReminderCalendarView: React.FC<ReminderCalendarViewProps> = ({
       isSelected: boolean;
     }[] = [];
 
-    const todayStr = new Date().toISOString().split('T')[0];
-    const selectedStr = selectedDate.toISOString().split('T')[0];
+    const todayStr = getLocalDateKey(new Date());
+    const selectedStr = getLocalDateKey(selectedDate);
 
     // Previous month padding
     for (let i = startOffset - 1; i >= 0; i--) {
       const d = new Date(year, month - 1, daysInPrevMonth - i);
-      const key = d.toISOString().split('T')[0];
+      const key = getLocalDateKey(d);
       days.push({
         date: d,
         isCurrentMonth: false,
@@ -97,7 +106,7 @@ export const ReminderCalendarView: React.FC<ReminderCalendarViewProps> = ({
     // Current month days
     for (let day = 1; day <= daysInMonth; day++) {
       const d = new Date(year, month, day);
-      const key = d.toISOString().split('T')[0];
+      const key = getLocalDateKey(d);
       days.push({
         date: d,
         isCurrentMonth: true,
@@ -111,7 +120,7 @@ export const ReminderCalendarView: React.FC<ReminderCalendarViewProps> = ({
     const remaining = 42 - days.length;
     for (let i = 1; i <= remaining; i++) {
       const d = new Date(year, month + 1, i);
-      const key = d.toISOString().split('T')[0];
+      const key = getLocalDateKey(d);
       days.push({
         date: d,
         isCurrentMonth: false,
@@ -131,7 +140,7 @@ export const ReminderCalendarView: React.FC<ReminderCalendarViewProps> = ({
     reminders.forEach((r) => {
       const d = new Date(r.scheduledAt);
       if (!isNaN(d.getTime())) {
-        const key = d.toISOString().split('T')[0];
+        const key = getLocalDateKey(d);
         if (!map.has(key)) map.set(key, { reminders: [], sessions: [] });
         map.get(key)!.reminders.push(r);
       }
@@ -141,7 +150,7 @@ export const ReminderCalendarView: React.FC<ReminderCalendarViewProps> = ({
       if (s.scheduledAt) {
         const d = new Date(s.scheduledAt);
         if (!isNaN(d.getTime())) {
-          const key = d.toISOString().split('T')[0];
+          const key = getLocalDateKey(d);
           if (!map.has(key)) map.set(key, { reminders: [], sessions: [] });
           map.get(key)!.sessions.push(s);
         }
@@ -152,7 +161,7 @@ export const ReminderCalendarView: React.FC<ReminderCalendarViewProps> = ({
   }, [reminders, sessions]);
 
   // Selected date agenda items
-  const selectedDateKey = selectedDate.toISOString().split('T')[0];
+  const selectedDateKey = getLocalDateKey(selectedDate);
   const selectedAgenda = useMemo(() => {
     return dateMap.get(selectedDateKey) || { reminders: [], sessions: [] };
   }, [dateMap, selectedDateKey]);
@@ -341,7 +350,7 @@ export const ReminderCalendarView: React.FC<ReminderCalendarViewProps> = ({
                 <div
                   key={r.id}
                   className={`p-3.5 rounded-2xl border transition-all flex items-start gap-3 ${
-                    r.completed
+                    r.status === 'completed'
                       ? 'bg-gray-50 dark:bg-[#1C2626] border-gray-200 dark:border-gray-800 opacity-60'
                       : 'bg-white dark:bg-[#202C2C] border-gray-200 dark:border-gray-700 shadow-2xs hover:border-[#287C78]'
                   }`}
@@ -349,9 +358,9 @@ export const ReminderCalendarView: React.FC<ReminderCalendarViewProps> = ({
                   <button
                     onClick={() => handleToggleComplete(r.id)}
                     className="mt-0.5 text-gray-400 hover:text-[#287C78] transition-colors cursor-pointer shrink-0"
-                    aria-label={r.completed ? 'Đánh dấu chưa xong' : 'Đánh dấu xong'}
+                    aria-label={r.status === 'completed' ? 'Đánh dấu chưa xong' : 'Đánh dấu xong'}
                   >
-                    {r.completed ? (
+                    {r.status === 'completed' ? (
                       <CheckCircle2 className="w-5 h-5 text-emerald-500" />
                     ) : (
                       <Circle className="w-5 h-5" />
@@ -384,7 +393,7 @@ export const ReminderCalendarView: React.FC<ReminderCalendarViewProps> = ({
 
                     <h5
                       className={`text-sm font-[800] mt-1 ${
-                        r.completed
+                        r.status === 'completed'
                           ? 'line-through text-gray-400 dark:text-gray-500'
                           : 'text-gray-900 dark:text-white'
                       }`}

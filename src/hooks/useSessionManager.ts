@@ -554,6 +554,27 @@ export function useSessionManager({
       };
     }
 
+    if (val.action.requiresConfirmation) {
+      setPendingInteraction({
+        type: 'confirm_action',
+        data: {
+          action: {
+            ...val.action,
+            payload: { ...val.action.payload, skipConfirmation: true },
+          },
+          actionType: val.action.type,
+          payload: val.action.payload,
+          successReply: `Dạ vâng, con đã xóa nhắc nhở "${val.action.payload?.title || ''}" rồi ạ.`,
+          cancelReply: 'Dạ vâng, con đã giữ nguyên nhắc nhở cho chú rồi ạ.',
+          question: val.action.confirmationPrompt || 'Chú có chắc chắn muốn thực hiện thao tác này không ạ?',
+        },
+        createdAt: new Date().toISOString(),
+        expiresAt: Date.now() + 180000,
+      });
+      showToast(val.action.confirmationPrompt || 'Vui lòng xác nhận thao tác.');
+      return { executed: false, action: val.action, reason: 'Chờ người dùng xác nhận thao tác' };
+    }
+
     const executed = await applyAppAction(actionToApply, rtCtx);
     return { executed, action: actionToApply, reason: executed ? undefined : 'Lỗi khi thực thi thao tác' };
   }, [showToast]);
