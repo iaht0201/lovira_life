@@ -1,9 +1,9 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { APP_IMAGES } from '../../assets/images';
 import { Send, Mic, MicOff, Camera, Sparkles, Bot, Loader2, X } from 'lucide-react';
 import { SessionMessage, VoiceInteractionState } from '../../types';
 import { speakText, stopSpeaking } from '../../services/ttsService';
 import { ChatMessageRenderer } from './ChatMessageRenderer';
+import { BrandAvatar } from '../common/BrandAvatar';
 
 interface AssistantComposerProps {
   messages: SessionMessage[];
@@ -82,9 +82,7 @@ export const AssistantComposer: React.FC<AssistantComposerProps> = ({
     <div className="p-3.5 sm:p-5 rounded-2xl bg-lovira-card border border-lovira shadow-xs space-y-3 sm:space-y-4">
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2.5">
-          <div className="w-9 h-9 rounded-xl overflow-hidden shadow-2xs shrink-0 border border-[#287C78]/20 bg-[#287C78]">
-            <img src={APP_IMAGES.avatar} alt="Lovira" className="w-full h-full object-cover" />
-          </div>
+          <BrandAvatar size="md" alt="Lovira" />
           <div>
             <h3 className="text-sm sm:text-base font-bold text-lovira-title">
               Trò chuyện & Tham vấn cùng Lovira

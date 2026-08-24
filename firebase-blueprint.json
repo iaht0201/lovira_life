@@ -1,0 +1,77 @@
+{
+  "entities": {
+    "User": {
+      "title": "User",
+      "description": "User account document",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string", "description": "Unique user identifier" },
+        "displayName": { "type": "string", "description": "User display name" },
+        "email": { "type": "string", "description": "User email address" },
+        "photoURL": { "type": "string", "description": "Avatar photo URL" },
+        "providers": { "type": "array", "items": { "type": "string" }, "description": "Linked auth providers" },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" },
+        "lastLoginAt": { "type": "string", "format": "date-time" },
+        "schemaVersion": { "type": "number" },
+        "sync": {
+          "type": "object",
+          "properties": {
+            "sessions": { "type": "boolean" },
+            "profile": { "type": "boolean" }
+          }
+        }
+      },
+      "required": ["uid", "providers", "schemaVersion"]
+    },
+    "CloudLifeSession": {
+      "title": "CloudLifeSession",
+      "description": "Synced life session document",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "ownerId": { "type": "string" },
+        "title": { "type": "string" },
+        "goal": { "type": "string" },
+        "scenarioType": { "type": "string" },
+        "status": { "type": "string" },
+        "tasks": { "type": "array" },
+        "importantFacts": { "type": "array" },
+        "messages": { "type": "array" },
+        "actionLog": { "type": "array" },
+        "createdAt": { "type": "string" },
+        "updatedAt": { "type": "string" },
+        "schemaVersion": { "type": "number" }
+      },
+      "required": ["id", "ownerId", "title", "status", "schemaVersion"]
+    },
+    "CloudUserProfile": {
+      "title": "CloudUserProfile",
+      "description": "Synced user profile and personalization",
+      "type": "object",
+      "properties": {
+        "preferredName": { "type": "string" },
+        "pronounStyle": { "type": "string" },
+        "customPronoun": { "type": "string" },
+        "communicationPace": { "type": "string" },
+        "syncHealthToCloud": { "type": "boolean" },
+        "updatedAt": { "type": "string" },
+        "schemaVersion": { "type": "number" }
+      }
+    }
+  },
+  "firestore": {
+    "/users/{userId}": {
+      "schema": "User",
+      "description": "Stores user profile and account status"
+    },
+    "/users/{userId}/sessions/{sessionId}": {
+      "schema": "CloudLifeSession",
+      "description": "Stores user's synced LifeSessions"
+    },
+    "/users/{userId}/profile/main": {
+      "schema": "CloudUserProfile",
+      "description": "Stores user's synced personal preferences"
+    }
+  }
+}

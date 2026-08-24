@@ -38,7 +38,8 @@ interface UseSessionManagerProps {
   showToast: (msg: string) => void;
   speakWithVoiceStatus: (text: string, onEnd?: () => void) => void;
   setVoiceStatus: (status: any) => void;
-  setActiveTab: (tab: any) => void;
+  setActiveTab?: (tab: any) => void;
+  onNavigate?: (path: string) => void;
   setCameraModalOpen: (open: boolean) => void;
   setProfileSetupOpen: (open: boolean) => void;
   setAccessibility: React.Dispatch<React.SetStateAction<any>>;
@@ -52,6 +53,7 @@ export function useSessionManager({
   speakWithVoiceStatus,
   setVoiceStatus,
   setActiveTab,
+  onNavigate,
   setCameraModalOpen,
   setProfileSetupOpen,
   setAccessibility,
@@ -93,9 +95,13 @@ export function useSessionManager({
     if (session) {
       setActiveSession(session);
       storageService.setActiveSessionId(id);
-      setActiveTab('session');
+      if (onNavigate) {
+        onNavigate(`/session/${id}`);
+      } else if (setActiveTab) {
+        setActiveTab('session');
+      }
     }
-  }, [setActiveTab]);
+  }, [setActiveTab, onNavigate]);
 
   const handleCreateSessionFromTemplate = useCallback(
     async (type: ScenarioType, customGoal?: string) => {
@@ -215,10 +221,14 @@ export function useSessionManager({
 
       saveUpdatedSession(newSession);
       storageService.setActiveSessionId(newId);
-      setActiveTab('session');
+      if (onNavigate) {
+        onNavigate(`/session/${newId}`);
+      } else if (setActiveTab) {
+        setActiveTab('session');
+      }
       showToast(`Đã khởi tạo phiên "${newSession.title}"`);
     },
-    [aiSettings, accessibilitySettings, userProfile, saveUpdatedSession, setActiveTab, showToast, speakWithVoiceStatus]
+    [aiSettings, accessibilitySettings, userProfile, saveUpdatedSession, setActiveTab, onNavigate, showToast, speakWithVoiceStatus]
   );
 
   const handleDeleteSession = useCallback((id: string, onConfirmModalShow: (modal: any) => void) => {
@@ -232,14 +242,18 @@ export function useSessionManager({
         if (activeSession?.id === id) {
           setActiveSession(null);
           storageService.clearActiveSessionId();
-          setActiveTab('dashboard');
+          if (onNavigate) {
+            onNavigate('/history');
+          } else if (setActiveTab) {
+            setActiveTab('dashboard');
+          }
         }
         refreshSessionsList();
         onConfirmModalShow({ isOpen: false, message: '', onConfirm: () => {} });
         showToast('Đã xoá phiên hỗ trợ');
       },
     });
-  }, [activeSession, refreshSessionsList, setActiveTab, showToast]);
+  }, [activeSession, refreshSessionsList, setActiveTab, onNavigate, showToast]);
 
   const handleUpdateStatus = useCallback((newStatus: SessionStatus) => {
     if (!activeSession) return;
@@ -531,9 +545,9 @@ export function useSessionManager({
     abortControllerRef.current = controller;
 
     const runtimeContext = {
-      goHome: () => setActiveTab('dashboard'),
-      goBack: () => setActiveTab('dashboard'),
-      openSettings: () => setActiveTab('settings'),
+      goHome: () => (onNavigate ? onNavigate('/') : setActiveTab?.('dashboard')),
+      goBack: () => (onNavigate ? onNavigate('/') : setActiveTab?.('dashboard')),
+      openSettings: () => (onNavigate ? onNavigate('/settings') : setActiveTab?.('settings')),
       openProfile: () => setProfileSetupOpen(true),
       openSession: (sId: string) => handleOpenSession(sId),
       createSession: async (goal: string) => {

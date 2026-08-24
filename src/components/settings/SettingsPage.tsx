@@ -24,6 +24,8 @@ import { MODEL_POOL } from '../../data/initialData';
 import { checkVietnameseVoiceSupport, speakText } from '../../services/ttsService';
 import { storageService } from '../../services/storageService';
 import { buildAddressing } from '../../utils/filterRelevantConditions';
+import { AuthUserCard } from '../auth/AuthUserCard';
+import { CloudSyncCard } from '../auth/CloudSyncCard';
 
 interface SettingsPageProps {
   accessibility: AccessibilitySettings;
@@ -33,6 +35,8 @@ interface SettingsPageProps {
   onUpdateAISettings: (settings: AISettings) => void;
   onUpdateUserProfile: (profile: UserProfile | null) => void;
   onOpenProfileSetup: () => void;
+  onOpenAuthModal?: () => void;
+  onShowToast?: (msg: string) => void;
 }
 
 export const SettingsPage: React.FC<SettingsPageProps> = ({
@@ -43,6 +47,8 @@ export const SettingsPage: React.FC<SettingsPageProps> = ({
   onUpdateAISettings,
   onUpdateUserProfile,
   onOpenProfileSetup,
+  onOpenAuthModal = () => {},
+  onShowToast,
 }) => {
   const [apiKeyInput, setApiKeyInput] = useState(aiSettings.apiKey || '');
   const [provider, setProvider] = useState<'gemini' | 'groq' | 'demo'>(aiSettings.provider);
@@ -408,6 +414,31 @@ export const SettingsPage: React.FC<SettingsPageProps> = ({
             </button>
           </div>
         </form>
+      </section>
+
+      {/* 5. ACCOUNT & CLOUD SYNC SECTION */}
+      <section className="space-y-4">
+        <div className="flex items-center gap-2 px-1">
+          <ShieldCheck className="w-[18px] h-[18px] text-[#287C78] dark:text-[#42A39E]" />
+          <h3 className="text-[16px] font-[800] text-lovira-title">
+            Tài khoản & Đồng bộ Đám mây
+          </h3>
+        </div>
+
+        <AuthUserCard
+          onOpenAuthModal={onOpenAuthModal}
+          onShowToast={onShowToast}
+        />
+
+        <CloudSyncCard
+          userProfile={userProfile}
+          onUpdateUserProfile={(p) => {
+            storageService.saveUserProfile(p);
+            onUpdateUserProfile(p);
+          }}
+          onOpenAuthModal={onOpenAuthModal}
+          onShowToast={onShowToast}
+        />
       </section>
     </div>
   );

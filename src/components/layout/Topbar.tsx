@@ -15,6 +15,8 @@ import {
   Menu,
 } from 'lucide-react';
 import { AccessibilitySettings } from '../../types';
+import { useAuth } from '../../context/AuthContext';
+import { User, LogIn, Cloud } from 'lucide-react';
 
 interface TopbarProps {
   accessibility?: AccessibilitySettings;
@@ -23,6 +25,7 @@ interface TopbarProps {
   onOpenSettings?: () => void;
   onOpenNotifications?: () => void;
   onOpenProfile?: () => void;
+  onOpenAuthModal?: () => void;
   onOpenMobileMenu?: () => void;
   hasNotifications?: boolean;
 }
@@ -34,9 +37,11 @@ export const Topbar: React.FC<TopbarProps> = ({
   onOpenSettings,
   onOpenNotifications,
   onOpenProfile,
+  onOpenAuthModal,
   onOpenMobileMenu,
   hasNotifications = true,
 }) => {
+  const { user, isAuthenticated, syncStatus } = useAuth();
   const [searchQuery, setSearchQuery] = useState('');
   const [showDropdown, setShowDropdown] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
@@ -294,15 +299,46 @@ export const Topbar: React.FC<TopbarProps> = ({
           <Settings className="w-[20px] h-[20px]" />
         </button>
 
-        {/* User Avatar Button */}
-        <button
-          onClick={onOpenProfile}
-          className="w-[34px] h-[34px] sm:w-[40px] sm:h-[40px] rounded-full bg-lovira-badge-purple hover:ring-2 hover:ring-[#287C78]/30 flex items-center justify-center overflow-hidden transition-all cursor-pointer ml-0.5 shadow-2xs"
-          title="Hồ sơ cá nhân"
-          aria-label="Hồ sơ cá nhân"
-        >
-          <span className="text-[16px] sm:text-[20px]">👴</span>
-        </button>
+        {/* User Account / Avatar Button */}
+        {isAuthenticated && user ? (
+          <button
+            onClick={onOpenProfile}
+            className="relative w-[34px] h-[34px] sm:w-[40px] sm:h-[40px] rounded-full hover:ring-2 hover:ring-[#287C78]/40 flex items-center justify-center overflow-hidden transition-all cursor-pointer ml-0.5 shadow-2xs"
+            title={`Tài khoản: ${user.displayName || user.email || 'Đã đăng nhập'}`}
+            aria-label="Tài khoản cá nhân"
+          >
+            {user.photoURL ? (
+              <img
+                src={user.photoURL}
+                alt={user.displayName || 'Tài khoản'}
+                referrerPolicy="no-referrer"
+                className="w-full h-full object-cover"
+              />
+            ) : (
+              <div className="w-full h-full bg-[#287C78] text-white font-[800] text-[14px] sm:text-[16px] flex items-center justify-center">
+                {user.displayName
+                  ? user.displayName.charAt(0).toUpperCase()
+                  : user.email?.charAt(0).toUpperCase() || 'U'}
+              </div>
+            )}
+
+            {syncStatus === 'synced' && (
+              <span
+                className="absolute bottom-0 right-0 w-[9px] h-[9px] rounded-full bg-emerald-500 ring-2 ring-white dark:ring-[#121818]"
+                title="Đã đồng bộ đám mây"
+              />
+            )}
+          </button>
+        ) : (
+          <button
+            onClick={onOpenProfile}
+            className="w-[34px] h-[34px] sm:w-[40px] sm:h-[40px] rounded-full bg-lovira-badge-purple hover:ring-2 hover:ring-[#287C78]/30 flex items-center justify-center overflow-hidden transition-all cursor-pointer ml-0.5 shadow-2xs"
+            title="Hồ sơ & Tài khoản (Chế độ Khách)"
+            aria-label="Hồ sơ & Tài khoản"
+          >
+            <span className="text-[16px] sm:text-[20px]">👴</span>
+          </button>
+        )}
       </div>
     </header>
   );

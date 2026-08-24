@@ -24,6 +24,7 @@ interface LifeDashboardProps {
   onCreateSessionFromTemplate: (type: ScenarioType, customGoal?: string) => void;
   onDeleteSession: (id: string) => void;
   onOpenCamera: () => void;
+  defaultTab?: 'tasks' | 'sessions';
 }
 
 export const LifeDashboard: React.FC<LifeDashboardProps> = ({
@@ -33,6 +34,7 @@ export const LifeDashboard: React.FC<LifeDashboardProps> = ({
   onCreateSessionFromTemplate,
   onDeleteSession,
   onOpenCamera,
+  defaultTab = 'tasks',
 }) => {
   const [showCustomModal, setShowCustomModal] = useState(false);
   const [customGoalInput, setCustomGoalInput] = useState('');

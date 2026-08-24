@@ -1,16 +1,17 @@
 /**
  * Brand Assets Configuration
- * Optimized WebP static assets served directly from /public/brand/
- * Lightweight (<1MB total), instant loading on all devices and network conditions.
+ * Bundled binary images directly embedded in app bundle for reliable display without 404s
  */
+import { APP_IMAGES } from '../assets/images';
 
 export const BRAND_IMAGES = {
-  logo: '/brand/lovira-logo.webp',
-  logoIcon: '/brand/lovira-logo-icon.webp',
-  avatar: '/brand/lovira-avatar.webp',
-  banner: '/brand/lovira-banner.webp',
-  pwa192: '/brand/pwa-192.png',
-  pwa512: '/brand/pwa-512.png',
+  logo: APP_IMAGES.logo,
+  logoIcon: APP_IMAGES.logoIcon,
+  avatar: APP_IMAGES.avatar,
+  banner: APP_IMAGES.banner,
+  logoClient: APP_IMAGES.logoClient,
 } as const;
 
 export default BRAND_IMAGES;
+
+

@@ -1,5 +1,6 @@
 import React from 'react';
 import { BrandLogo } from '../common/BrandLogo';
+import { useAuth } from '../../context/AuthContext';
 import {
   LayoutDashboard,
   MessageSquare,
@@ -26,6 +27,7 @@ interface MobileSidebarDrawerProps {
   activeTab: NavTab;
   onTabChange: (tab: NavTab) => void;
   onCreateSession: () => void;
+  onOpenAuthModal?: () => void;
   userName?: string;
   planName?: string;
   accessibility?: AccessibilitySettings;
@@ -38,12 +40,21 @@ export const MobileSidebarDrawer: React.FC<MobileSidebarDrawerProps> = ({
   activeTab,
   onTabChange,
   onCreateSession,
+  onOpenAuthModal,
   userName = 'Chú Ba',
   planName = 'Gói miễn phí',
   accessibility,
   onUpdateAccessibility,
 }) => {
+  const { user, isAuthenticated, syncStatus } = useAuth();
   if (!isOpen) return null;
+
+  const displayName = user?.displayName || (isAuthenticated ? 'Đã đăng nhập' : userName);
+  const accountSubtext = isAuthenticated
+    ? syncStatus === 'synced'
+      ? 'Đã đồng bộ đám mây'
+      : user?.email || 'Tài khoản Lovira'
+    : 'Chế độ Khách (Cục bộ)';
 
   const navItems = [
     { id: 'dashboard' as NavTab, label: 'Trang chủ', icon: LayoutDashboard },
@@ -118,14 +129,27 @@ export const MobileSidebarDrawer: React.FC<MobileSidebarDrawerProps> = ({
           <div className="p-3 rounded-[16px] bg-lovira-card border border-lovira flex items-center justify-between">
             <div className="flex items-center gap-3 min-w-0">
               <div className="w-[42px] h-[42px] rounded-full bg-lovira-badge-purple border border-lovira-purple flex items-center justify-center shrink-0 overflow-hidden">
-                <span className="text-[20px]">👴</span>
+                {isAuthenticated && user?.photoURL ? (
+                  <img
+                    src={user.photoURL}
+                    alt={displayName}
+                    referrerPolicy="no-referrer"
+                    className="w-full h-full object-cover"
+                  />
+                ) : isAuthenticated && user ? (
+                  <span className="font-[800] text-[15px] text-[#287C78] dark:text-[#42A39E]">
+                    {user.displayName ? user.displayName.charAt(0).toUpperCase() : 'U'}
+                  </span>
+                ) : (
+                  <span className="text-[20px]">👴</span>
+                )}
               </div>
               <div className="min-w-0">
                 <p className="text-[14px] font-[700] text-lovira-title truncate leading-tight">
-                  {userName}
+                  {displayName}
                 </p>
-                <p className="text-[11px] font-[500] text-lovira-sub truncate leading-tight mt-1">
-                  {planName}
+                <p className="text-[11px] font-[500] text-lovira-sub truncate leading-tight mt-0.5">
+                  {accountSubtext}
                 </p>
               </div>
             </div>

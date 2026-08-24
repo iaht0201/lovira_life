@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
-import { APP_IMAGES } from '../../assets/images';
 import { Volume2, Check, Copy, Sparkles, Bot, User, CheckCircle2 } from 'lucide-react';
 import { SessionMessage } from '../../types';
+import { BrandAvatar } from '../common/BrandAvatar';
 
 interface ChatMessageRendererProps {
   message: SessionMessage;
@@ -140,9 +140,9 @@ export const ChatMessageRenderer: React.FC<ChatMessageRendererProps> = ({
     >
       {/* Avatar (rendered only when showAvatar is true) */}
       {!isUser ? (
-        <div className="w-8 h-8 rounded-full overflow-hidden shrink-0 shadow-2xs mt-1 border border-[#287C78]/20 bg-[#287C78]">
+        <div className="shrink-0 mt-1">
           {showAvatar ? (
-            <img src={APP_IMAGES.avatar} alt="Lovira" className="w-full h-full object-cover" />
+            <BrandAvatar size="md" alt="Lovira" />
           ) : (
             <div className="w-8 h-8" />
           )}

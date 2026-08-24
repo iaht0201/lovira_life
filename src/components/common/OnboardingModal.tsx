@@ -1,5 +1,4 @@
 import React, { useState } from 'react';
-import { APP_IMAGES } from '../../assets/images';
 import {
   Sparkles,
   Heart,
@@ -15,6 +14,7 @@ import {
 import { UserProfile, PronounStyle, DEFAULT_USER_PROFILE } from '../../types';
 import { storageService } from '../../services/storageService';
 import { sfx } from '../../utils/sfx';
+import { BrandAvatar } from './BrandAvatar';
 
 interface OnboardingModalProps {
   isOpen: boolean;
@@ -40,9 +40,7 @@ export const OnboardingModal: React.FC<OnboardingModalProps> = ({
   const slidesData = [
     {
       icon: (
-        <div className="w-16 h-16 rounded-full overflow-hidden shadow-xs border border-[#287C78]/20 bg-[#287C78]">
-          <img src={APP_IMAGES.avatar} alt="Lovira" className="w-full h-full object-cover" />
-        </div>
+        <BrandAvatar size="xl" alt="Lovira" className="shadow-xs" />
       ),
       title: 'Chào mừng ông/bà đến với Lovira ♥',
       subtitle: 'Trợ lý cuộc sống thông minh & chu đáo',

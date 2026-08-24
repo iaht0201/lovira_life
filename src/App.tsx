@@ -4,25 +4,30 @@
  */
 
 import React, { useState, useEffect } from 'react';
+import { BrowserRouter, Routes, Route, Navigate, useLocation, useNavigate } from 'react-router-dom';
 import { NavTab } from './components/layout/DesktopSidebar';
 import { storageService } from './services/storageService';
 import { AISettings, UserProfile } from './types';
+import { getTabFromPathname, getPathForTab } from './utils/navigation';
 
 import { AccessibilityProvider, useAccessibility } from './context/AccessibilityContext';
+import { AuthProvider, useAuth } from './context/AuthContext';
 import { useVoiceAssistant } from './hooks/useVoiceAssistant';
 import { useSessionManager } from './hooks/useSessionManager';
 
 import { AppShell } from './components/layout/AppShell';
 import { HomePage } from './components/home/HomePage';
-import { UpcomingReminders } from './components/home/UpcomingReminders';
 import { LifeDashboard } from './components/dashboard/LifeDashboard';
-import { LifeSessionPage } from './components/session/LifeSessionPage';
+import { LifeSessionRoute } from './components/session/LifeSessionRoute';
+import { GlobalChatPage } from './components/chat/GlobalChatPage';
+import { RemindersPage } from './components/reminders/RemindersPage';
 import { CameraModal } from './components/camera/CameraModal';
 import { VSLFloatingPanel } from './components/vsl/VSLFloatingPanel';
 import { SettingsPage } from './components/settings/SettingsPage';
 import { ProfilePage } from './components/profile/ProfilePage';
 import { ProfileInviteBanner } from './components/profile/ProfileInviteBanner';
 import { ProfileSetupFlow } from './components/profile/ProfileSetupFlow';
+import { AuthModal } from './components/auth/AuthModal';
 import { ConfirmDialog } from './components/common/ConfirmDialog';
 import { Toast } from './components/common/Toast';
 import { SplashScreen } from './components/common/SplashScreen';
@@ -34,14 +39,33 @@ import { notificationService } from './services/notificationService';
 import { AppNotification, NotificationType } from './types';
 
 function AppContent() {
+  const { user, isAuthenticated } = useAuth();
+  const location = useLocation();
+  const navigate = useNavigate();
+
+  const activeTab: NavTab = getTabFromPathname(location.pathname);
+
   const [showSplash, setShowSplash] = useState(true);
-  const [activeTab, setActiveTab] = useState<NavTab>('dashboard');
   const [aiSettings, setAiSettings] = useState<AISettings>(() => storageService.getAISettings());
   const [userProfile, setUserProfile] = useState<UserProfile | null>(() => storageService.getUserProfile());
   const [profileSetupOpen, setProfileSetupOpen] = useState(false);
   const [bannerDismissed, setBannerDismissed] = useState(() => storageService.isProfileBannerDismissed());
 
-  // New Modals State
+  // Auth Modal State
+  const [authModalOpen, setAuthModalOpen] = useState(false);
+  const [authModalInitialMode, setAuthModalInitialMode] = useState<'login' | 'register' | 'forgot'>('login');
+
+  const handleOpenAuthModal = (mode?: unknown) => {
+    let cleanMode: 'login' | 'register' | 'forgot' = 'login';
+    if (typeof mode === 'string') {
+      if (mode === 'register') cleanMode = 'register';
+      else if (mode === 'forgot' || mode === 'forgot-password') cleanMode = 'forgot';
+    }
+    setAuthModalInitialMode(cleanMode);
+    setAuthModalOpen(true);
+  };
+
+  // Modals State
   const [permissionModalOpen, setPermissionModalOpen] = useState(false);
   const [onboardingOpen, setOnboardingOpen] = useState<boolean>(() => {
     return localStorage.getItem('lovira_onboarded') !== 'true';
@@ -131,6 +155,7 @@ function AppContent() {
 
   const {
     activeSession,
+    setActiveSession,
     sessionsList,
     isLoading,
     handleOpenSession,
@@ -155,7 +180,7 @@ function AppContent() {
     showToast,
     speakWithVoiceStatus,
     setVoiceStatus,
-    setActiveTab,
+    onNavigate: (path) => navigate(path),
     setCameraModalOpen,
     setProfileSetupOpen,
     setAccessibility,
@@ -166,6 +191,10 @@ function AppContent() {
     storageService.saveAISettings(aiSettings);
   }, [aiSettings]);
 
+  const handleTabChange = (tab: NavTab) => {
+    navigate(getPathForTab(tab));
+  };
+
   return (
     <>
       {/* 1. App Boot Splash Screen */}
@@ -173,15 +202,19 @@ function AppContent() {
 
       <AppShell
         activeTab={activeTab}
-        onTabChange={setActiveTab}
+        onTabChange={handleTabChange}
         onCreateSession={() => handleCreateSessionFromTemplate('medical')}
+        onOpenAuthModal={handleOpenAuthModal}
         userName={userProfile?.preferredName || ''}
         planName="Gói miễn phí"
         voiceStatus={voiceStatus}
         onVoiceClick={
           voiceStatus === 'listening'
             ? stopListening
-            : () => startListening((transcript) => sendInteraction(transcript, { inputMode: 'voice', activeTab }))
+            : () =>
+                startListening((transcript) =>
+                  sendInteraction(transcript, { inputMode: 'voice', activeTab })
+                )
         }
         accessibility={accessibility}
         onUpdateAccessibility={setAccessibility}
@@ -202,117 +235,170 @@ function AppContent() {
             />
           )}
 
-        {/* Tab 1: Full Homepage */}
-        {activeTab === 'dashboard' && (
-          <HomePage
-            userName={userProfile?.preferredName || ''}
-            sessionsList={sessionsList}
-            onOpenSession={handleOpenSession}
-            onCreateSessionFromTemplate={handleCreateSessionFromTemplate}
-            onDeleteSession={(id) => handleDeleteSession(id, setConfirmModal)}
-            onOpenTasks={() => setActiveTab('tasks')}
-            onOpenReminders={() => setActiveTab('reminders')}
-            onOpenCamera={() => setCameraModalOpen(true)}
-            onOpenChat={() => {
-              if (activeSession) {
-                setActiveTab('session');
-              } else if (sessionsList.length > 0) {
-                handleOpenSession(sessionsList[0].id);
-              } else {
-                handleCreateSessionFromTemplate('custom', 'Trò chuyện cùng Lovira');
-              }
-            }}
+        {/* Declarative URL Routes */}
+        <Routes>
+          {/* Route 1: Full Homepage */}
+          <Route
+            path="/"
+            element={
+              <HomePage
+                userName={userProfile?.preferredName || ''}
+                sessionsList={sessionsList}
+                onOpenSession={handleOpenSession}
+                onCreateSessionFromTemplate={handleCreateSessionFromTemplate}
+                onDeleteSession={(id) => handleDeleteSession(id, setConfirmModal)}
+                onOpenTasks={() => navigate('/tasks')}
+                onOpenReminders={() => navigate('/reminders')}
+                onOpenCamera={() => setCameraModalOpen(true)}
+                onOpenChat={() => {
+                  if (activeSession) {
+                    navigate(`/session/${activeSession.id}`);
+                  } else if (sessionsList.length > 0) {
+                    handleOpenSession(sessionsList[0].id);
+                  } else {
+                    handleCreateSessionFromTemplate('custom', 'Trò chuyện cùng Lovira');
+                  }
+                }}
+              />
+            }
           />
-        )}
 
-        {/* Tab 2: Life Session Active Screen / Chat */}
-        {(activeTab === 'session' || activeTab === 'chat') && activeSession && (
-          <LifeSessionPage
-            session={activeSession}
-            sessionsList={sessionsList}
-            onOpenSession={handleOpenSession}
-            onCreateNewSession={() => handleCreateSessionFromTemplate('medical')}
-            onOpenHistory={() => setActiveTab('history')}
-            onBack={() => setActiveTab('dashboard')}
-            onUpdateStatus={handleUpdateStatus}
-            onDeleteSession={() => handleDeleteSession(activeSession.id, setConfirmModal)}
-            onCompleteCurrentTask={handleCompleteCurrentTask}
-            onToggleTask={handleToggleTask}
-            onToggleSubtask={handleToggleSubtask}
-            onAddTask={handleAddTask}
-            onAddSubtask={handleAddSubtask}
-            onDeleteTask={handleDeleteTask}
-            onAddFact={handleAddFact}
-            onDeleteFact={(id) => handleDeleteFact(id, setConfirmModal)}
-            onDeleteResource={handleDeleteResource}
-            onSendMessage={(text, opts) => sendInteraction(text, { ...opts, activeTab })}
-            onOpenCamera={() => setCameraModalOpen(true)}
-            isLoading={isLoading}
-            voiceStatus={voiceStatus}
-            interimTranscript={interimTranscript}
-            userName={userProfile?.preferredName || ''}
-            onStartVoice={() => startListening((transcript) => sendInteraction(transcript, { inputMode: 'voice', activeTab }))}
-            onStopVoice={stopListening}
-            onCancelVoice={cancelListening}
+          {/* Route 2: Global Chat */}
+          <Route
+            path="/chat"
+            element={
+              <GlobalChatPage
+                activeSession={activeSession}
+                sessionsList={sessionsList}
+                onOpenSession={handleOpenSession}
+                onCreateSessionFromTemplate={handleCreateSessionFromTemplate}
+                userName={userProfile?.preferredName || ''}
+              />
+            }
           />
-        )}
 
-        {/* Fallback if session/chat tab opened with no session */}
-        {(activeTab === 'session' || activeTab === 'chat') && !activeSession && (
-          <div className="p-8 text-center bg-surface border border-dashed border-default rounded-2xl space-y-4 max-w-lg mx-auto my-8">
-            <p className="text-base font-bold text-text-primary">Chưa mở phiên hỗ trợ nào.</p>
-            <p className="text-xs text-text-secondary">Hãy tạo một phiên mới để trò chuyện và được Lovira trợ giúp nhen.</p>
-            <button
-              onClick={() => handleCreateSessionFromTemplate('medical')}
-              className="px-5 py-2.5 bg-[#287C78] hover:bg-[#1F625F] text-white font-bold text-sm rounded-xl transition-all shadow-xs cursor-pointer"
-            >
-              + Tạo phiên Đi khám bệnh mẫu ngay
-            </button>
-          </div>
-        )}
-
-        {/* Tab 3: Tasks & Session Management Dashboard */}
-        {(activeTab === 'tasks' || activeTab === 'history') && (
-          <LifeDashboard
-            activeSession={activeSession}
-            sessionsList={sessionsList}
-            onOpenSession={handleOpenSession}
-            onCreateSessionFromTemplate={handleCreateSessionFromTemplate}
-            onDeleteSession={(id) => handleDeleteSession(id, setConfirmModal)}
-            onOpenCamera={() => setCameraModalOpen(true)}
+          {/* Route 3: Life Session Active Screen / Chat */}
+          <Route
+            path="/session/:sessionId"
+            element={
+              <LifeSessionRoute
+                activeSession={activeSession}
+                sessionsList={sessionsList}
+                onSetSession={setActiveSession}
+                onOpenSession={handleOpenSession}
+                onCreateNewSession={() => handleCreateSessionFromTemplate('medical')}
+                onDeleteSession={(id) => handleDeleteSession(id, setConfirmModal)}
+                onUpdateStatus={handleUpdateStatus}
+                onCompleteCurrentTask={handleCompleteCurrentTask}
+                onToggleTask={handleToggleTask}
+                onToggleSubtask={handleToggleSubtask}
+                onAddTask={handleAddTask}
+                onAddSubtask={handleAddSubtask}
+                onDeleteTask={handleDeleteTask}
+                onAddFact={handleAddFact}
+                onDeleteFact={(id) => handleDeleteFact(id, setConfirmModal)}
+                onDeleteResource={handleDeleteResource}
+                onSendMessage={(text, opts) =>
+                  sendInteraction(text, { ...opts, activeTab: 'session' })
+                }
+                onOpenCamera={() => setCameraModalOpen(true)}
+                isLoading={isLoading}
+                voiceStatus={voiceStatus}
+                interimTranscript={interimTranscript}
+                userName={userProfile?.preferredName || ''}
+                onStartVoice={() =>
+                  startListening((transcript) =>
+                    sendInteraction(transcript, { inputMode: 'voice', activeTab: 'session' })
+                  )
+                }
+                onStopVoice={stopListening}
+                onCancelVoice={cancelListening}
+              />
+            }
           />
-        )}
 
-        {/* Tab 4: Reminders */}
-        {activeTab === 'reminders' && (
-          <div className="max-w-2xl mx-auto space-y-6">
-            <h2 className="text-2xl font-bold text-[#17151F]">Quản lý Nhắc nhở</h2>
-            <UpcomingReminders />
-          </div>
-        )}
-
-        {/* Tab 5: Settings */}
-        {activeTab === 'settings' && (
-          <SettingsPage
-            accessibility={accessibility}
-            aiSettings={aiSettings}
-            userProfile={userProfile}
-            onUpdateAccessibility={setAccessibility}
-            onUpdateAISettings={setAiSettings}
-            onUpdateUserProfile={setUserProfile}
-            onOpenProfileSetup={() => setProfileSetupOpen(true)}
+          {/* Route 4: Tasks Dashboard */}
+          <Route
+            path="/tasks"
+            element={
+              <LifeDashboard
+                defaultTab="tasks"
+                activeSession={activeSession}
+                sessionsList={sessionsList}
+                onOpenSession={handleOpenSession}
+                onCreateSessionFromTemplate={handleCreateSessionFromTemplate}
+                onDeleteSession={(id) => handleDeleteSession(id, setConfirmModal)}
+                onOpenCamera={() => setCameraModalOpen(true)}
+              />
+            }
           />
-        )}
 
-        {/* Tab 6: Profile Page */}
-        {activeTab === 'profile' && (
-          <ProfilePage
-            userProfile={userProfile}
-            onOpenProfileSetup={() => setProfileSetupOpen(true)}
-            onUpdateUserProfile={setUserProfile}
-            totalSessionsCount={sessionsList.length}
+          {/* Route 5: History / Sessions List */}
+          <Route
+            path="/history"
+            element={
+              <LifeDashboard
+                defaultTab="sessions"
+                activeSession={activeSession}
+                sessionsList={sessionsList}
+                onOpenSession={handleOpenSession}
+                onCreateSessionFromTemplate={handleCreateSessionFromTemplate}
+                onDeleteSession={(id) => handleDeleteSession(id, setConfirmModal)}
+                onOpenCamera={() => setCameraModalOpen(true)}
+              />
+            }
           />
-        )}
+
+          {/* Route 6: Reminders */}
+          <Route path="/reminders" element={<RemindersPage onShowToast={showToast} />} />
+
+          {/* Route 7: Settings */}
+          <Route
+            path="/settings"
+            element={
+              <SettingsPage
+                accessibility={accessibility}
+                aiSettings={aiSettings}
+                userProfile={userProfile}
+                onUpdateAccessibility={setAccessibility}
+                onUpdateAISettings={setAiSettings}
+                onUpdateUserProfile={setUserProfile}
+                onOpenProfileSetup={() => setProfileSetupOpen(true)}
+                onOpenAuthModal={handleOpenAuthModal}
+                onShowToast={showToast}
+              />
+            }
+          />
+
+          {/* Route 8: Profile */}
+          <Route
+            path="/profile"
+            element={
+              <ProfilePage
+                userProfile={userProfile}
+                onOpenProfileSetup={() => setProfileSetupOpen(true)}
+                onUpdateUserProfile={setUserProfile}
+                onOpenAuthModal={handleOpenAuthModal}
+                onShowToast={showToast}
+                totalSessionsCount={sessionsList.length}
+              />
+            }
+          />
+
+          {/* Catch-all fallback */}
+          <Route path="*" element={<Navigate to="/" replace />} />
+        </Routes>
+
+        {/* Auth Modal */}
+        <AuthModal
+          isOpen={authModalOpen}
+          onClose={() => setAuthModalOpen(false)}
+          initialMode={authModalInitialMode}
+          onSuccess={() => {
+            setAuthModalOpen(false);
+            showToast('Đăng nhập tài khoản thành công!');
+          }}
+        />
 
         {/* Profile Setup Flow Modal */}
         {profileSetupOpen && (
@@ -371,7 +457,13 @@ function AppContent() {
           onClearAll={handleClearAllNotifs}
           onResetDefaults={handleResetDefaultNotifs}
           onAddNotification={handleAddNotif}
-          onNavigate={(tab) => setActiveTab(tab)}
+          onNavigate={(tab) => {
+            if (typeof tab === 'string' && tab.startsWith('/')) {
+              navigate(tab);
+            } else {
+              navigate(getPathForTab(tab as NavTab));
+            }
+          }}
         />
 
         {/* PWA Mobile Install Banner */}
@@ -395,8 +487,12 @@ function AppContent() {
 
 export default function App() {
   return (
-    <AccessibilityProvider>
-      <AppContent />
-    </AccessibilityProvider>
+    <BrowserRouter>
+      <AccessibilityProvider>
+        <AuthProvider>
+          <AppContent />
+        </AuthProvider>
+      </AccessibilityProvider>
+    </BrowserRouter>
   );
 }

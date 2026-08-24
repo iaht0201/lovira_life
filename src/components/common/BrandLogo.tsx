@@ -1,60 +1,114 @@
 import React, { useState } from 'react';
 import { BRAND_IMAGES } from '../../config/brandAssets';
-import { Heart } from 'lucide-react';
 
 interface BrandLogoProps {
-  variant?: 'full' | 'icon';
+  variant?: 'full' | 'icon' | 'client';
   className?: string;
   size?: 'sm' | 'md' | 'lg';
+  src?: string;
 }
 
 export const BrandLogo: React.FC<BrandLogoProps> = ({
   variant = 'full',
   className = '',
   size = 'md',
+  src,
 }) => {
-  const src = variant === 'icon' ? BRAND_IMAGES.logoIcon : BRAND_IMAGES.logo;
-  const [hasError, setHasError] = useState(false);
+  const [imageError, setImageError] = useState(false);
 
-  const getHeightClass = () => {
+  const getDimensions = () => {
     if (variant === 'icon') {
-      if (size === 'sm') return 'h-[28px] w-[28px]';
-      if (size === 'lg') return 'h-[44px] w-[44px]';
-      return 'h-[36px] w-[36px]';
+      if (size === 'sm') return { box: 'w-7 h-7', heart: 'w-3.5 h-3.5', height: 'h-7' };
+      if (size === 'lg') return { box: 'w-11 h-11', heart: 'w-5 h-5', height: 'h-11' };
+      return { box: 'w-9 h-9', heart: 'w-4 h-4', height: 'h-9' };
     }
-    if (size === 'sm') return 'h-[28px]';
-    if (size === 'lg') return 'h-[42px]';
-    return 'h-[34px]';
+    if (size === 'sm') return { text: 'text-lg', badge: 'w-6 h-6', heart: 'w-3 h-3', height: 'h-7' };
+    if (size === 'lg') return { text: 'text-2xl', badge: 'w-9 h-9', heart: 'w-4.5 h-4.5', height: 'h-10' };
+    return { text: 'text-xl', badge: 'w-7 h-7', heart: 'w-3.5 h-3.5', height: 'h-8' };
   };
 
-  if (hasError) {
-    if (variant === 'icon') {
-      return (
-        <div className={`rounded-xl bg-[#287C78] text-white flex items-center justify-center shadow-xs font-bold text-sm select-none ${getHeightClass()} ${className}`}>
-          <Heart className="w-4 h-4 fill-rose-400 text-rose-400" />
-        </div>
-      );
-    }
+  const dims = getDimensions();
+
+  // Determine target image source based on variant
+  const targetSrc =
+    src ||
+    (variant === 'icon'
+      ? BRAND_IMAGES.logoIcon
+      : variant === 'client'
+      ? BRAND_IMAGES.logoClient
+      : BRAND_IMAGES.logo);
+
+  // If custom uploaded image is available and hasn't errored, render it
+  if (targetSrc && !imageError) {
     return (
-      <div className={`flex items-center gap-1.5 font-black tracking-tight text-[#1C2226] dark:text-white select-none ${className}`}>
-        <div className="w-7 h-7 rounded-lg bg-[#287C78] text-white flex items-center justify-center shadow-2xs">
-          <Heart className="w-4 h-4 fill-rose-400 text-rose-400" />
-        </div>
-        <span className="text-[18px] font-extrabold tracking-tight text-[#287C78] dark:text-[#42A39E]">
-          L<span className="text-rose-500">♥</span>vira
-        </span>
+      <img
+        src={targetSrc}
+        alt="Lovira"
+        onError={() => setImageError(true)}
+        className={`${dims.height} w-auto object-contain select-none transition-transform ${className}`}
+      />
+    );
+  }
+
+  // Graceful Vector Fallback when user hasn't uploaded logo image yet
+  if (variant === 'icon') {
+    return (
+      <div
+        className={`relative ${dims.box} rounded-[11px] sm:rounded-[13px] bg-gradient-to-br from-[#349C96] to-[#1A625E] flex items-center justify-center shadow-xs text-white select-none shrink-0 transition-transform ${className}`}
+        aria-label="Lovira Logo Icon"
+      >
+        <svg
+          viewBox="0 0 24 24"
+          fill="none"
+          className={dims.heart}
+          xmlns="http://www.w3.org/2000/svg"
+        >
+          <path
+            d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"
+            fill="url(#icon-heart-grad)"
+          />
+          <defs>
+            <linearGradient id="icon-heart-grad" x1="0%" y1="0%" x2="100%" y2="100%">
+              <stop offset="0%" stopColor="#FF758F" />
+              <stop offset="100%" stopColor="#F43F5E" />
+            </linearGradient>
+          </defs>
+        </svg>
+        <span className="absolute top-1.5 right-1.5 w-1.5 h-1.5 rounded-full bg-[#5EEAD4] shadow-xs" />
       </div>
     );
   }
 
   return (
-    <img
-      src={src}
-      alt="Lovira"
-      decoding="async"
-      onError={() => setHasError(true)}
-      className={`${getHeightClass()} w-auto max-w-[160px] object-contain select-none transition-transform ${className}`}
-    />
+    <div
+      className={`flex items-center gap-2 select-none shrink-0 font-black tracking-tight ${className}`}
+      aria-label="Lovira Logo"
+    >
+      <div className={`relative ${dims.badge} rounded-[9px] sm:rounded-[10px] bg-gradient-to-br from-[#349C96] to-[#1A625E] flex items-center justify-center shadow-xs text-white shrink-0`}>
+        <svg
+          viewBox="0 0 24 24"
+          fill="none"
+          className={dims.heart}
+          xmlns="http://www.w3.org/2000/svg"
+        >
+          <path
+            d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"
+            fill="url(#brand-heart-grad)"
+          />
+          <defs>
+            <linearGradient id="brand-heart-grad" x1="0%" y1="0%" x2="100%" y2="100%">
+              <stop offset="0%" stopColor="#FF758F" />
+              <stop offset="100%" stopColor="#F43F5E" />
+            </linearGradient>
+          </defs>
+        </svg>
+        <span className="absolute top-1 right-1 w-1 h-1 rounded-full bg-[#5EEAD4]" />
+      </div>
+
+      <span className={`${dims.text} font-black tracking-tight text-[#165653] dark:text-[#E4F0EF] leading-none`}>
+        L<span className="text-[#F43F5E]">o</span>vira
+      </span>
+    </div>
   );
 };
 

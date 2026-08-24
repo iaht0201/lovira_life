@@ -1,9 +1,9 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { APP_IMAGES } from '../../assets/images';
 import { Send, Mic, MicOff, Camera, Sparkles, Bot, Loader2, X, Volume2 } from 'lucide-react';
 import { SessionMessage, VoiceInteractionState } from '../../types';
 import { speakText, stopSpeaking } from '../../services/ttsService';
 import { ChatMessageRenderer } from './ChatMessageRenderer';
+import { BrandAvatar } from '../common/BrandAvatar';
 
 interface ConversationPaneProps {
   messages: SessionMessage[];
@@ -92,13 +92,13 @@ export const ConversationPane: React.FC<ConversationPaneProps> = ({
   };
 
   return (
-    <div className="flex-1 flex flex-col h-full bg-white dark:bg-[#121818] relative overflow-hidden">
+    <div className="flex-1 flex flex-col h-full bg-white dark:bg-[#101818] relative overflow-hidden">
       {/* Messages Stream Area */}
-      <div className="flex-1 overflow-y-auto p-3.5 sm:p-6 space-y-3.5 custom-scrollbar bg-white dark:bg-[#121818]">
+      <div className="flex-1 overflow-y-auto p-3.5 sm:p-6 space-y-3.5 custom-scrollbar bg-white dark:bg-[#101818]">
         {messages.length === 0 ? (
           <div className="flex flex-col items-center justify-center min-h-[300px] text-center p-6 space-y-4 my-auto">
-            <div className="w-16 h-16 rounded-full overflow-hidden shadow-md bg-[#287C78] animate-bounce">
-              <img src={APP_IMAGES.avatar} alt="Lovira" className="w-full h-full object-cover" />
+            <div className="animate-bounce">
+              <BrandAvatar size="xl" alt="Lovira" className="shadow-md" />
             </div>
             <div className="space-y-1.5 max-w-sm">
               <h3 className="text-base font-bold text-[#1C2226] dark:text-[#F2F7F7]">Chào chú 👋</h3>

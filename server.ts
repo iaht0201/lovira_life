@@ -312,7 +312,17 @@ QUY TẮC NGÔN NGỮ BẮT BUỘC:
     }
   });
 
-  // 6. Vite Middleware for development / Static files for production
+  // 6. Static asset directories
+  const publicPath = path.join(process.cwd(), 'public');
+  const assetsImagesPath = path.join(process.cwd(), 'assets/images');
+  
+  app.use('/brand', express.static(path.join(publicPath, 'brand')));
+  app.use('/images', express.static(path.join(publicPath, 'images')));
+  app.use('/images', express.static(assetsImagesPath));
+  app.use('/assets/images', express.static(assetsImagesPath));
+  app.use(express.static(publicPath));
+
+  // 7. Vite Middleware for development / Static files for production
   if (process.env.NODE_ENV !== 'production') {
     const vite = await createViteServer({
       server: { middlewareMode: true },
@@ -321,11 +331,7 @@ QUY TẮC NGÔN NGỮ BẮT BUỘC:
     app.use(vite.middlewares);
   } else {
     const distPath = path.join(process.cwd(), 'dist');
-    const publicPath = path.join(process.cwd(), 'public');
-    app.use('/images', express.static(path.join(distPath, 'images')));
-    app.use('/images', express.static(path.join(publicPath, 'images')));
     app.use(express.static(distPath));
-    app.use(express.static(publicPath));
     app.get('*', (req, res) => {
       res.sendFile(path.join(distPath, 'index.html'));
     });

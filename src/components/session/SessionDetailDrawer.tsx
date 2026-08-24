@@ -23,7 +23,7 @@ export const SessionDetailDrawer: React.FC<SessionDetailDrawerProps> = ({
       />
 
       {/* Drawer Container (Slide-over for mobile / smaller screens) */}
-      <div className="relative z-10 w-full sm:w-[420px] h-full max-h-[100dvh] bg-white dark:bg-[#152020] border-l border-[#F0EDE4] dark:border-[#202E2E] shadow-2xl flex flex-col overflow-hidden animate-in slide-in-from-right duration-200">
+      <div className="relative z-10 w-full sm:w-[420px] h-full max-h-[100dvh] bg-white dark:bg-[#152020] border-l border-[#EAEFEF] dark:border-[#202E2E] shadow-2xl flex flex-col overflow-hidden animate-in slide-in-from-right duration-200">
         <SessionPlanDetailContent onClose={onClose} {...props} />
       </div>
     </div>

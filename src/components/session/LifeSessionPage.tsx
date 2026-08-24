@@ -100,23 +100,23 @@ export const LifeSessionPage: React.FC<LifeSessionPageProps> = ({
               onClick={() => setIsMobileSessionsOpen(false)}
             />
             <div className="relative z-[101] w-[85%] max-w-[320px] h-full bg-white dark:bg-[#141E1E] shadow-2xl flex flex-col animate-in slide-in-from-left duration-200 overflow-hidden">
-              <div className="p-3.5 border-b border-[#F0EDE4] dark:border-[#202E2E] flex items-center justify-between bg-white dark:bg-[#141E1E] shrink-0">
+              <div className="p-3.5 border-b border-[#EAEFEF] dark:border-[#202E2E] flex items-center justify-between bg-white dark:bg-[#141E1E] shrink-0">
                 <div className="flex items-center gap-2.5">
                   <div className="w-8 h-8 rounded-xl bg-[#E4F0EF] text-[#287C78] dark:bg-[#1B2D2C] dark:text-[#42A39E] flex items-center justify-center font-bold text-sm shrink-0">
                     💬
                   </div>
                   <div>
-                    <span className="text-xs sm:text-sm font-bold text-[#1C2226] dark:text-[#F2F7F7] block leading-tight">
+                    <span className="text-xs sm:text-sm font-bold text-[#11181C] dark:text-[#F2F7F7] block leading-tight">
                       Đoạn chat
                     </span>
-                    <span className="text-[10px] sm:text-[11px] font-medium text-[#7A848B] dark:text-[#8E9E9E] block leading-tight mt-0.5">
+                    <span className="text-[10px] sm:text-[11px] font-medium text-[#586268] dark:text-[#8E9E9E] block leading-tight mt-0.5">
                       Các phiên đời sống của bạn
                     </span>
                   </div>
                 </div>
                 <button
                   onClick={() => setIsMobileSessionsOpen(false)}
-                  className="p-1.5 rounded-xl hover:bg-[#F6F4EF] dark:hover:bg-[#202E2E] text-[#7A848B] hover:text-[#1C2226] dark:hover:text-[#F2F7F7] cursor-pointer transition-colors"
+                  className="p-1.5 rounded-xl hover:bg-[#F0F5F4] dark:hover:bg-[#202E2E] text-[#586268] hover:text-[#11181C] dark:hover:text-[#F2F7F7] cursor-pointer transition-colors"
                   aria-label="Đóng danh sách"
                 >
                   <X className="w-5 h-5" />
@@ -143,7 +143,7 @@ export const LifeSessionPage: React.FC<LifeSessionPageProps> = ({
 
         {/* Column 2: Main Conversation Area (7/12 ratio, active chat header + message stream + fixed composer) */}
         <div
-          className={`flex-1 flex flex-col min-w-0 h-full relative overflow-hidden bg-white dark:bg-[#121818] ${
+          className={`flex-1 flex flex-col min-w-0 h-full relative overflow-hidden bg-white dark:bg-[#101818] ${
             isDetailOpen ? 'xl:border-r border-[#EAEFEF] dark:border-[#202E2E]' : ''
           }`}
         >
@@ -154,7 +154,7 @@ export const LifeSessionPage: React.FC<LifeSessionPageProps> = ({
             onToggleMobileSessionsList={() => setIsMobileSessionsOpen((prev) => !prev)}
             isDetailOpen={isDetailOpen}
           />
-          <div className="flex-1 flex flex-col min-h-0 overflow-hidden bg-white dark:bg-[#121818]">
+          <div className="flex-1 flex flex-col min-h-0 overflow-hidden bg-white dark:bg-[#101818]">
             <ConversationPane
               messages={session.messages}
               onSendMessage={onSendMessage}

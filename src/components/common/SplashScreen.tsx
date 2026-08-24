@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
-import { APP_IMAGES } from '../../assets/images';
 import { Heart, Sparkles } from 'lucide-react';
 import { sfx } from '../../utils/sfx';
+import { BrandLogo } from './BrandLogo';
 
 interface SplashScreenProps {
   onFinish?: () => void;
@@ -48,11 +48,7 @@ export const SplashScreen: React.FC<SplashScreenProps> = ({
         <div className="relative">
           <div className="w-[96px] h-[96px] sm:w-[110px] sm:h-[110px] rounded-3xl p-1.5 bg-gradient-to-tr from-[#287C78] to-[#42A39E] shadow-2xl flex items-center justify-center">
             <div className="w-full h-full rounded-[22px] overflow-hidden bg-white dark:bg-[#162222] p-2 flex items-center justify-center">
-              <img
-                src={APP_IMAGES.logo}
-                alt="Lovira"
-                className="w-full h-full object-contain"
-              />
+              <BrandLogo variant="icon" size="lg" className="scale-125" />
             </div>
           </div>
           <span className="absolute -bottom-1 -right-1 flex h-4 w-4">

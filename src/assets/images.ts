@@ -1,10 +1,15 @@
-import { BRAND_IMAGES } from '../config/brandAssets';
+import avatarImg from './images/avatar.png';
+import bannerImg from './images/banner.png';
+import logoImg from './images/logo.png';
+import logoClientImg from './images/logo_client.png';
 
 export const APP_IMAGES = {
-  avatar: BRAND_IMAGES.avatar,
-  banner: BRAND_IMAGES.banner,
-  logo: BRAND_IMAGES.logoIcon,
-  logoClient: BRAND_IMAGES.logo,
+  avatar: avatarImg,
+  banner: bannerImg,
+  logo: logoImg,
+  logoIcon: logoImg,
+  logoClient: logoClientImg,
 };
 
 export default APP_IMAGES;
+

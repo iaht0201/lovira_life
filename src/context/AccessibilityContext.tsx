@@ -25,21 +25,27 @@ export const AccessibilityProvider: React.FC<{ children: ReactNode }> = ({ child
     if (typeof window === 'undefined') return;
     const root = document.documentElement;
 
+    const theme = accessibility.theme === 'dark' ? 'dark' : 'light';
+
+    root.dataset.theme = theme;
+    root.classList.toggle('dark', theme === 'dark');
+
     root.style.setProperty('--font-scale', accessibility.fontScale.toString());
 
-    if (accessibility.theme === 'dark') {
-      root.classList.add('dark');
-    } else {
-      root.classList.remove('dark');
-    }
+    root.classList.toggle('high-contrast', Boolean(accessibility.highContrast));
 
-    if (accessibility.highContrast) {
-      root.classList.add('high-contrast');
-    } else {
-      root.classList.remove('high-contrast');
-    }
+    storageService.saveAccessibilitySettings({
+      ...accessibility,
+      theme,
+    });
 
-    storageService.saveAccessibilitySettings(accessibility);
+    if (process.env.NODE_ENV !== 'production') {
+      console.debug('[Lovira Theme]', {
+        stateTheme: theme,
+        htmlDark: root.classList.contains('dark'),
+        dataTheme: root.dataset.theme,
+      });
+    }
   }, [accessibility]);
 
   const updateAccessibility = (key: keyof AccessibilitySettings, value: any) => {

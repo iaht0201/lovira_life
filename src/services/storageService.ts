@@ -25,7 +25,7 @@ export interface BriefSessionHeader {
 export const DEFAULT_ACCESSIBILITY: AccessibilitySettings = {
   fontScale: 1.0, // 100%
   highContrast: false,
-  theme: 'dark',
+  theme: 'light',
   speakResponse: true,
   vslEnabled: false,
   reducedMotion: false,
@@ -180,7 +180,14 @@ class StorageService {
   getAccessibilitySettings(): AccessibilitySettings {
     try {
       const raw = localStorage.getItem(KEY_ACCESSIBILITY);
-      return raw ? { ...DEFAULT_ACCESSIBILITY, ...JSON.parse(raw) } : DEFAULT_ACCESSIBILITY;
+      if (!raw) return DEFAULT_ACCESSIBILITY;
+      const parsed = JSON.parse(raw);
+      const theme: 'light' | 'dark' = parsed.theme === 'dark' ? 'dark' : 'light';
+      return {
+        ...DEFAULT_ACCESSIBILITY,
+        ...parsed,
+        theme,
+      };
     } catch {
       return DEFAULT_ACCESSIBILITY;
     }
