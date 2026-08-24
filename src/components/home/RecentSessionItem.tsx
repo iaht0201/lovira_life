@@ -13,35 +13,60 @@ export const RecentSessionItem: React.FC<RecentSessionItemProps> = ({
   onOpen,
   onDelete,
 }) => {
-  const getIcon = () => {
-    switch (session.type) {
-      case 'medical':
-        return Stethoscope;
-      case 'administrative':
-        return Landmark;
-      case 'shopping':
-        return ShoppingBag;
-      case 'interview':
-        return Briefcase;
-      default:
-        return Sparkles;
+  const getCategoryTheme = () => {
+    const type = (session.scenarioType || session.scenarioFamily || (session as any).type || '').toLowerCase();
+    const titleLower = session.title.toLowerCase();
+
+    if (type.includes('medical') || type.includes('health') || titleLower.includes('khám') || titleLower.includes('thuốc')) {
+      return {
+        Icon: Stethoscope,
+        iconBg: 'bg-[#E6F4F1] dark:bg-[#143B33] text-[#0D9488] dark:text-[#34D399]',
+        badgeStyle: 'bg-[#E6F4F1] dark:bg-[#143B33] text-[#0D9488] dark:text-[#34D399]',
+      };
     }
+    if (type.includes('shopping') || titleLower.includes('sắm') || titleLower.includes('chợ') || titleLower.includes('sữa') || titleLower.includes('mua')) {
+      return {
+        Icon: ShoppingBag,
+        iconBg: 'bg-[#FFF7ED] dark:bg-[#3B2917] text-[#EA580C] dark:text-[#FDBA74]',
+        badgeStyle: 'bg-[#FFF7ED] dark:bg-[#3B2917] text-[#C2410C] dark:text-[#FDBA74]',
+      };
+    }
+    if (type.includes('admin') || type.includes('doc') || titleLower.includes('thủ tục') || titleLower.includes('giấy') || titleLower.includes('hồ sơ')) {
+      return {
+        Icon: Landmark,
+        iconBg: 'bg-[#EEECFF] dark:bg-[#251D42] text-[#4F46E5] dark:text-[#A5B4FC]',
+        badgeStyle: 'bg-[#EEECFF] dark:bg-[#251D42] text-[#4338CA] dark:text-[#C7D2FE]',
+      };
+    }
+    if (type.includes('interview') || titleLower.includes('phỏng vấn') || titleLower.includes('việc')) {
+      return {
+        Icon: Briefcase,
+        iconBg: 'bg-[#EFF6FF] dark:bg-[#1E293B] text-[#2563EB] dark:text-[#60A5FA]',
+        badgeStyle: 'bg-[#EFF6FF] dark:bg-[#1E293B] text-[#1D4ED8] dark:text-[#60A5FA]',
+      };
+    }
+    return {
+      Icon: Sparkles,
+      iconBg: 'bg-lovira-badge-purple text-lovira-purple',
+      badgeStyle: 'bg-lovira-badge-purple text-lovira-purple',
+    };
   };
 
-  const Icon = getIcon();
+  const theme = getCategoryTheme();
+  const Icon = theme.Icon;
 
   const getStatusBadge = () => {
     switch (session.status) {
       case 'active':
       case 'in_progress':
         return (
-          <span className="px-2.5 py-0.5 rounded-full text-[11px] font-[700] bg-lovira-badge-purple text-lovira-purple shrink-0">
+          <span className={`px-2.5 py-0.5 rounded-full text-[11px] font-[700] ${theme.badgeStyle} shrink-0`}>
             Đang thực hiện
           </span>
         );
       case 'completed':
         return (
-          <span className="px-2.5 py-0.5 rounded-full text-[11px] font-[700] bg-[#EAFBF5] dark:bg-[#143B2E] text-[#188B68] dark:text-[#34D399] shrink-0">
+          <span className="px-2.5 py-0.5 rounded-full text-[11px] font-[700] bg-[#EAFBF5] dark:bg-[#143B2E] text-[#15803D] dark:text-[#34D399] shrink-0">
             Đã hoàn thành
           </span>
         );
@@ -59,20 +84,20 @@ export const RecentSessionItem: React.FC<RecentSessionItemProps> = ({
   const totalCount = session.totalTasks ?? 7;
 
   return (
-    <div className="group flex items-center justify-between p-3.5 sm:p-4 rounded-[16px] bg-lovira-card border border-lovira hover:border-lovira-purple hover:bg-lovira-card-hover transition-all duration-150 gap-3">
+    <div className="group flex items-center justify-between p-3.5 sm:p-4 rounded-[18px] bg-lovira-card border border-lovira hover:border-lovira-purple hover:bg-lovira-card-hover transition-all duration-150 gap-3 shadow-xs">
       {/* Clickable Area */}
       <button
         onClick={() => onOpen(session.id)}
         className="flex items-center gap-3 flex-1 min-w-0 text-left cursor-pointer focus:outline-none"
       >
-        {/* Icon Container */}
-        <div className="w-[38px] h-[38px] rounded-[12px] bg-lovira-badge-purple text-lovira-purple flex items-center justify-center shrink-0">
-          <Icon className="w-[18px] h-[18px]" />
+        {/* Icon Container with Category Theme Color */}
+        <div className={`w-[40px] h-[40px] rounded-[13px] ${theme.iconBg} flex items-center justify-center shrink-0 shadow-2xs`}>
+          <Icon className="w-[20px] h-[20px]" />
         </div>
 
         {/* Title & Status */}
         <div className="min-w-0 flex-1 space-y-1">
-          <h4 className="text-[14px] font-[700] text-lovira-title group-hover:text-lovira-purple transition-colors truncate">
+          <h4 className="text-[15px] font-[700] text-lovira-title group-hover:text-lovira-purple transition-colors line-clamp-2 leading-snug">
             {session.title}
           </h4>
           <div className="flex items-center gap-2">
@@ -81,25 +106,31 @@ export const RecentSessionItem: React.FC<RecentSessionItemProps> = ({
         </div>
       </button>
 
-      {/* Progress Ratio (e.g. 3/7) */}
-      <div className="flex items-center gap-2 shrink-0">
-        <span className="text-[13px] font-[700] text-lovira-muted">
-          {completedCount}/{totalCount}
+      {/* Progress Ratio & Mini Progress Bar */}
+      <div className="flex flex-col items-end justify-center gap-1.5 shrink-0 pl-1">
+        <span className="text-[12px] font-[700] text-lovira-muted whitespace-nowrap">
+          {completedCount} / {totalCount} bước
         </span>
-
-        {/* Quick Delete */}
-        <button
-          onClick={(e) => {
-            e.stopPropagation();
-            onDelete(session.id);
-          }}
-          className="w-[28px] h-[28px] rounded-full text-lovira-sub hover:text-[#FF4D4D] hover:bg-[#FFF0F0] dark:hover:bg-[#3D1A1A] flex items-center justify-center transition-colors cursor-pointer opacity-0 group-hover:opacity-100 focus:opacity-100"
-          title="Xóa phiên này"
-          aria-label="Xóa phiên này"
-        >
-          <Trash2 className="w-[15px] h-[15px]" />
-        </button>
+        <div className="w-[56px] h-[6px] rounded-full bg-[#EFEAF6] dark:bg-[#2D2442] overflow-hidden">
+          <div
+            className="h-full rounded-full bg-lovira-purple transition-all duration-300"
+            style={{ width: `${Math.min(100, Math.round((completedCount / totalCount) * 100))}%` }}
+          />
+        </div>
       </div>
+
+      {/* Quick Delete */}
+      <button
+        onClick={(e) => {
+          e.stopPropagation();
+          onDelete(session.id);
+        }}
+        className="w-[30px] h-[30px] rounded-full text-lovira-sub hover:text-[#EF4444] hover:bg-[#FEE2E2] dark:hover:bg-[#3D1A1A] flex items-center justify-center transition-colors cursor-pointer opacity-0 group-hover:opacity-100 focus:opacity-100 min-w-[30px]"
+        title="Xóa phiên này"
+        aria-label="Xóa phiên này"
+      >
+        <Trash2 className="w-[15px] h-[15px]" />
+      </button>
     </div>
   );
 };

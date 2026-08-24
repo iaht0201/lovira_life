@@ -39,7 +39,7 @@ export const RecentSessions: React.FC<RecentSessionsProps> = ({
       {/* Sessions List or Empty State */}
       {sessions.length > 0 ? (
         <div className="space-y-2.5">
-          {sessions.slice(0, 5).map((session) => (
+          {sessions.slice(0, 3).map((session) => (
             <RecentSessionItem
               key={session.id}
               session={session}

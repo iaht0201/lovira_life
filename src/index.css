@@ -85,31 +85,37 @@
 }
 
 /* Lovira Semantic Utility Classes */
-.bg-lovira-base { background-color: var(--bg-base); }
-.bg-lovira-surface { background-color: var(--bg-surface); }
-.bg-lovira-card { background-color: var(--bg-card); }
-.bg-lovira-card-hover:hover { background-color: var(--bg-card-hover); }
-.bg-lovira-sidebar { background-color: var(--bg-sidebar); }
-.bg-lovira-sidebar-active { background-color: var(--bg-sidebar-active); }
-.bg-lovira-topbar { background-color: var(--bg-topbar); }
-.bg-lovira-input { background-color: var(--bg-input); }
-.bg-lovira-hero { background: var(--bg-hero); }
+.bg-lovira-base, .bg-base { background-color: var(--bg-base); }
+.bg-lovira-surface, .bg-surface { background-color: var(--bg-surface); }
+.bg-lovira-surface-raised, .bg-surface-raised { background-color: var(--bg-surface-raised); }
+.bg-lovira-card, .bg-card { background-color: var(--bg-card); }
+.bg-lovira-card-hover:hover, .bg-card-hover:hover { background-color: var(--bg-card-hover); }
+.bg-lovira-sidebar, .bg-sidebar { background-color: var(--bg-sidebar); }
+.bg-lovira-sidebar-active, .bg-sidebar-active { background-color: var(--bg-sidebar-active); }
+.bg-lovira-topbar, .bg-topbar { background-color: var(--bg-topbar); }
+.bg-lovira-input, .bg-input { background-color: var(--bg-input); }
+.bg-lovira-hero, .bg-hero { background: var(--bg-hero); }
 .bg-lovira-badge-purple { background-color: var(--bg-badge-purple); }
 .bg-lovira-purple { background-color: #7C4DFF; color: #ffffff; }
 .bg-lovira-purple-hover:hover { background-color: #6D3CF0; }
 
-.text-lovira-title { color: var(--text-primary); }
+.text-lovira-title, .text-primary, .text-text-primary { color: var(--text-primary); }
 .text-lovira-main { color: var(--text-primary); }
-.text-lovira-muted { color: var(--text-secondary); }
-.text-lovira-sub { color: var(--text-muted); }
-.text-lovira-purple { color: var(--text-brand); }
+.text-lovira-muted, .text-secondary { color: var(--text-secondary); }
+.text-lovira-sub, .text-muted { color: var(--text-muted); }
+.text-lovira-purple, .text-brand { color: var(--text-brand); }
 .text-lovira-on-hero { color: var(--text-on-hero); }
 
-.border-lovira { border-color: var(--border-default); }
-.border-lovira-subtle { border-color: var(--border-subtle); }
-.border-lovira-purple { border-color: var(--border-brand); }
-.border-default { border-color: var(--border-default); }
-.border-subtle { border-color: var(--border-subtle); }
+.border-lovira, .border-default { border-color: var(--border-default); }
+.border-lovira-subtle, .border-subtle { border-color: var(--border-subtle); }
+.border-lovira-purple, .border-brand { border-color: var(--border-brand); }
+
+.line-clamp-2 {
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
 
 /* Custom Lovira Shadows */
 .shadow-lovira {

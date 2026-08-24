@@ -36,7 +36,7 @@ export const AccessibilityToolbar: React.FC<AccessibilityToolbarProps> = ({ sett
       className={`flex flex-wrap items-center justify-between gap-2 p-3 rounded-xl border mb-4 shadow-sm text-sm ${
         settings.highContrast
           ? 'bg-black text-white border-white border-2'
-          : 'bg-surface border-default text-text-primary'
+          : 'bg-lovira-surface border-lovira text-lovira-title'
       }`}
       role="toolbar"
       aria-label="Thanh công cụ trợ năng"

@@ -38,7 +38,7 @@ export const AppShell: React.FC<AppShellProps> = ({
   const isChatTab = activeTab === 'chat' || activeTab === 'session';
 
   return (
-    <div className="min-h-screen bg-bg-base text-text-primary flex flex-col md:flex-row antialiased">
+    <div className="min-h-screen bg-lovira-base text-lovira-title flex flex-col md:flex-row antialiased">
       {/* Desktop Sidebar */}
       <DesktopSidebar
         activeTab={activeTab}
@@ -62,7 +62,7 @@ export const AppShell: React.FC<AppShellProps> = ({
       />
 
       {/* Main Content Area */}
-      <div className="flex-1 flex flex-col min-w-0 min-h-screen pb-[76px] md:pb-0">
+      <div className="flex-1 flex flex-col min-w-0 min-h-screen pb-[calc(86px+env(safe-area-inset-bottom,0px))] md:pb-0">
         {/* Topbar Header */}
         <Topbar
           accessibility={accessibility}

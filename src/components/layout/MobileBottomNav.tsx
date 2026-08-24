@@ -61,7 +61,7 @@ export const MobileBottomNav: React.FC<MobileBottomNavProps> = ({
 
   return (
     <nav
-      className="md:hidden fixed bottom-0 left-0 right-0 z-40 bg-lovira-topbar backdrop-blur-md border-t border-lovira-subtle h-[76px] px-2 flex items-center justify-around shadow-lg select-none"
+      className="md:hidden fixed bottom-0 left-0 right-0 z-40 bg-lovira-topbar backdrop-blur-md border-t border-lovira-subtle h-[calc(66px+env(safe-area-inset-bottom,0px))] pb-[env(safe-area-inset-bottom,0px)] px-2 flex items-center justify-around shadow-lg select-none"
       aria-label="Điều hướng di động"
     >
       {/* 1. Trang chủ */}
@@ -89,11 +89,11 @@ export const MobileBottomNav: React.FC<MobileBottomNavProps> = ({
       </button>
 
       {/* 3. Floating Center Voice Button */}
-      <div className="relative -mt-[26px] shrink-0">
+      <div className="relative -mt-[22px] shrink-0">
         <button
           onClick={onVoiceClick}
           aria-label="Nói chuyện bằng giọng nói với Lovira"
-          className={`w-[64px] h-[64px] rounded-full bg-gradient-to-tr from-[#7C4DFF] to-[#A45CFF] text-white flex flex-col items-center justify-center shadow-lovira-lg ring-[6px] ring-lovira-base transition-transform active:scale-95 cursor-pointer ${
+          className={`w-[60px] h-[60px] rounded-full bg-gradient-to-tr from-[#7C4DFF] to-[#A45CFF] text-white flex flex-col items-center justify-center shadow-lovira-lg ring-[5px] ring-lovira-base transition-transform active:scale-95 cursor-pointer ${
             isVoiceActive ? 'animate-pulse ring-[#FF5CA8]/40' : 'hover:scale-105'
           }`}
         >

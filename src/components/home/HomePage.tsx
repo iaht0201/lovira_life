@@ -3,6 +3,7 @@ import { HomeHero } from './HomeHero';
 import { QuickActions } from './QuickActions';
 import { RecentSessions } from './RecentSessions';
 import { UpcomingReminders } from './UpcomingReminders';
+import { LoviraSuggestionsCard } from './LoviraSuggestionsCard';
 import { DailyProgress } from './DailyProgress';
 import { WeatherMiniCard } from './WeatherMiniCard';
 import { HomeOfflineBanner } from './HomeOfflineBanner';
@@ -114,6 +115,7 @@ export const HomePage: React.FC<HomePageProps> = ({
             reminders={reminders}
             onAddReminder={handleOpenRemindersModal}
           />
+          <LoviraSuggestionsCard />
           <DailyProgress completedTasks={3} totalTasks={7} />
           <WeatherMiniCard />
         </div>

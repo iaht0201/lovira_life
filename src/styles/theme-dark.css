@@ -1,26 +1,26 @@
-/* Lovira Dark Theme Palette */
+/* Lovira Dark Theme Palette - Soft, Warm, High-Contrast Care Assistant Palette */
 html.dark {
-  --bg-base: #0F0C1B;
+  --bg-base: #120E20;
   --bg-surface: #1B152B;
-  --bg-surface-raised: #241D38;
-  --bg-card: #1E1832;
-  --bg-card-hover: #292042;
-  --bg-sidebar: #161124;
-  --bg-sidebar-active: #2F2252;
+  --bg-surface-raised: #251D3A;
+  --bg-card: #1F1833;
+  --bg-card-hover: #2B2147;
+  --bg-sidebar: #171126;
+  --bg-sidebar-active: #32235B;
   --bg-topbar: rgba(27, 21, 43, 0.92);
-  --bg-input: #231B3A;
-  --bg-hero: linear-gradient(135deg, #1E1735 0%, #271C45 50%, #301B3A 100%);
+  --bg-input: #271E40;
+  --bg-hero: linear-gradient(135deg, #1D1635 0%, #291D4A 50%, #351C42 100%);
   --bg-badge-purple: #2F2154;
 
-  --text-primary: #F4EEFF;
-  --text-secondary: #D4CDE3;
-  --text-muted: #E2DCF0;
-  --text-brand: #A45CFF;
+  --text-primary: #F7F4FF;
+  --text-secondary: #DBCFEE;
+  --text-muted: #B8A8D6;
+  --text-brand: #C49BFF;
   --text-on-hero: #FFFFFF;
 
-  --border-default: rgba(255, 255, 255, 0.08);
-  --border-subtle: rgba(255, 255, 255, 0.05);
-  --border-brand: rgba(164, 92, 255, 0.25);
+  --border-default: rgba(255, 255, 255, 0.12);
+  --border-subtle: rgba(255, 255, 255, 0.07);
+  --border-brand: rgba(196, 155, 255, 0.35);
 
   --color-primary: #9D75FF;
   --color-primary-hover: #B594FF;
@@ -28,5 +28,5 @@ html.dark {
   --color-success: #34D399;
   --color-warning: #FFA066;
   --color-danger: #FF6666;
-  --color-focus-ring: #B594FF;
+  --color-focus-ring: #C49BFF;
 }

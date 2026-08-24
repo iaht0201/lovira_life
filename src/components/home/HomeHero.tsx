@@ -12,7 +12,7 @@ export const HomeHero: React.FC<HomeHeroProps> = ({
   const displayName = userName && userName.trim() ? userName.trim() : 'bạn';
 
   return (
-    <section className="relative rounded-[28px] border border-lovira-purple bg-lovira-hero shadow-lovira overflow-hidden p-6 md:p-10 flex flex-col items-center sm:items-start text-center sm:text-left transition-colors">
+    <section className="relative rounded-[24px] sm:rounded-[28px] border border-lovira-purple bg-lovira-hero shadow-lovira overflow-hidden p-4 sm:p-6 md:p-8 flex flex-col items-center sm:items-start text-center sm:text-left transition-colors">
       {/* Background Decorative Sparkles / Bubbles */}
       <div className="absolute top-4 left-1/2 -translate-x-1/2 w-48 h-48 bg-[#FF5CA8]/10 rounded-full blur-3xl pointer-events-none" />
       <div className="absolute -bottom-10 left-10 w-64 h-64 bg-[#7C4DFF]/10 rounded-full blur-3xl pointer-events-none" />

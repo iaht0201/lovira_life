@@ -40,8 +40,11 @@ export const DailyProgress: React.FC<DailyProgressProps> = ({
       {/* Label */}
       <div>
         <h4 className="text-[14px] font-[700] text-lovira-title">Tiến độ hôm nay</h4>
+        <p className="text-[12px] font-[600] text-lovira-muted mt-0.5">
+          {completedTasks}/{totalTasks} việc đã hoàn thành
+        </p>
         <span className="inline-block mt-1 px-2.5 py-0.5 rounded-full text-[11px] font-[700] bg-lovira-badge-purple text-lovira-purple">
-          Đang thực hiện ({percentage}%)
+          Đạt {percentage}% mục tiêu
         </span>
       </div>
     </div>

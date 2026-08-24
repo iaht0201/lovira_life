@@ -31,7 +31,7 @@ export const QuickActions: React.FC<QuickActionsProps> = ({
     {
       id: 'camera' as const,
       title: 'Nhìn giúp tôi',
-      description: 'Chụp ảnh phiếu khám, đơn thuốc, sổ thứ tự',
+      description: 'Chụp ảnh để Lovira đọc và giải thích',
       icon: Camera,
       accent: 'purple' as const,
       onClick: handleCameraClick,

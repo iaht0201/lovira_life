@@ -43,7 +43,7 @@ export const WeatherMiniCard: React.FC<WeatherMiniCardProps> = ({
   };
 
   return (
-    <div className="bg-lovira-card border border-lovira rounded-[22px] p-5 shadow-lovira flex items-center justify-between transition-all relative overflow-hidden group">
+    <div className="bg-lovira-card border border-lovira rounded-[22px] p-3.5 sm:p-4 shadow-lovira flex items-center justify-between transition-all relative overflow-hidden group">
       <div className="space-y-1">
         <div className="flex items-center space-x-1.5">
           <p className="text-[12px] font-[700] text-lovira-muted uppercase tracking-wider">
