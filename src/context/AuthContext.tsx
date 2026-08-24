@@ -8,6 +8,7 @@ import {
 import { authService } from '../services/firebase/authService';
 import { firestoreService } from '../services/firebase/firestoreService';
 import { cloudSyncService } from '../services/firebase/cloudSyncService';
+import { storageService } from '../services/storageService';
 import { isFirebaseConfigured } from '../services/firebase/firebaseClient';
 
 interface AuthContextValue {
@@ -60,6 +61,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     if (!isFirebaseConfigured) {
       setStatus('guest');
       setUser(null);
+      cloudSyncService.setCurrentUid(null);
       return;
     }
 
@@ -67,13 +69,30 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       if (authUser) {
         setUser(authUser);
         setStatus('authenticated');
+        cloudSyncService.setCurrentUid(authUser.uid);
+        const scopedSettings = cloudSyncService.getSyncSettings(authUser.uid);
+        setSyncSettings(scopedSettings);
+
         // Ensure firestore user doc exists in the background
-        firestoreService.ensureUserDocument(authUser).catch((e) => {
-          console.warn('[Firebase] Ensure user document warning:', e);
-        });
+        firestoreService
+          .ensureUserDocument(authUser)
+          .then(async () => {
+            // Also attempt to load remote sync settings
+            const remoteSettings = await firestoreService.getCloudSyncSettings(authUser.uid);
+            if (remoteSettings) {
+              const mergedSettings = { ...scopedSettings, ...remoteSettings };
+              cloudSyncService.saveSyncSettings(mergedSettings, authUser.uid);
+              setSyncSettings(mergedSettings);
+            }
+          })
+          .catch((e) => {
+            console.warn('[Firebase] Ensure user document warning:', e);
+          });
       } else {
         setUser(null);
         setStatus('guest');
+        cloudSyncService.setCurrentUid(null);
+        setSyncSettings(cloudSyncService.getSyncSettings());
       }
     });
 
@@ -84,6 +103,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     const authUser = await authService.signInGoogle();
     setUser(authUser);
     setStatus('authenticated');
+    cloudSyncService.setCurrentUid(authUser.uid);
     await firestoreService.ensureUserDocument(authUser).catch(console.warn);
   }, []);
 
@@ -91,6 +111,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     const authUser = await authService.signInEmail(email, pass);
     setUser(authUser);
     setStatus('authenticated');
+    cloudSyncService.setCurrentUid(authUser.uid);
     await firestoreService.ensureUserDocument(authUser).catch(console.warn);
   }, []);
 
@@ -103,6 +124,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       });
       setUser(authUser);
       setStatus('authenticated');
+      cloudSyncService.setCurrentUid(authUser.uid);
       await firestoreService.ensureUserDocument(authUser).catch(console.warn);
     },
     []
@@ -118,8 +140,10 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
   const logout = useCallback(async () => {
     await authService.logout();
+    cloudSyncService.resetSyncState();
     setUser(null);
     setStatus('guest');
+    setSyncSettings(cloudSyncService.getSyncSettings());
   }, []);
 
   const refreshUser = useCallback(async () => {
@@ -129,22 +153,42 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
   const updateSyncSettings = useCallback(
     async (patch: Partial<CloudSyncSettings>) => {
+      if (!user?.uid) {
+        throw new Error('Cần đăng nhập tài khoản để thay đổi cài đặt đồng bộ.');
+      }
+
+      // Check email verification if enabling cloud sync on non-Google account
+      const isEnablingSync =
+        (patch.syncSessions && !syncSettings.syncSessions) ||
+        (patch.syncProfile && !syncSettings.syncProfile);
+      const isGoogle = user.providerIds?.includes('google.com');
+
+      if (isEnablingSync && !isGoogle && !user.emailVerified) {
+        throw new Error('Vui lòng xác minh email trước khi bật đồng bộ dữ liệu đám mây.');
+      }
+
       const updated = { ...syncSettings, ...patch };
       setSyncSettings(updated);
-      cloudSyncService.saveSyncSettings(updated);
+      cloudSyncService.saveSyncSettings(updated, user.uid);
 
-      if (user?.uid) {
-        await firestoreService
-          .setCloudSyncSettings(user.uid, updated)
-          .catch(console.warn);
+      await firestoreService
+        .setCloudSyncSettings(user.uid, updated)
+        .catch(console.warn);
 
-        // If session sync was just enabled, perform initial merge
-        if (patch.syncSessions && !syncSettings.syncSessions) {
-          await cloudSyncService.performInitialMerge(user.uid);
+      // If session sync was just enabled, perform initial merge
+      if (patch.syncSessions && !syncSettings.syncSessions) {
+        await cloudSyncService.performInitialMerge(user.uid);
+      }
+
+      // If profile sync was just enabled, sync profile
+      if (patch.syncProfile && !syncSettings.syncProfile) {
+        const localProfile = storageService.getUserProfile();
+        if (localProfile) {
+          await cloudSyncService.syncProfile(user.uid, localProfile);
         }
       }
     },
-    [syncSettings, user?.uid]
+    [syncSettings, user]
   );
 
   const triggerManualSync = useCallback(async () => {

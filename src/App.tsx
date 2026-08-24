@@ -14,6 +14,7 @@ import { AccessibilityProvider, useAccessibility } from './context/Accessibility
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { useVoiceAssistant } from './hooks/useVoiceAssistant';
 import { useSessionManager } from './hooks/useSessionManager';
+import { cloudSyncService } from './services/firebase/cloudSyncService';
 
 import { AppShell } from './components/layout/AppShell';
 import { HomePage } from './components/home/HomePage';
@@ -39,17 +40,26 @@ import { notificationService } from './services/notificationService';
 import { AppNotification, NotificationType } from './types';
 
 function AppContent() {
-  const { user, isAuthenticated } = useAuth();
+  const { user, isAuthenticated, syncSettings } = useAuth();
   const location = useLocation();
   const navigate = useNavigate();
 
   const activeTab: NavTab = getTabFromPathname(location.pathname);
+  const isSessionRoute = location.pathname.startsWith('/session/');
+  const routeSessionId = isSessionRoute ? location.pathname.replace('/session/', '') : undefined;
 
   const [showSplash, setShowSplash] = useState(true);
   const [aiSettings, setAiSettings] = useState<AISettings>(() => storageService.getAISettings());
   const [userProfile, setUserProfile] = useState<UserProfile | null>(() => storageService.getUserProfile());
   const [profileSetupOpen, setProfileSetupOpen] = useState(false);
   const [bannerDismissed, setBannerDismissed] = useState(() => storageService.isProfileBannerDismissed());
+
+  // Auto sync userProfile changes to Cloud when syncProfile is active
+  useEffect(() => {
+    if (isAuthenticated && user?.uid && syncSettings?.syncProfile && userProfile) {
+      cloudSyncService.syncProfile(user.uid, userProfile);
+    }
+  }, [userProfile, isAuthenticated, user?.uid, syncSettings?.syncProfile]);
 
   // Auth Modal State
   const [authModalOpen, setAuthModalOpen] = useState(false);
@@ -181,9 +191,12 @@ function AppContent() {
     speakWithVoiceStatus,
     setVoiceStatus,
     onNavigate: (path) => navigate(path),
+    onGoBack: () => navigate(-1),
     setCameraModalOpen,
     setProfileSetupOpen,
     setAccessibility,
+    authUser: user,
+    syncSettings,
   });
 
   // Sync AI Settings
@@ -193,6 +206,12 @@ function AppContent() {
 
   const handleTabChange = (tab: NavTab) => {
     navigate(getPathForTab(tab));
+  };
+
+  const currentGlobalPageContext = {
+    page: isSessionRoute ? 'session' : activeTab,
+    pathname: location.pathname,
+    sessionId: isSessionRoute ? (activeSession?.id || routeSessionId) : undefined,
   };
 
   return (
@@ -213,7 +232,11 @@ function AppContent() {
             ? stopListening
             : () =>
                 startListening((transcript) =>
-                  sendInteraction(transcript, { inputMode: 'voice', activeTab })
+                  sendInteraction(transcript, {
+                    inputMode: 'voice',
+                    activeTab: isSessionRoute ? 'session' : activeTab,
+                    pageContext: currentGlobalPageContext,
+                  })
                 )
         }
         accessibility={accessibility}
@@ -299,7 +322,15 @@ function AppContent() {
                 onDeleteFact={(id) => handleDeleteFact(id, setConfirmModal)}
                 onDeleteResource={handleDeleteResource}
                 onSendMessage={(text, opts) =>
-                  sendInteraction(text, { ...opts, activeTab: 'session' })
+                  sendInteraction(text, {
+                    ...opts,
+                    activeTab: 'session',
+                    pageContext: {
+                      page: 'session',
+                      pathname: location.pathname,
+                      sessionId: activeSession?.id || routeSessionId,
+                    },
+                  })
                 }
                 onOpenCamera={() => setCameraModalOpen(true)}
                 isLoading={isLoading}
@@ -308,7 +339,15 @@ function AppContent() {
                 userName={userProfile?.preferredName || ''}
                 onStartVoice={() =>
                   startListening((transcript) =>
-                    sendInteraction(transcript, { inputMode: 'voice', activeTab: 'session' })
+                    sendInteraction(transcript, {
+                      inputMode: 'voice',
+                      activeTab: 'session',
+                      pageContext: {
+                        page: 'session',
+                        pathname: location.pathname,
+                        sessionId: activeSession?.id || routeSessionId,
+                      },
+                    })
                   )
                 }
                 onStopVoice={stopListening}

@@ -30,6 +30,18 @@ import { validateAppAction } from '../services/interaction/appActionValidator';
 import { applyAppAction } from '../services/interaction/appActionEngine';
 import { resolvePendingInteraction } from '../services/interaction/pendingInteractionResolver';
 import { validateAndGroundAIResponse } from '../services/interaction/CapabilityResponseValidator';
+import { cloudSyncService } from '../services/firebase/cloudSyncService';
+import { LoviraAuthUser, CloudSyncSettings } from '../services/firebase/firebaseTypes';
+
+export interface InteractionOptions {
+  inputMode?: InteractionInputMode;
+  activeTab?: any;
+  pageContext?: {
+    page?: string;
+    pathname?: string;
+    sessionId?: string;
+  };
+}
 
 interface UseSessionManagerProps {
   userProfile: UserProfile | null;
@@ -40,9 +52,12 @@ interface UseSessionManagerProps {
   setVoiceStatus: (status: any) => void;
   setActiveTab?: (tab: any) => void;
   onNavigate?: (path: string) => void;
+  onGoBack?: () => void;
   setCameraModalOpen: (open: boolean) => void;
   setProfileSetupOpen: (open: boolean) => void;
   setAccessibility: React.Dispatch<React.SetStateAction<any>>;
+  authUser?: LoviraAuthUser | null;
+  syncSettings?: CloudSyncSettings;
 }
 
 export function useSessionManager({
@@ -54,9 +69,12 @@ export function useSessionManager({
   setVoiceStatus,
   setActiveTab,
   onNavigate,
+  onGoBack,
   setCameraModalOpen,
   setProfileSetupOpen,
   setAccessibility,
+  authUser,
+  syncSettings,
 }: UseSessionManagerProps) {
   const [activeSession, setActiveSession] = useState<LifeSession | null>(null);
   const [sessionsList, setSessionsList] = useState<BriefSessionHeader[]>([]);
@@ -88,7 +106,11 @@ export function useSessionManager({
     setActiveSession(session);
     storageService.saveSession(session);
     refreshSessionsList();
-  }, [refreshSessionsList]);
+
+    if (authUser?.uid && syncSettings?.syncSessions) {
+      cloudSyncService.queueSessionUpload(authUser.uid, session);
+    }
+  }, [authUser?.uid, syncSettings?.syncSessions, refreshSessionsList]);
 
   const handleOpenSession = useCallback((id: string) => {
     const session = storageService.getSession(id);
@@ -144,7 +166,11 @@ export function useSessionManager({
 
           saveUpdatedSession(newCustomSession);
           storageService.setActiveSessionId(newCustomSession.id);
-          setActiveTab('session');
+          if (onNavigate) {
+            onNavigate(`/session/${newCustomSession.id}`);
+          } else if (setActiveTab) {
+            setActiveTab('session');
+          }
           showToast(`✨ Đã khởi tạo thành công phiên AI: "${newCustomSession.title}"`);
           if (accessibilitySettings.speakResponse) {
             speakWithVoiceStatus(`Lovira đã tạo xong kế hoạch cho ${newCustomSession.title}`);
@@ -236,9 +262,16 @@ export function useSessionManager({
       isOpen: true,
       title: 'Xoá phiên hỗ trợ',
       message: 'Bạn có chắc chắn muốn xoá toàn bộ dữ liệu phiên này? Thao tác này không thể hoàn tác.',
-      onConfirm: () => {
+      onConfirm: async () => {
         storageService.deleteSession(id);
         indexedDbService.deleteSessionBlobs(id);
+
+        if (authUser?.uid && syncSettings?.syncSessions) {
+          await cloudSyncService.deleteSession(authUser.uid, id).catch((err) => {
+            console.warn('[CloudSync] Session deletion on cloud warning:', err);
+          });
+        }
+
         if (activeSession?.id === id) {
           setActiveSession(null);
           storageService.clearActiveSessionId();
@@ -253,7 +286,7 @@ export function useSessionManager({
         showToast('Đã xoá phiên hỗ trợ');
       },
     });
-  }, [activeSession, refreshSessionsList, setActiveTab, onNavigate, showToast]);
+  }, [activeSession, authUser?.uid, syncSettings?.syncSessions, refreshSessionsList, setActiveTab, onNavigate, showToast]);
 
   const handleUpdateStatus = useCallback((newStatus: SessionStatus) => {
     if (!activeSession) return;
@@ -527,11 +560,17 @@ export function useSessionManager({
 
   const sendInteraction = useCallback(async (
     userText: string,
-    options: { inputMode?: InteractionInputMode; activeTab: any }
+    options: InteractionOptions
   ) => {
     const inputMode = options.inputMode || 'text';
     const activeTab = options.activeTab;
+    const pageContext = options.pageContext;
     if (!userText.trim() || isLoading) return;
+
+    const isSessionContext =
+      activeTab === 'session' ||
+      pageContext?.page === 'session' ||
+      (pageContext?.pathname && pageContext.pathname.startsWith('/session/'));
 
     const trimmedText = userText.trim();
     setIsLoading(true);
@@ -546,9 +585,9 @@ export function useSessionManager({
 
     const runtimeContext = {
       goHome: () => (onNavigate ? onNavigate('/') : setActiveTab?.('dashboard')),
-      goBack: () => (onNavigate ? onNavigate('/') : setActiveTab?.('dashboard')),
+      goBack: () => (onGoBack ? onGoBack() : onNavigate ? onNavigate('/history') : setActiveTab?.('dashboard')),
       openSettings: () => (onNavigate ? onNavigate('/settings') : setActiveTab?.('settings')),
-      openProfile: () => setProfileSetupOpen(true),
+      openProfile: () => (onNavigate ? onNavigate('/profile') : setProfileSetupOpen(true)),
       openSession: (sId: string) => handleOpenSession(sId),
       createSession: async (goal: string) => {
         await handleCreateSessionFromTemplate('custom', goal);
@@ -561,8 +600,8 @@ export function useSessionManager({
     };
 
     const appContext: AppInteractionContext = {
-      page: activeTab,
-      activeSessionId: activeSession?.id,
+      page: isSessionContext ? 'session' : (pageContext?.page || activeTab || 'dashboard'),
+      activeSessionId: activeSession?.id || pageContext?.sessionId,
       activeSessionTitle: activeSession?.title,
       hasActiveSession: !!activeSession,
       availableSessions: sessionsList,
@@ -594,7 +633,7 @@ export function useSessionManager({
     }
 
     // B. Inside Active Session
-    if (activeSession && activeTab === 'session') {
+    if (activeSession && isSessionContext) {
       const now = new Date().toISOString();
       const userMsg = {
         id: `msg-${Date.now()}`,
@@ -848,6 +887,8 @@ export function useSessionManager({
     userProfile,
     accessibilitySettings,
     setActiveTab,
+    onNavigate,
+    onGoBack,
     setProfileSetupOpen,
     handleOpenSession,
     handleCreateSessionFromTemplate,

@@ -3,7 +3,7 @@ import { storageService } from '../storageService';
 import { CloudSyncSettings, CloudSyncStatus } from './firebaseTypes';
 import { LifeSession, UserProfile } from '../../types';
 
-const KEY_CLOUD_SYNC_SETTINGS = 'lovira_cloud_sync_settings';
+const KEY_CLOUD_SYNC_SETTINGS_PREFIX = 'lovira_cloud_sync_settings';
 
 const DEFAULT_SYNC_SETTINGS: CloudSyncSettings = {
   syncSessions: false,
@@ -17,6 +17,7 @@ class CloudSyncService {
   private lastSyncAt: string | undefined = undefined;
   private listeners: Set<SyncStatusListener> = new Set();
   private debounceTimers: Map<string, any> = new Map();
+  private currentUid: string | null = null;
 
   constructor() {
     const saved = this.getSyncSettings();
@@ -26,9 +27,26 @@ class CloudSyncService {
     }
   }
 
-  getSyncSettings(): CloudSyncSettings {
+  private getStorageKey(uid?: string | null): string {
+    const effectiveUid = uid || this.currentUid;
+    return effectiveUid ? `${KEY_CLOUD_SYNC_SETTINGS_PREFIX}_${effectiveUid}` : KEY_CLOUD_SYNC_SETTINGS_PREFIX;
+  }
+
+  setCurrentUid(uid: string | null): void {
+    this.currentUid = uid;
+    const settings = this.getSyncSettings(uid || undefined);
+    this.lastSyncAt = settings.lastSyncAt;
+    if (!settings.syncSessions && !settings.syncProfile) {
+      this.setStatus('disabled');
+    } else {
+      this.setStatus('idle');
+    }
+  }
+
+  getSyncSettings(uid?: string): CloudSyncSettings {
     try {
-      const raw = localStorage.getItem(KEY_CLOUD_SYNC_SETTINGS);
+      const key = this.getStorageKey(uid);
+      const raw = localStorage.getItem(key);
       if (!raw) return DEFAULT_SYNC_SETTINGS;
       return JSON.parse(raw);
     } catch {
@@ -36,9 +54,10 @@ class CloudSyncService {
     }
   }
 
-  saveSyncSettings(settings: CloudSyncSettings): void {
+  saveSyncSettings(settings: CloudSyncSettings, uid?: string): void {
     try {
-      localStorage.setItem(KEY_CLOUD_SYNC_SETTINGS, JSON.stringify(settings));
+      const key = this.getStorageKey(uid);
+      localStorage.setItem(key, JSON.stringify(settings));
       this.lastSyncAt = settings.lastSyncAt;
       if (!settings.syncSessions && !settings.syncProfile) {
         this.setStatus('disabled');
@@ -170,8 +189,21 @@ class CloudSyncService {
     this.debounceTimers.set(session.id, timer);
   }
 
+  async deleteSession(uid: string, sessionId: string): Promise<void> {
+    if (!uid || !sessionId) return;
+    if (this.debounceTimers.has(sessionId)) {
+      clearTimeout(this.debounceTimers.get(sessionId));
+      this.debounceTimers.delete(sessionId);
+    }
+    try {
+      await firestoreService.deleteCloudSession(uid, sessionId, true);
+    } catch (err) {
+      console.warn('[CloudSync] Delete session on cloud warning:', err);
+    }
+  }
+
   async syncProfile(uid: string, profile: UserProfile | null): Promise<void> {
-    const settings = this.getSyncSettings();
+    const settings = this.getSyncSettings(uid);
     if (!settings.syncProfile || !uid || !profile) return;
 
     try {
@@ -190,7 +222,8 @@ class CloudSyncService {
     this.lastSyncAt = undefined;
     this.debounceTimers.forEach((t) => clearTimeout(t));
     this.debounceTimers.clear();
-    this.saveSyncSettings(DEFAULT_SYNC_SETTINGS);
+    this.saveSyncSettings(DEFAULT_SYNC_SETTINGS, this.currentUid || undefined);
+    this.currentUid = null;
   }
 }
 

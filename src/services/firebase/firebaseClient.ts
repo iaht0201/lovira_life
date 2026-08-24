@@ -20,12 +20,12 @@ interface FirebaseConfig {
 }
 
 const rawConfig: FirebaseConfig = {
-  apiKey: import.meta.env.VITE_FIREBASE_API_KEY || 'AIzaSyBSdPMChVvhHU5MlIrdff8D48aJXfVq3fE',
-  authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN || 'chatbot-425916.firebaseapp.com',
-  projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID || 'chatbot-425916',
-  storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET || 'chatbot-425916.firebasestorage.app',
-  messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID || '1064010494754',
-  appId: import.meta.env.VITE_FIREBASE_APP_ID || '1:1064010494754:web:2eeb793efdb011dd566b7b',
+  apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
+  authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN,
+  projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID,
+  storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET,
+  messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID,
+  appId: import.meta.env.VITE_FIREBASE_APP_ID,
 };
 
 // Check if Firebase configuration is provided
