@@ -1,4 +1,6 @@
 import { AppAction } from './appActionTypes';
+import { reminderService } from '../reminderService';
+import { storageService } from '../storageService';
 
 export interface AppActionRuntimeContext {
   goHome: () => void;
@@ -8,6 +10,7 @@ export interface AppActionRuntimeContext {
   openSession: (sessionId: string) => void;
   createSession: (goal: string) => Promise<void>;
   openCamera: () => void;
+  openReminders?: () => void;
   updateAccessibilitySetting?: (key: string, value: any) => void;
   showToast: (msg: string) => void;
 }
@@ -39,6 +42,91 @@ export async function applyAppAction(
       case 'OPEN_CAMERA':
         context.openCamera();
         return true;
+
+      case 'OPEN_REMINDERS':
+        if (context.openReminders) {
+          context.openReminders();
+          return true;
+        }
+        return false;
+
+      case 'CREATE_REMINDER': {
+        const payload = action.payload;
+        if (payload?.title && payload.scheduledAt) {
+          reminderService.createReminder({
+            title: payload.title,
+            scheduledAt: payload.scheduledAt,
+            notes: payload.notes,
+            category: payload.category || 'general',
+            repeat: payload.repeat || 'once',
+            priority: payload.priority || 'normal',
+            sessionId: payload.sessionId,
+          });
+          context.showToast(`🔔 Đã tạo nhắc nhở: ${payload.title}`);
+          return true;
+        }
+        return false;
+      }
+
+      case 'SNOOZE_REMINDER': {
+        const reminderId = action.payload?.reminderId;
+        const preset = action.payload?.snoozePreset || '10m';
+        const mins = action.payload?.snoozeMinutes;
+        if (reminderId) {
+          reminderService.snoozeReminder(reminderId, mins || preset);
+          context.showToast('⏰ Đã hoãn nhắc nhở');
+          return true;
+        }
+        return false;
+      }
+
+      case 'COMPLETE_REMINDER': {
+        const reminderId = action.payload?.reminderId;
+        if (reminderId) {
+          reminderService.toggleComplete(reminderId);
+          context.showToast('✓ Đã đánh dấu hoàn thành nhắc nhở');
+          return true;
+        }
+        return false;
+      }
+
+      case 'DELETE_REMINDER': {
+        const reminderId = action.payload?.reminderId;
+        if (reminderId) {
+          reminderService.deleteReminder(reminderId);
+          context.showToast('🗑️ Đã xóa nhắc nhở');
+          return true;
+        }
+        return false;
+      }
+
+      case 'PIN_SESSION': {
+        const sessionId = action.payload?.sessionId;
+        if (sessionId) {
+          const session = storageService.getSession(sessionId);
+          if (session) {
+            session.pinned = !session.pinned;
+            storageService.saveSession(session);
+            context.showToast(session.pinned ? '📌 Đã ghim phiên' : 'Đã bỏ ghim phiên');
+            return true;
+          }
+        }
+        return false;
+      }
+
+      case 'ARCHIVE_SESSION': {
+        const sessionId = action.payload?.sessionId;
+        if (sessionId) {
+          const session = storageService.getSession(sessionId);
+          if (session) {
+            session.status = session.status === 'archived' ? 'active' : 'archived';
+            storageService.saveSession(session);
+            context.showToast(session.status === 'archived' ? '📦 Đã lưu trữ phiên' : 'Đã khôi phục phiên');
+            return true;
+          }
+        }
+        return false;
+      }
 
       case 'OPEN_SESSION': {
         const sessionId = action.payload?.sessionId;

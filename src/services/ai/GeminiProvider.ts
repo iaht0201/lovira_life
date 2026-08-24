@@ -94,13 +94,13 @@ export class GeminiProvider {
                 },
                 appActions: {
                   type: Type.ARRAY,
-                  description: 'Danh sách các hành động điều hướng ứng dụng',
+                  description: 'Danh sách các hành động điều hướng và thao tác ứng dụng (nhắc nhở, phiên làm việc, cài đặt)',
                   items: {
                     type: Type.OBJECT,
                     properties: {
                       type: {
                         type: Type.STRING,
-                        description: 'GO_HOME, GO_BACK, OPEN_SESSION, CREATE_SESSION, OPEN_SETTINGS, OPEN_PROFILE, OPEN_CAMERA, UPDATE_ACCESSIBILITY_SETTING',
+                        description: 'GO_HOME, GO_BACK, OPEN_SESSION, CREATE_SESSION, OPEN_SETTINGS, OPEN_PROFILE, OPEN_CAMERA, UPDATE_ACCESSIBILITY_SETTING, OPEN_REMINDERS, CREATE_REMINDER, UPDATE_REMINDER, DELETE_REMINDER, SNOOZE_REMINDER, COMPLETE_REMINDER, PIN_SESSION, ARCHIVE_SESSION',
                       },
                       payload: {
                         type: Type.OBJECT,
@@ -110,6 +110,14 @@ export class GeminiProvider {
                           goal: { type: Type.STRING },
                           setting: { type: Type.STRING },
                           value: { type: Type.STRING },
+                          reminderId: { type: Type.STRING },
+                          title: { type: Type.STRING },
+                          scheduledAt: { type: Type.STRING },
+                          category: { type: Type.STRING },
+                          notes: { type: Type.STRING },
+                          repeat: { type: Type.STRING },
+                          priority: { type: Type.STRING },
+                          snoozePreset: { type: Type.STRING },
                         },
                       },
                     },

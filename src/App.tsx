@@ -389,7 +389,10 @@ function AppContent() {
           />
 
           {/* Route 6: Reminders */}
-          <Route path="/reminders" element={<RemindersPage onShowToast={showToast} />} />
+          <Route
+            path="/reminders"
+            element={<RemindersPage onOpenSession={handleOpenSession} onShowToast={showToast} />}
+          />
 
           {/* Route 7: Settings */}
           <Route

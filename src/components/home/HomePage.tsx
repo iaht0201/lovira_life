@@ -41,42 +41,14 @@ export const HomePage: React.FC<HomePageProps> = ({
 }) => {
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [isReminderModalOpen, setIsReminderModalOpen] = useState(false);
-  const [reminders, setReminders] = useState<ReminderData[]>([
-    {
-      id: 'rem-1',
-      title: '💊 Uống thuốc huyết áp',
-      time: 'Hôm nay, 07:00 (Hàng ngày)',
-      category: 'medication',
-    },
-    {
-      id: 'rem-2',
-      title: '📅 Tái khám định kỳ tại BV Chợ Rẫy',
-      time: 'Thứ 6, 8:30 Sáng',
-      category: 'appointment',
-    },
-    {
-      id: 'rem-3',
-      title: '👨‍👩‍👧 Họp mặt gia đình cuối tuần',
-      time: 'Chủ nhật, 17:00',
-      category: 'family',
-    },
-  ]);
 
   const handleOpenRemindersModal = () => {
     setIsReminderModalOpen(true);
   };
 
-  const handleSaveReminder = (newRem: ReminderData & { notes?: string; priority?: 'normal' | 'high' }) => {
-    setReminders((prev) => [newRem, ...prev]);
-
-    // Also add to global notifications service
-    notificationService.addNotification({
-      title: newRem.title,
-      message: newRem.notes || `Nhắc nhở hẹn lúc: ${newRem.time}`,
-      type: newRem.category === 'medication' ? 'medical' : 'reminder',
-      actionTab: 'reminders',
-      priority: newRem.priority || 'normal',
-    });
+  const handleSaveReminder = (newRem: any) => {
+    // Handled by DetailedReminderModal through reminderService
+    setIsReminderModalOpen(false);
   };
 
   return (
@@ -92,7 +64,7 @@ export const HomePage: React.FC<HomePageProps> = ({
         onCreateSession={() => setIsCreateModalOpen(true)}
         onOpenCamera={onOpenCamera}
         onOpenTasks={onOpenTasks}
-        onOpenReminders={handleOpenRemindersModal}
+        onOpenReminders={onOpenReminders}
         onOpenChat={onOpenChat}
       />
 
@@ -112,8 +84,9 @@ export const HomePage: React.FC<HomePageProps> = ({
         {/* Right 1 Column: Upcoming Reminders & Widgets */}
         <div className="space-y-6">
           <UpcomingReminders
-            reminders={reminders}
             onAddReminder={handleOpenRemindersModal}
+            onNavigateToReminders={onOpenReminders}
+            onOpenSession={onOpenSession}
           />
           <LoviraSuggestionsCard />
           <DailyProgress completedTasks={3} totalTasks={7} />

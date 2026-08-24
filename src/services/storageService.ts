@@ -19,6 +19,9 @@ export interface BriefSessionHeader {
   scenarioType: LifeSession['scenarioType'];
   scenarioFamily?: ScenarioFamily;
   subtype?: string;
+  scheduledAt?: string;
+  deadlineAt?: string;
+  pinned?: boolean;
   updatedAt: string;
 }
 
@@ -131,6 +134,9 @@ class StorageService {
         scenarioType: migrated.scenarioType,
         scenarioFamily: migrated.scenarioFamily,
         subtype: migrated.subtype,
+        scheduledAt: migrated.scheduledAt,
+        deadlineAt: migrated.deadlineAt,
+        pinned: migrated.pinned,
         updatedAt: migrated.updatedAt,
       };
 

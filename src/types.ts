@@ -4,6 +4,7 @@ import { PendingInteraction } from './services/interaction/interactionTypes';
 export * from './types/userProfile';
 export * from './types/clarification';
 export * from './types/notification';
+export * from './types/reminder';
 export * from './services/voice/voiceTypes';
 export * from './services/interaction/interactionTypes';
 export * from './services/interaction/appActionTypes';
@@ -85,6 +86,8 @@ export interface LifeTask {
   subtasks?: LifeTask[];       // chỉ populate ở task cha; rỗng/undefined nếu task không cần chia nhỏ
   completionSource?: 'explicit' | 'inferred' | 'outcome'; // Nguồn hoàn thành: trực tiếp, suy luận qua ngữ cảnh hội thoại, hoặc qua kết quả chung của phiên
   completedAt?: string;
+  dueAt?: string;
+  reminderId?: string;
 }
 
 export interface RecommendedAction {
@@ -146,6 +149,9 @@ export interface LifeSession {
   goal: string;
   createdAt: string;
   updatedAt: string;
+  scheduledAt?: string;
+  deadlineAt?: string;
+  pinned?: boolean;
   currentStepId?: string;
   nextRecommendedAction?: RecommendedAction;
   importantFacts: ImportantFact[];

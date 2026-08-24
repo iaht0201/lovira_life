@@ -1,3 +1,5 @@
+import { Reminder, SnoozePreset } from '../../types/reminder';
+
 export type AppActionType =
   | 'GO_HOME'
   | 'GO_BACK'
@@ -6,7 +8,15 @@ export type AppActionType =
   | 'OPEN_SETTINGS'
   | 'OPEN_PROFILE'
   | 'OPEN_CAMERA'
-  | 'UPDATE_ACCESSIBILITY_SETTING';
+  | 'UPDATE_ACCESSIBILITY_SETTING'
+  | 'OPEN_REMINDERS'
+  | 'CREATE_REMINDER'
+  | 'UPDATE_REMINDER'
+  | 'DELETE_REMINDER'
+  | 'SNOOZE_REMINDER'
+  | 'COMPLETE_REMINDER'
+  | 'PIN_SESSION'
+  | 'ARCHIVE_SESSION';
 
 export interface AppActionPayload {
   sessionId?: string;
@@ -15,6 +25,17 @@ export interface AppActionPayload {
   page?: string;
   setting?: string;
   value?: unknown;
+  // Reminder action payloads
+  reminderId?: string;
+  reminder?: Partial<Reminder>;
+  snoozeMinutes?: number;
+  snoozePreset?: SnoozePreset;
+  title?: string;
+  scheduledAt?: string;
+  category?: 'medication' | 'appointment' | 'family' | 'general';
+  notes?: string;
+  repeat?: 'once' | 'daily' | 'weekly' | 'monthly';
+  priority?: 'normal' | 'high';
 }
 
 export interface AppAction {

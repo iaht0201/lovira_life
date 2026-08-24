@@ -1,5 +1,22 @@
-import React from 'react';
-import { Pill, Calendar, Users, BellRing, CheckCircle2 } from 'lucide-react';
+import React, { useState } from 'react';
+import {
+  Pill,
+  Calendar,
+  Users,
+  BellRing,
+  CheckCircle2,
+  Circle,
+  Clock,
+  MoreVertical,
+  Download,
+  AlarmClock,
+  ExternalLink,
+  Trash2,
+  Edit2,
+} from 'lucide-react';
+import { Reminder } from '../../types/reminder';
+import { reminderService, formatVietnameseReminderTime } from '../../services/reminderService';
+import { sfx } from '../../utils/sfx';
 
 export interface ReminderData {
   id: string;
@@ -10,63 +27,284 @@ export interface ReminderData {
 }
 
 interface ReminderItemProps {
-  reminder: ReminderData;
+  reminder: Reminder | ReminderData;
   onToggle?: (id: string) => void;
+  onEdit?: (reminder: Reminder) => void;
+  onDelete?: (id: string) => void;
+  onOpenSession?: (sessionId: string) => void;
+  onShowToast?: (msg: string) => void;
+  showActions?: boolean;
 }
 
 export const ReminderItem: React.FC<ReminderItemProps> = ({
   reminder,
   onToggle,
+  onEdit,
+  onDelete,
+  onOpenSession,
+  onShowToast,
+  showActions = true,
 }) => {
+  const [showMenu, setShowMenu] = useState(false);
+  const [showSnoozeOptions, setShowSnoozeOptions] = useState(false);
+
+  const isFullReminder = 'scheduledAt' in reminder;
+  const fullReminder = isFullReminder ? (reminder as Reminder) : null;
+
+  const category = reminder.category || 'general';
+  const completed = reminder.completed || false;
+
+  const displayTime = isFullReminder
+    ? formatVietnameseReminderTime(fullReminder!.scheduledAt, fullReminder!.repeat)
+    : (reminder as ReminderData).time;
+
   const getIcon = () => {
-    switch (reminder.category) {
+    switch (category) {
       case 'medication':
-        return { Icon: Pill, bg: 'bg-[#FFF3E8] dark:bg-[#3D2518]', text: 'text-[#FF701A] dark:text-[#FFA066]' };
+        return {
+          Icon: Pill,
+          bg: 'bg-[#FFF3E8] dark:bg-[#3D2518]',
+          text: 'text-[#FF701A] dark:text-[#FFA066]',
+          border: 'border-[#FF701A]/30',
+        };
       case 'appointment':
-        return { Icon: Calendar, bg: 'bg-[#EBF5F4] dark:bg-[#1B2928]', text: 'text-[#287C78] dark:text-[#42A39E]' };
+        return {
+          Icon: Calendar,
+          bg: 'bg-[#EBF5F4] dark:bg-[#1B2928]',
+          text: 'text-[#287C78] dark:text-[#42A39E]',
+          border: 'border-[#287C78]/30',
+        };
       case 'family':
-        return { Icon: Users, bg: 'bg-[#FDF2F4] dark:bg-[#2A181C]', text: 'text-[#E76F91] dark:text-[#F296B0]' };
+        return {
+          Icon: Users,
+          bg: 'bg-[#FDF2F4] dark:bg-[#2A181C]',
+          text: 'text-[#E76F91] dark:text-[#F296B0]',
+          border: 'border-[#E76F91]/30',
+        };
       default:
-        return { Icon: BellRing, bg: 'bg-[#E8F2FF] dark:bg-[#1A2A44]', text: 'text-[#2B70E4] dark:text-[#70A5FF]' };
+        return {
+          Icon: BellRing,
+          bg: 'bg-[#E8F2FF] dark:bg-[#1A2A44]',
+          text: 'text-[#2B70E4] dark:text-[#70A5FF]',
+          border: 'border-[#2B70E4]/30',
+        };
     }
   };
 
-  const { Icon, bg, text } = getIcon();
+  const { Icon, bg, text, border } = getIcon();
+
+  const handleToggle = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (onToggle) {
+      onToggle(reminder.id);
+    } else {
+      reminderService.toggleComplete(reminder.id);
+    }
+    sfx.playSuccess();
+  };
+
+  const handleSnooze = (preset: '10m' | '30m' | '1h' | 'tonight' | 'tomorrow') => {
+    reminderService.snoozeReminder(reminder.id, preset);
+    setShowSnoozeOptions(false);
+    setShowMenu(false);
+    sfx.playTap();
+    if (onShowToast) onShowToast('⏰ Đã hoãn nhắc nhở');
+  };
+
+  const handleExportICS = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (fullReminder) {
+      reminderService.downloadICS(fullReminder);
+      if (onShowToast) onShowToast('📅 Đã tải file lịch (.ics)');
+    }
+  };
 
   return (
     <div
-      onClick={() => onToggle && onToggle(reminder.id)}
-      className={`group flex items-center gap-3.5 p-3.5 rounded-[16px] bg-lovira-card border border-lovira hover:border-lovira-purple transition-all cursor-pointer ${
-        reminder.completed ? 'opacity-50 line-through bg-lovira-card-hover' : ''
+      className={`group relative flex items-start gap-3.5 p-3.5 sm:p-4 rounded-[20px] bg-white dark:bg-[#182424] border border-gray-200 dark:border-gray-800 hover:border-[#287C78] transition-all shadow-2xs ${
+        completed ? 'opacity-60 bg-gray-50 dark:bg-[#141C1C]' : ''
       }`}
     >
-      {/* Icon */}
-      <div className={`w-[38px] h-[38px] rounded-[12px] ${bg} ${text} flex items-center justify-center shrink-0`}>
-        <Icon className="w-[18px] h-[18px]" />
-      </div>
-
-      {/* Info */}
-      <div className="flex-1 min-w-0">
-        <h4 className="text-[14px] font-[700] text-lovira-title truncate group-hover:text-lovira-purple transition-colors">
-          {reminder.title}
-        </h4>
-        <p className="text-[12px] font-[500] text-lovira-muted truncate mt-0.5">
-          {reminder.time}
-        </p>
-      </div>
-
-      {/* Complete Checkbox */}
+      {/* Complete Checkbox Button */}
       <button
         type="button"
-        className={`w-[22px] h-[22px] rounded-full border flex items-center justify-center transition-colors shrink-0 ${
-          reminder.completed
-            ? 'bg-[#28C795] border-[#28C795] text-white'
-            : 'border-lovira group-hover:border-lovira-purple text-transparent'
-        }`}
-        aria-label="Đánh dấu đã hoàn thành"
+        onClick={handleToggle}
+        className="mt-1 text-gray-400 hover:text-[#287C78] dark:hover:text-[#42A39E] transition-colors cursor-pointer shrink-0"
+        aria-label={completed ? 'Đánh dấu chưa xong' : 'Đánh dấu xong'}
       >
-        <CheckCircle2 className="w-[14px] h-[14px]" />
+        {completed ? (
+          <CheckCircle2 className="w-5 h-5 text-emerald-500 fill-emerald-100 dark:fill-emerald-950" />
+        ) : (
+          <Circle className="w-5 h-5 hover:scale-110 transition-transform" />
+        )}
       </button>
+
+      {/* Category Icon */}
+      <div
+        className={`w-10 h-10 rounded-[14px] ${bg} ${text} ${border} border flex items-center justify-center shrink-0 shadow-2xs`}
+      >
+        <Icon className="w-5 h-5" />
+      </div>
+
+      {/* Info Body */}
+      <div className="flex-1 min-w-0">
+        <div className="flex items-center gap-2 flex-wrap">
+          <h4
+            className={`text-sm sm:text-base font-[800] ${
+              completed
+                ? 'line-through text-gray-400 dark:text-gray-500'
+                : 'text-gray-900 dark:text-white'
+            }`}
+          >
+            {reminder.title}
+          </h4>
+
+          {fullReminder?.priority === 'high' && !completed && (
+            <span className="px-1.5 py-0.5 text-[10px] font-black rounded-md bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/30">
+              Ưu tiên cao
+            </span>
+          )}
+        </div>
+
+        <div className="flex items-center gap-2 mt-1 text-xs text-gray-500 dark:text-gray-400 flex-wrap">
+          <span className="flex items-center gap-1 font-semibold text-[#287C78] dark:text-[#42A39E]">
+            <Clock className="w-3.5 h-3.5" />
+            {displayTime}
+          </span>
+
+          {fullReminder?.notes && (
+            <span className="text-gray-600 dark:text-gray-400 line-clamp-1">
+              &bull; {fullReminder.notes}
+            </span>
+          )}
+        </div>
+
+        {/* Linked Session Badge */}
+        {fullReminder?.sessionId && (
+          <div className="mt-2">
+            <button
+              onClick={() => onOpenSession && onOpenSession(fullReminder.sessionId!)}
+              className="inline-flex items-center gap-1 text-[11px] font-bold text-[#287C78] dark:text-[#42A39E] bg-[#287C78]/10 hover:bg-[#287C78]/20 px-2.5 py-1 rounded-lg transition-colors cursor-pointer"
+            >
+              <ExternalLink className="w-3 h-3" />
+              <span>Xem phiên liên quan</span>
+            </button>
+          </div>
+        )}
+      </div>
+
+      {/* Actions Menu */}
+      {showActions && (
+        <div className="relative shrink-0 flex items-center gap-1">
+          {/* Quick Snooze button for uncompleted reminders */}
+          {!completed && (
+            <div className="relative">
+              <button
+                type="button"
+                onClick={() => setShowSnoozeOptions(!showSnoozeOptions)}
+                className="p-1.5 rounded-xl hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-500 dark:text-gray-400 transition-colors cursor-pointer"
+                title="Hoãn báo (Snooze)"
+              >
+                <AlarmClock className="w-4 h-4" />
+              </button>
+
+              {showSnoozeOptions && (
+                <div className="absolute right-0 top-8 z-30 w-36 bg-white dark:bg-[#1E2B2B] rounded-xl shadow-xl border border-gray-200 dark:border-gray-700 py-1 text-xs font-semibold text-gray-700 dark:text-gray-200 animate-in fade-in">
+                  <div className="px-2.5 py-1 text-[10px] uppercase font-black text-gray-400">
+                    Hoãn nhắc:
+                  </div>
+                  <button
+                    onClick={() => handleSnooze('10m')}
+                    className="w-full text-left px-3 py-1.5 hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer"
+                  >
+                    10 phút
+                  </button>
+                  <button
+                    onClick={() => handleSnooze('30m')}
+                    className="w-full text-left px-3 py-1.5 hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer"
+                  >
+                    30 phút
+                  </button>
+                  <button
+                    onClick={() => handleSnooze('1h')}
+                    className="w-full text-left px-3 py-1.5 hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer"
+                  >
+                    1 giờ
+                  </button>
+                  <button
+                    onClick={() => handleSnooze('tonight')}
+                    className="w-full text-left px-3 py-1.5 hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer"
+                  >
+                    Tối nay (20:00)
+                  </button>
+                  <button
+                    onClick={() => handleSnooze('tomorrow')}
+                    className="w-full text-left px-3 py-1.5 hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer"
+                  >
+                    Sáng mai (08:00)
+                  </button>
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Quick .ics export button */}
+          {fullReminder && (
+            <button
+              type="button"
+              onClick={handleExportICS}
+              className="p-1.5 rounded-xl hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-500 dark:text-gray-400 transition-colors cursor-pointer"
+              title="Tải file lịch (.ics) vào điện thoại"
+            >
+              <Download className="w-4 h-4" />
+            </button>
+          )}
+
+          {/* More options dropdown */}
+          <div className="relative">
+            <button
+              type="button"
+              onClick={() => setShowMenu(!showMenu)}
+              className="p-1.5 rounded-xl hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-500 dark:text-gray-400 transition-colors cursor-pointer"
+            >
+              <MoreVertical className="w-4 h-4" />
+            </button>
+
+            {showMenu && (
+              <div className="absolute right-0 top-8 z-30 w-36 bg-white dark:bg-[#1E2B2B] rounded-xl shadow-xl border border-gray-200 dark:border-gray-700 py-1 text-xs font-semibold text-gray-700 dark:text-gray-200 animate-in fade-in">
+                {fullReminder && onEdit && (
+                  <button
+                    onClick={() => {
+                      setShowMenu(false);
+                      onEdit(fullReminder);
+                    }}
+                    className="w-full text-left px-3 py-1.5 hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-2 cursor-pointer"
+                  >
+                    <Edit2 className="w-3.5 h-3.5 text-blue-500" />
+                    <span>Chỉnh sửa</span>
+                  </button>
+                )}
+
+                <button
+                  onClick={() => {
+                    setShowMenu(false);
+                    if (onDelete) {
+                      onDelete(reminder.id);
+                    } else {
+                      reminderService.deleteReminder(reminder.id);
+                    }
+                    if (onShowToast) onShowToast('🗑️ Đã xóa nhắc nhở');
+                  }}
+                  className="w-full text-left px-3 py-1.5 hover:bg-red-50 dark:hover:bg-red-950/40 text-red-600 dark:text-red-400 flex items-center gap-2 cursor-pointer"
+                >
+                  <Trash2 className="w-3.5 h-3.5" />
+                  <span>Xóa</span>
+                </button>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
     </div>
   );
 };

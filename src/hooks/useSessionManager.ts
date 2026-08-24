@@ -588,6 +588,7 @@ export function useSessionManager({
       goBack: () => (onGoBack ? onGoBack() : onNavigate ? onNavigate('/history') : setActiveTab?.('dashboard')),
       openSettings: () => (onNavigate ? onNavigate('/settings') : setActiveTab?.('settings')),
       openProfile: () => (onNavigate ? onNavigate('/profile') : setProfileSetupOpen(true)),
+      openReminders: () => (onNavigate ? onNavigate('/reminders') : setActiveTab?.('reminders')),
       openSession: (sId: string) => handleOpenSession(sId),
       createSession: async (goal: string) => {
         await handleCreateSessionFromTemplate('custom', goal);

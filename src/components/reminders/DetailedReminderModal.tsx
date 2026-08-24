@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Bell,
   X,
@@ -9,23 +9,32 @@ import {
   Clock,
   Sparkles,
   CheckCircle2,
-  AlertCircle,
   FileText,
   Volume2,
+  Repeat,
+  Tag,
 } from 'lucide-react';
-import { ReminderData } from '../home/ReminderItem';
+import { Reminder, ReminderCategory, ReminderPriority, ReminderRepeat } from '../../types/reminder';
 import { sfx } from '../../utils/sfx';
+import { reminderService } from '../../services/reminderService';
+import { storageService, BriefSessionHeader } from '../../services/storageService';
 
 interface DetailedReminderModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onSaveReminder: (reminder: ReminderData & { notes?: string; priority?: 'normal' | 'high' }) => void;
+  onSaveReminder?: (reminder: Reminder) => void;
+  initialReminder?: Reminder | null;
+  initialDate?: string; // e.g. "2026-08-25"
+  initialSessionId?: string;
 }
 
 export const DetailedReminderModal: React.FC<DetailedReminderModalProps> = ({
   isOpen,
   onClose,
   onSaveReminder,
+  initialReminder,
+  initialDate,
+  initialSessionId,
 }) => {
   const [title, setTitle] = useState('');
   const [dateType, setDateType] = useState<'today' | 'tomorrow' | 'custom'>('today');
@@ -34,10 +43,73 @@ export const DetailedReminderModal: React.FC<DetailedReminderModalProps> = ({
     return today.toISOString().split('T')[0];
   });
   const [timeStr, setTimeStr] = useState('08:00');
-  const [repeat, setRepeat] = useState<'once' | 'daily' | 'weekly' | 'monthly'>('daily');
-  const [category, setCategory] = useState<'medication' | 'appointment' | 'family' | 'general'>('medication');
+  const [repeat, setRepeat] = useState<ReminderRepeat>('daily');
+  const [category, setCategory] = useState<ReminderCategory>('medication');
   const [notes, setNotes] = useState('');
-  const [priority, setPriority] = useState<'normal' | 'high'>('high');
+  const [priority, setPriority] = useState<ReminderPriority>('normal');
+  const [sessionId, setSessionId] = useState<string | undefined>(undefined);
+  const [sessionsList, setSessionsList] = useState<BriefSessionHeader[]>([]);
+
+  useEffect(() => {
+    if (isOpen) {
+      const list = storageService.getSessionsList();
+      setSessionsList(list);
+
+      if (initialReminder) {
+        setTitle(initialReminder.title);
+        setNotes(initialReminder.notes || '');
+        setCategory(initialReminder.category);
+        setRepeat(initialReminder.repeat);
+        setPriority(initialReminder.priority);
+        setSessionId(initialReminder.sessionId);
+
+        const d = new Date(initialReminder.scheduledAt);
+        if (!isNaN(d.getTime())) {
+          const now = new Date();
+          const isToday =
+            d.getDate() === now.getDate() &&
+            d.getMonth() === now.getMonth() &&
+            d.getFullYear() === now.getFullYear();
+
+          const tomorrow = new Date(now);
+          tomorrow.setDate(tomorrow.getDate() + 1);
+          const isTomorrow =
+            d.getDate() === tomorrow.getDate() &&
+            d.getMonth() === tomorrow.getMonth() &&
+            d.getFullYear() === tomorrow.getFullYear();
+
+          if (isToday) {
+            setDateType('today');
+          } else if (isTomorrow) {
+            setDateType('tomorrow');
+          } else {
+            setDateType('custom');
+            setCustomDate(d.toISOString().split('T')[0]);
+          }
+
+          const hh = String(d.getHours()).padStart(2, '0');
+          const mm = String(d.getMinutes()).padStart(2, '0');
+          setTimeStr(`${hh}:${mm}`);
+        }
+      } else {
+        // New reminder defaults
+        setTitle('');
+        setNotes('');
+        setCategory('medication');
+        setRepeat('daily');
+        setPriority('normal');
+        setSessionId(initialSessionId);
+
+        if (initialDate) {
+          setDateType('custom');
+          setCustomDate(initialDate);
+        } else {
+          setDateType('today');
+        }
+        setTimeStr('08:00');
+      }
+    }
+  }, [isOpen, initialReminder, initialDate, initialSessionId]);
 
   if (!isOpen) return null;
 
@@ -45,34 +117,44 @@ export const DetailedReminderModal: React.FC<DetailedReminderModalProps> = ({
     {
       label: '💊 Uống thuốc huyết áp',
       cat: 'medication' as const,
-      time: '07:00',
+      time: '07:30',
       note: 'Uống 1 viên Amlodipine 5mg sau bữa ăn sáng',
+      repeat: 'daily' as const,
+      priority: 'high' as const,
     },
     {
       label: '🏥 Lịch tái khám bệnh viện',
       cat: 'appointment' as const,
       time: '08:30',
       note: 'Mang theo thẻ BHYT, Căn cước công dân và sổ khám bệnh',
+      repeat: 'once' as const,
+      priority: 'high' as const,
     },
     {
-      label: '🍲 Tắt bếp gas sau khi nấu',
+      label: '💧 Uống nước & tập thể dục nhẹ',
       cat: 'general' as const,
-      time: '11:30',
-      note: 'Kiểm tra khóa van gas an toàn',
+      time: '15:00',
+      note: 'Xoay khớp nhẹ nhàng và uống 1 ly nước ấm',
+      repeat: 'daily' as const,
+      priority: 'normal' as const,
     },
     {
-      label: '⚡ Đóng tiền điện & nước',
-      cat: 'general' as const,
-      time: '09:00',
-      note: 'Đóng tiền điện tháng này qua viettelpay/ngân hàng',
+      label: '👨‍👩‍👧 Gọi điện hỏi thăm con cháu',
+      cat: 'family' as const,
+      time: '19:30',
+      note: 'Hỏi thăm tình hình tuần này',
+      repeat: 'weekly' as const,
+      priority: 'normal' as const,
     },
   ];
 
-  const handleApplyPreset = (p: typeof presets[0]) => {
+  const handleApplyPreset = (p: (typeof presets)[0]) => {
     setTitle(p.label);
     setCategory(p.cat);
     setTimeStr(p.time);
     setNotes(p.note);
+    setRepeat(p.repeat);
+    setPriority(p.priority);
     sfx.playTap();
   };
 
@@ -80,65 +162,75 @@ export const DetailedReminderModal: React.FC<DetailedReminderModalProps> = ({
     e.preventDefault();
     if (!title.trim()) return;
 
-    let timeDisplay = '';
+    // Calculate real ISO scheduledAt date
+    const now = new Date();
+    let targetDate = new Date();
+
     if (dateType === 'today') {
-      timeDisplay = `Hôm nay, ${timeStr}`;
+      targetDate = new Date(now.getFullYear(), now.getMonth(), now.getDate());
     } else if (dateType === 'tomorrow') {
-      timeDisplay = `Ngày mai, ${timeStr}`;
+      targetDate = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1);
     } else {
-      const d = new Date(customDate);
-      const formattedDate = `${d.getDate()}/${d.getMonth() + 1}/${d.getFullYear()}`;
-      timeDisplay = `${formattedDate}, ${timeStr}`;
+      const [y, m, d] = customDate.split('-').map(Number);
+      targetDate = new Date(y, m - 1, d);
     }
 
-    if (repeat !== 'once') {
-      const repeatText =
-        repeat === 'daily' ? ' (Hàng ngày)' : repeat === 'weekly' ? ' (Hàng tuần)' : ' (Hàng tháng)';
-      timeDisplay += repeatText;
-    }
+    const [hours, minutes] = timeStr.split(':').map(Number);
+    targetDate.setHours(hours || 8, minutes || 0, 0, 0);
 
-    onSaveReminder({
-      id: `rem-${Date.now()}`,
-      title: title.trim(),
-      time: timeDisplay,
-      category,
-      completed: false,
-      notes: notes.trim(),
-      priority,
-    });
+    let savedReminder: Reminder;
+    if (initialReminder) {
+      const updated = reminderService.updateReminder(initialReminder.id, {
+        title: title.trim(),
+        notes: notes.trim(),
+        category,
+        scheduledAt: targetDate.toISOString(),
+        repeat,
+        priority,
+        sessionId: sessionId || undefined,
+      });
+      savedReminder = updated || initialReminder;
+    } else {
+      savedReminder = reminderService.createReminder({
+        title: title.trim(),
+        notes: notes.trim(),
+        category,
+        scheduledAt: targetDate.toISOString(),
+        repeat,
+        priority,
+        sessionId: sessionId || undefined,
+      });
+    }
 
     sfx.playSuccess();
-
-    // Reset form
-    setTitle('');
-    setNotes('');
+    if (onSaveReminder) {
+      onSaveReminder(savedReminder);
+    }
     onClose();
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/90 backdrop-blur-md p-3 sm:p-4 overflow-y-auto animate-in fade-in duration-200">
-      {/* Modal Container - Solid 100% opacity background (no transparency) */}
-      <div className="bg-white dark:bg-[#182222] opacity-100 border-2 border-[#287C78]/40 rounded-3xl max-w-lg w-full p-5 sm:p-6 shadow-2xl space-y-5 relative z-10 text-gray-900 dark:text-white my-auto">
-        
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-3 sm:p-4 overflow-y-auto animate-in fade-in duration-200">
+      <div className="bg-white dark:bg-[#182424] w-full max-w-xl rounded-[28px] shadow-2xl border-2 border-gray-200 dark:border-gray-700 overflow-hidden my-auto">
         {/* Header */}
-        <div className="flex items-start justify-between border-b border-gray-200 dark:border-gray-800 pb-4">
+        <div className="px-6 py-4 bg-gradient-to-r from-[#287C78]/15 via-[#287C78]/5 to-transparent border-b border-gray-200 dark:border-gray-800 flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <div className="w-11 h-11 rounded-2xl bg-gradient-to-br from-[#FF8C42] to-[#E76F91] text-white flex items-center justify-center shadow-md shrink-0">
-              <Bell className="w-6 h-6" />
+            <div className="w-10 h-10 rounded-2xl bg-[#287C78] text-white flex items-center justify-center shadow-sm">
+              <Bell className="w-5 h-5" />
             </div>
             <div>
-              <h2 className="text-lg sm:text-xl font-black tracking-tight text-gray-900 dark:text-white">
-                Tạo & Ghi chú Nhắc nhở
-              </h2>
-              <p className="text-xs text-gray-500 dark:text-gray-400 font-medium">
-                Ghi chép đầy đủ chi tiết lịch hẹn, thuốc uống & công việc
+              <h3 className="text-base sm:text-lg font-[800] text-gray-900 dark:text-white">
+                {initialReminder ? 'Chỉnh sửa nhắc nhở' : 'Tạo lịch nhắc nhở mới'}
+              </h3>
+              <p className="text-xs text-gray-600 dark:text-gray-400">
+                Lovira sẽ theo dõi và phát chuông báo đúng giờ cho bạn
               </p>
             </div>
           </div>
-
           <button
+            type="button"
             onClick={onClose}
-            className="p-2 rounded-xl text-gray-400 hover:text-gray-700 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors cursor-pointer"
+            className="p-2 rounded-full hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-500 dark:text-gray-400 transition-colors cursor-pointer"
             aria-label="Đóng"
           >
             <X className="w-5 h-5" />
@@ -146,94 +238,119 @@ export const DetailedReminderModal: React.FC<DetailedReminderModalProps> = ({
         </div>
 
         {/* Form Body */}
-        <form onSubmit={handleSubmit} className="space-y-4">
-          
-          {/* Presets Chips */}
-          <div>
-            <label className="block text-xs font-bold text-gray-500 dark:text-gray-400 mb-2 flex items-center gap-1">
-              <Sparkles className="w-3.5 h-3.5 text-amber-500" />
-              <span>Gợi ý mẫu nhắc nhở nhanh:</span>
-            </label>
-            <div className="flex flex-wrap gap-1.5">
-              {presets.map((p) => (
-                <button
-                  key={p.label}
-                  type="button"
-                  onClick={() => handleApplyPreset(p)}
-                  className="px-2.5 py-1.5 text-xs font-bold rounded-xl bg-[#287C78]/10 hover:bg-[#287C78]/20 text-[#287C78] dark:text-[#42A39E] border border-[#287C78]/20 transition-all cursor-pointer"
-                >
-                  {p.label}
-                </button>
-              ))}
+        <form onSubmit={handleSubmit} className="p-5 sm:p-6 space-y-4 max-h-[75vh] overflow-y-auto">
+          {/* Quick Presets */}
+          {!initialReminder && (
+            <div className="space-y-1.5">
+              <label className="text-[11px] font-bold uppercase tracking-wider text-gray-500 dark:text-gray-400 flex items-center gap-1">
+                <Sparkles className="w-3 h-3 text-amber-500" />
+                <span>Gợi ý mẫu nhanh:</span>
+              </label>
+              <div className="flex flex-wrap gap-1.5">
+                {presets.map((p, idx) => (
+                  <button
+                    key={idx}
+                    type="button"
+                    onClick={() => handleApplyPreset(p)}
+                    className="px-2.5 py-1 text-xs font-semibold rounded-lg bg-gray-100 dark:bg-gray-800 hover:bg-[#287C78]/15 hover:text-[#287C78] dark:hover:text-[#42A39E] text-gray-700 dark:text-gray-300 border border-gray-200 dark:border-gray-700 transition-all cursor-pointer"
+                  >
+                    {p.label}
+                  </button>
+                ))}
+              </div>
             </div>
-          </div>
+          )}
 
           {/* 1. Title Input */}
           <div className="space-y-1">
             <label className="block text-xs font-black uppercase tracking-wider text-gray-700 dark:text-gray-300">
-              1. Tên nhắc nhở <span className="text-rose-500">*</span>
+              1. Tên nhắc nhở / Sự kiện *
             </label>
             <input
               type="text"
               required
-              placeholder="Ví dụ: Uống thuốc huyết áp Amlodipine..."
+              placeholder="Ví dụ: Uống thuốc huyết áp buổi sáng..."
               value={title}
               onChange={(e) => setTitle(e.target.value)}
-              className="w-full h-11 px-3.5 text-sm font-bold bg-gray-50 dark:bg-[#202C2C] border-2 border-gray-300 dark:border-gray-700 rounded-xl focus:border-[#287C78] outline-none text-gray-900 dark:text-white transition-all"
+              className="w-full px-3.5 py-2.5 text-sm font-semibold bg-gray-50 dark:bg-[#202C2C] border-2 border-gray-300 dark:border-gray-700 rounded-xl focus:border-[#287C78] outline-none text-gray-900 dark:text-white transition-all"
             />
           </div>
 
-          {/* 2. Category Selection */}
+          {/* 2. Category selection */}
           <div className="space-y-1">
             <label className="block text-xs font-black uppercase tracking-wider text-gray-700 dark:text-gray-300">
               2. Phân loại nhắc nhở
             </label>
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
-              {[
-                { id: 'medication', label: 'Uống thuốc', icon: Pill, color: 'text-amber-500 border-amber-500/40 bg-amber-500/10' },
-                { id: 'appointment', label: 'Tái khám', icon: Calendar, color: 'text-[#287C78] border-[#287C78]/40 bg-[#287C78]/10' },
-                { id: 'family', label: 'Gia đình', icon: Users, color: 'text-pink-500 border-pink-500/40 bg-pink-500/10' },
-                { id: 'general', label: 'Công việc', icon: BellRing, color: 'text-blue-500 border-blue-500/40 bg-blue-500/10' },
-              ].map((item) => {
-                const isSel = category === item.id;
-                const Icon = item.icon;
-                return (
-                  <button
-                    key={item.id}
-                    type="button"
-                    onClick={() => {
-                      setCategory(item.id as any);
-                      sfx.playTap();
-                    }}
-                    className={`p-2.5 rounded-xl border-2 flex items-center justify-center gap-2 font-bold text-xs transition-all cursor-pointer ${
-                      isSel
-                        ? `${item.color} shadow-xs ring-1 ring-[#287C78]`
-                        : 'bg-gray-50 dark:bg-[#202C2C] border-gray-200 dark:border-gray-800 text-gray-600 dark:text-gray-300'
-                    }`}
-                  >
-                    <Icon className="w-4 h-4" />
-                    <span>{item.label}</span>
-                  </button>
-                );
-              })}
+              <button
+                type="button"
+                onClick={() => setCategory('medication')}
+                className={`flex items-center justify-center gap-1.5 p-2.5 rounded-xl border-2 transition-all cursor-pointer text-xs font-bold ${
+                  category === 'medication'
+                    ? 'border-[#FF701A] bg-[#FFF3E8] dark:bg-[#3D2518] text-[#FF701A] dark:text-[#FFA066]'
+                    : 'border-gray-200 dark:border-gray-800 bg-gray-50 dark:bg-[#202C2C] text-gray-600 dark:text-gray-400'
+                }`}
+              >
+                <Pill className="w-4 h-4" />
+                <span>Thuốc uống</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setCategory('appointment')}
+                className={`flex items-center justify-center gap-1.5 p-2.5 rounded-xl border-2 transition-all cursor-pointer text-xs font-bold ${
+                  category === 'appointment'
+                    ? 'border-[#287C78] bg-[#EBF5F4] dark:bg-[#1B2928] text-[#287C78] dark:text-[#42A39E]'
+                    : 'border-gray-200 dark:border-gray-800 bg-gray-50 dark:bg-[#202C2C] text-gray-600 dark:text-gray-400'
+                }`}
+              >
+                <Calendar className="w-4 h-4" />
+                <span>Tái khám</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setCategory('family')}
+                className={`flex items-center justify-center gap-1.5 p-2.5 rounded-xl border-2 transition-all cursor-pointer text-xs font-bold ${
+                  category === 'family'
+                    ? 'border-[#E76F91] bg-[#FDF2F4] dark:bg-[#2A181C] text-[#E76F91] dark:text-[#F296B0]'
+                    : 'border-gray-200 dark:border-gray-800 bg-gray-50 dark:bg-[#202C2C] text-gray-600 dark:text-gray-400'
+                }`}
+              >
+                <Users className="w-4 h-4" />
+                <span>Gia đình</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setCategory('general')}
+                className={`flex items-center justify-center gap-1.5 p-2.5 rounded-xl border-2 transition-all cursor-pointer text-xs font-bold ${
+                  category === 'general'
+                    ? 'border-[#2B70E4] bg-[#E8F2FF] dark:bg-[#1A2A44] text-[#2B70E4] dark:text-[#70A5FF]'
+                    : 'border-gray-200 dark:border-gray-800 bg-gray-50 dark:bg-[#202C2C] text-gray-600 dark:text-gray-400'
+                }`}
+              >
+                <BellRing className="w-4 h-4" />
+                <span>Khác</span>
+              </button>
             </div>
           </div>
 
-          {/* 3. Date & Time Selection */}
-          <div className="space-y-2">
+          {/* 3. Date & Time & Repeat */}
+          <div className="space-y-2 p-3.5 rounded-2xl bg-gray-50 dark:bg-[#202C2C]/50 border border-gray-200 dark:border-gray-800">
             <label className="block text-xs font-black uppercase tracking-wider text-gray-700 dark:text-gray-300">
-              3. Thời gian nhắc nhở
+              3. Thời gian & Tần suất lặp
             </label>
 
-            {/* Date options */}
-            <div className="flex items-center gap-2">
+            {/* Date selection pill buttons */}
+            <div className="flex gap-2">
               <button
                 type="button"
                 onClick={() => setDateType('today')}
                 className={`flex-1 py-2 px-3 text-xs font-bold rounded-xl border-2 transition-all cursor-pointer ${
                   dateType === 'today'
                     ? 'bg-[#287C78] text-white border-[#287C78]'
-                    : 'bg-gray-50 dark:bg-[#202C2C] border-gray-200 dark:border-gray-800 text-gray-700 dark:text-gray-300'
+                    : 'bg-white dark:bg-[#202C2C] border-gray-200 dark:border-gray-800 text-gray-700 dark:text-gray-300'
                 }`}
               >
                 Hôm nay
@@ -244,7 +361,7 @@ export const DetailedReminderModal: React.FC<DetailedReminderModalProps> = ({
                 className={`flex-1 py-2 px-3 text-xs font-bold rounded-xl border-2 transition-all cursor-pointer ${
                   dateType === 'tomorrow'
                     ? 'bg-[#287C78] text-white border-[#287C78]'
-                    : 'bg-gray-50 dark:bg-[#202C2C] border-gray-200 dark:border-gray-800 text-gray-700 dark:text-gray-300'
+                    : 'bg-white dark:bg-[#202C2C] border-gray-200 dark:border-gray-800 text-gray-700 dark:text-gray-300'
                 }`}
               >
                 Ngày mai
@@ -255,7 +372,7 @@ export const DetailedReminderModal: React.FC<DetailedReminderModalProps> = ({
                 className={`flex-1 py-2 px-3 text-xs font-bold rounded-xl border-2 transition-all cursor-pointer ${
                   dateType === 'custom'
                     ? 'bg-[#287C78] text-white border-[#287C78]'
-                    : 'bg-gray-50 dark:bg-[#202C2C] border-gray-200 dark:border-gray-800 text-gray-700 dark:text-gray-300'
+                    : 'bg-white dark:bg-[#202C2C] border-gray-200 dark:border-gray-800 text-gray-700 dark:text-gray-300'
                 }`}
               >
                 Chọn ngày
@@ -267,7 +384,7 @@ export const DetailedReminderModal: React.FC<DetailedReminderModalProps> = ({
                 type="date"
                 value={customDate}
                 onChange={(e) => setCustomDate(e.target.value)}
-                className="w-full px-3 py-2 text-xs font-bold bg-gray-50 dark:bg-[#202C2C] border border-gray-300 dark:border-gray-700 rounded-xl outline-none"
+                className="w-full px-3 py-2 text-xs font-bold bg-white dark:bg-[#202C2C] border border-gray-300 dark:border-gray-700 rounded-xl outline-none"
               />
             )}
 
@@ -284,7 +401,7 @@ export const DetailedReminderModal: React.FC<DetailedReminderModalProps> = ({
                     required
                     value={timeStr}
                     onChange={(e) => setTimeStr(e.target.value)}
-                    className="w-full pl-9 pr-3 py-2 text-sm font-bold bg-gray-50 dark:bg-[#202C2C] border border-gray-300 dark:border-gray-700 rounded-xl outline-none text-gray-900 dark:text-white"
+                    className="w-full pl-9 pr-3 py-2 text-sm font-bold bg-white dark:bg-[#202C2C] border border-gray-300 dark:border-gray-700 rounded-xl outline-none text-gray-900 dark:text-white"
                   />
                 </div>
               </div>
@@ -295,8 +412,8 @@ export const DetailedReminderModal: React.FC<DetailedReminderModalProps> = ({
                 </label>
                 <select
                   value={repeat}
-                  onChange={(e) => setRepeat(e.target.value as any)}
-                  className="w-full px-3 py-2 text-xs font-bold bg-gray-50 dark:bg-[#202C2C] border border-gray-300 dark:border-gray-700 rounded-xl outline-none text-gray-900 dark:text-white"
+                  onChange={(e) => setRepeat(e.target.value as ReminderRepeat)}
+                  className="w-full px-3 py-2 text-xs font-bold bg-white dark:bg-[#202C2C] border border-gray-300 dark:border-gray-700 rounded-xl outline-none text-gray-900 dark:text-white"
                 >
                   <option value="daily">🔄 Hàng ngày</option>
                   <option value="once">1️⃣ Chỉ 1 lần</option>
@@ -307,11 +424,33 @@ export const DetailedReminderModal: React.FC<DetailedReminderModalProps> = ({
             </div>
           </div>
 
-          {/* 4. Notes / Instructions */}
+          {/* 4. Link to Session (Optional) */}
+          {sessionsList.length > 0 && (
+            <div className="space-y-1">
+              <label className="block text-xs font-black uppercase tracking-wider text-gray-700 dark:text-gray-300 flex items-center gap-1">
+                <Tag className="w-3.5 h-3.5 text-[#287C78]" />
+                <span>Gắn với phiên hỗ trợ (Tùy chọn)</span>
+              </label>
+              <select
+                value={sessionId || ''}
+                onChange={(e) => setSessionId(e.target.value || undefined)}
+                className="w-full px-3 py-2 text-xs font-medium bg-gray-50 dark:bg-[#202C2C] border border-gray-300 dark:border-gray-700 rounded-xl outline-none text-gray-900 dark:text-white"
+              >
+                <option value="">-- Không gắn phiên --</option>
+                {sessionsList.map((s) => (
+                  <option key={s.id} value={s.id}>
+                    {s.title} ({s.status})
+                  </option>
+                ))}
+              </select>
+            </div>
+          )}
+
+          {/* 5. Notes */}
           <div className="space-y-1">
             <label className="block text-xs font-black uppercase tracking-wider text-gray-700 dark:text-gray-300 flex items-center gap-1">
               <FileText className="w-3.5 h-3.5 text-[#287C78]" />
-              <span>4. Ghi chú & Lời dặn chi tiết</span>
+              <span>Ghi chú & Lời dặn chi tiết</span>
             </label>
             <textarea
               rows={2}
@@ -322,7 +461,7 @@ export const DetailedReminderModal: React.FC<DetailedReminderModalProps> = ({
             />
           </div>
 
-          {/* Priority & Alert sound */}
+          {/* Priority Toggle */}
           <div className="flex items-center justify-between p-3 rounded-2xl bg-amber-500/10 border border-amber-500/30">
             <div className="flex items-center gap-2">
               <Volume2 className="w-5 h-5 text-amber-600 dark:text-amber-400" />
@@ -363,12 +502,10 @@ export const DetailedReminderModal: React.FC<DetailedReminderModalProps> = ({
               className="flex-1 py-3 text-xs font-black bg-gradient-to-r from-[#287C78] to-[#1F625F] text-white rounded-xl shadow-lg hover:opacity-90 transition-all cursor-pointer flex items-center justify-center gap-1.5"
             >
               <CheckCircle2 className="w-4 h-4" />
-              <span>Lưu Nhắc Nhở Chi Tiết</span>
+              <span>{initialReminder ? 'Lưu Thay Đổi' : 'Lưu Nhắc Nhở'}</span>
             </button>
           </div>
-
         </form>
-
       </div>
     </div>
   );

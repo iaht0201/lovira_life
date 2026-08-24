@@ -97,9 +97,16 @@ export const RecentSessionItem: React.FC<RecentSessionItemProps> = ({
 
         {/* Title & Status */}
         <div className="min-w-0 flex-1 space-y-1">
-          <h4 className="text-[15px] font-[700] text-lovira-title group-hover:text-lovira-purple transition-colors line-clamp-2 leading-snug">
-            {session.title}
-          </h4>
+          <div className="flex items-center gap-1.5 flex-wrap">
+            {session.pinned && (
+              <span className="px-1.5 py-0.5 text-[10px] font-black rounded-md bg-amber-500/15 text-amber-600 dark:text-amber-400 border border-amber-500/30">
+                📌 Đã ghim
+              </span>
+            )}
+            <h4 className="text-[15px] font-[700] text-lovira-title group-hover:text-lovira-purple transition-colors line-clamp-2 leading-snug">
+              {session.title}
+            </h4>
+          </div>
           <div className="flex items-center gap-2">
             {getStatusBadge()}
           </div>
