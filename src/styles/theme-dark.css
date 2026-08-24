@@ -18,9 +18,9 @@ html.dark {
   --text-brand: #42A39E;
   --text-on-hero: #FFFFFF;
 
-  --border-default: transparent;
-  --border-subtle: transparent;
-  --border-brand: transparent;
+  --border-default: #202E2E;
+  --border-subtle: #253737;
+  --border-brand: #42A39E;
 
   --color-primary: #287C78;
   --color-primary-hover: #42A39E;

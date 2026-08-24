@@ -172,7 +172,7 @@ export const SessionListSidebar: React.FC<SessionListSidebarProps> = ({
       )}
 
       {/* Column 1 Independent Scrollable List */}
-      <div className="flex-1 overflow-y-auto p-2.5 space-y-1.5 custom-scrollbar bg-white dark:bg-[#101818]">
+      <div className="flex-1 overflow-y-auto p-2.5 space-y-1.5 custom-scrollbar bg-[#F8FAFA] dark:bg-[#101818]">
         {filteredSessions.length === 0 ? (
           <div className="text-center py-10 px-4 space-y-3">
             <div className="w-10 h-10 rounded-full bg-[#E4F0EF] text-[#287C78] dark:bg-[#203B3A] dark:text-[#42A39E] flex items-center justify-center mx-auto">

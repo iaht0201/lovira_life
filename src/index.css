@@ -1,4 +1,14 @@
 @import "tailwindcss";
+
+/*
+ * IMPORTANT:
+ * Dark mode của Lovira được điều khiển bởi
+ * AccessibilityContext thông qua class <html class="dark">.
+ *
+ * Không sử dụng prefers-color-scheme của hệ điều hành.
+ */
+@custom-variant dark (&:where(.dark, .dark *));
+
 @import "./styles/theme-light.css";
 @import "./styles/theme-dark.css";
 
