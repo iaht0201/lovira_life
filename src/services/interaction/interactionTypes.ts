@@ -30,6 +30,9 @@ export interface PendingInteraction {
     actionType?: string;
     payload?: any;
     question?: string;
+    action?: any;
+    successReply?: string;
+    cancelReply?: string;
   };
   createdAt: string;
   expiresAt?: number;

@@ -1,5 +1,7 @@
 import { AppAction } from './appActionTypes';
 import { AppInteractionContext } from './interactionTypes';
+import { reminderService } from '../reminderService';
+import { storageService } from '../storageService';
 
 export interface AppActionValidationResult {
   valid: boolean;
@@ -32,6 +34,7 @@ export function validateAppAction(
     case 'OPEN_SETTINGS':
     case 'OPEN_PROFILE':
     case 'OPEN_CAMERA':
+    case 'OPEN_REMINDERS':
       return { valid: true, action };
 
     case 'OPEN_SESSION': {
@@ -106,6 +109,209 @@ export function validateAppAction(
       return { valid: true, action };
     }
 
+    case 'PIN_SESSION': {
+      const targetSessionId = action.payload?.sessionId || context.activeSessionId;
+      if (!targetSessionId) {
+        return { valid: false, reason: 'Không tìm thấy phiên để ghim' };
+      }
+      return {
+        valid: true,
+        action: {
+          ...action,
+          payload: { ...action.payload, sessionId: targetSessionId },
+        },
+      };
+    }
+
+    case 'ARCHIVE_SESSION': {
+      const targetSessionId = action.payload?.sessionId || context.activeSessionId;
+      if (!targetSessionId) {
+        return { valid: false, reason: 'Không tìm thấy phiên để lưu trữ' };
+      }
+      return {
+        valid: true,
+        action: {
+          ...action,
+          payload: { ...action.payload, sessionId: targetSessionId },
+        },
+      };
+    }
+
+    case 'CREATE_REMINDER': {
+      const title = action.payload?.title?.trim();
+      let scheduledAt = action.payload?.scheduledAt?.trim();
+
+      if (!title || title.length < 2) {
+        return { valid: false, reason: 'Tiêu đề nhắc nhở không được để trống' };
+      }
+
+      if (!scheduledAt) {
+        // Default to next hour if omitted
+        scheduledAt = new Date(Date.now() + 60 * 60 * 1000).toISOString();
+      } else {
+        const d = new Date(scheduledAt);
+        if (isNaN(d.getTime())) {
+          return { valid: false, reason: 'Thời gian nhắc nhở không hợp lệ' };
+        }
+        scheduledAt = d.toISOString();
+      }
+
+      return {
+        valid: true,
+        action: {
+          ...action,
+          payload: {
+            ...action.payload,
+            title,
+            scheduledAt,
+            category: action.payload?.category || 'general',
+            repeat: action.payload?.repeat || 'once',
+            priority: action.payload?.priority || 'normal',
+          },
+        },
+      };
+    }
+
+    case 'UPDATE_REMINDER': {
+      let reminderId = action.payload?.reminderId;
+      const title = action.payload?.title?.toLowerCase().trim();
+      const reminders = reminderService.getReminders();
+
+      if (!reminderId && title) {
+        const found = reminders.find((r) => r.title.toLowerCase().includes(title));
+        if (found) {
+          reminderId = found.id;
+        }
+      }
+
+      if (!reminderId) {
+        // If only 1 active reminder exists, fallback to it
+        const active = reminders.filter((r) => r.status === 'active');
+        if (active.length === 1) {
+          reminderId = active[0].id;
+        }
+      }
+
+      if (!reminderId) {
+        return { valid: false, reason: 'Không tìm thấy nhắc nhở để cập nhật' };
+      }
+
+      return {
+        valid: true,
+        action: {
+          ...action,
+          payload: { ...action.payload, reminderId },
+        },
+      };
+    }
+
+    case 'DELETE_REMINDER': {
+      let reminderId = action.payload?.reminderId;
+      const title = action.payload?.title?.toLowerCase().trim();
+      const reminders = reminderService.getReminders();
+
+      if (!reminderId && title) {
+        const found = reminders.find((r) => r.title.toLowerCase().includes(title));
+        if (found) {
+          reminderId = found.id;
+        }
+      }
+
+      if (!reminderId) {
+        const active = reminders.filter((r) => r.status === 'active');
+        if (active.length === 1) {
+          reminderId = active[0].id;
+        }
+      }
+
+      if (!reminderId) {
+        return { valid: false, reason: 'Không tìm thấy nhắc nhở để xóa' };
+      }
+
+      const targetRem = reminders.find((r) => r.id === reminderId);
+      const remTitle = targetRem ? targetRem.title : 'này';
+
+      // Always require explicit confirmation before deleting
+      return {
+        valid: true,
+        action: {
+          ...action,
+          payload: { ...action.payload, reminderId, title: remTitle },
+          requiresConfirmation: true,
+          confirmationPrompt: `Chú có chắc muốn xóa nhắc nhở "${remTitle}" không ạ?`,
+        },
+      };
+    }
+
+    case 'SNOOZE_REMINDER': {
+      let reminderId = action.payload?.reminderId;
+      const title = action.payload?.title?.toLowerCase().trim();
+      const reminders = reminderService.getReminders();
+
+      if (!reminderId && title) {
+        const found = reminders.find((r) => r.title.toLowerCase().includes(title));
+        if (found) {
+          reminderId = found.id;
+        }
+      }
+
+      if (!reminderId) {
+        const active = reminders.filter((r) => r.status === 'active');
+        if (active.length > 0) {
+          // Default to most recently scheduled/due reminder
+          reminderId = active[0].id;
+        }
+      }
+
+      if (!reminderId) {
+        return { valid: false, reason: 'Không tìm thấy nhắc nhở để báo lại' };
+      }
+
+      return {
+        valid: true,
+        action: {
+          ...action,
+          payload: {
+            ...action.payload,
+            reminderId,
+            snoozePreset: action.payload?.snoozePreset || '10m',
+          },
+        },
+      };
+    }
+
+    case 'COMPLETE_REMINDER': {
+      let reminderId = action.payload?.reminderId;
+      const title = action.payload?.title?.toLowerCase().trim();
+      const reminders = reminderService.getReminders();
+
+      if (!reminderId && title) {
+        const found = reminders.find((r) => r.title.toLowerCase().includes(title));
+        if (found) {
+          reminderId = found.id;
+        }
+      }
+
+      if (!reminderId) {
+        const active = reminders.filter((r) => r.status === 'active');
+        if (active.length > 0) {
+          reminderId = active[0].id;
+        }
+      }
+
+      if (!reminderId) {
+        return { valid: false, reason: 'Không tìm thấy nhắc nhở để hoàn thành' };
+      }
+
+      return {
+        valid: true,
+        action: {
+          ...action,
+          payload: { ...action.payload, reminderId },
+        },
+      };
+    }
+
     case 'UPDATE_ACCESSIBILITY_SETTING': {
       const setting = action.payload?.setting;
       const value = action.payload?.value;
@@ -154,3 +360,4 @@ export function validateAppAction(
       return { valid: false, reason: `Loại hành động ứng dụng không hỗ trợ: ${(action as any).type}` };
   }
 }
+

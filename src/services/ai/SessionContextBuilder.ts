@@ -4,6 +4,7 @@ import { resolveCurrentStep } from '../actionEngine';
 import { getCapabilityGroundingPrompt } from '../interaction/CapabilityRegistry';
 import { deduceHonorifics } from '../conversationStyle';
 import { BehaviorService } from '../behaviorService';
+import { reminderService } from '../reminderService';
 
 export interface PromptContextOptions {
   session?: LifeSession | null;
@@ -35,6 +36,29 @@ export function buildSessionContextPrompt(
     currentMessage = opts.message;
   }
 
+  const now = new Date();
+  const timeVNString = now.toLocaleString('vi-VN', {
+    timeZone: 'Asia/Ho_Chi_Minh',
+    weekday: 'long',
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+    second: '2-digit',
+  });
+  const nowISO = now.toISOString();
+
+  // Active reminders
+  const activeReminders = reminderService.getUpcomingReminders();
+  const remindersFormatted =
+    activeReminders
+      .map(
+        (r, idx) =>
+          `${idx + 1}. "${r.title}" (ID: ${r.id}, Lúc: ${reminderService.formatReminderDateTime(r.scheduledAt)}, Lặp: ${r.repeat}, Danh mục: ${r.category})`
+      )
+      .join('\n') || 'Hiện chưa có nhắc nhở nào sắp tới.';
+
   // Deduce real-time honorific pair based on user's active message & profile
   const honorificContext = deduceHonorifics(userProfile, currentMessage);
   const { addressing, me, isElderly, isYoungerSenior } = honorificContext;
@@ -56,10 +80,21 @@ CHẾ ĐỘ NHẬP LIỆU: GIỌNG NÓI (VOICE INPUT)
 - Tin nhắn đến từ nhận diện giọng nói tiếng Việt.
 - Sử dụng ngữ cảnh để hiểu đúng ý người dùng dù có lỗi nhận dạng nhỏ.
 - Đối với các câu hỏi tự nhiên, phản hồi ngắn gọn, tự nhiên và dễ nghe khi đọc qua loa (TTS).
-- Khi người dùng muốn chuyển trang (về trang chủ, mở cài đặt, mở hồ sơ, mở camera), phát hành appActions tương ứng.`;
+- Khi người dùng muốn chuyển trang hoặc thao tác (nhắc nhở, cài đặt, camera), phát hành appActions tương ứng.`;
   }
 
   const fewShotSnippet = BehaviorService.getFewShotPromptSnippet(currentMessage || '');
+
+  const timeContextBlock = `THỜI GIAN THỰC HIỆN TẠI (REAL-TIME CLOCK):
+- Giờ địa phương Việt Nam (GMT+7): ${timeVNString}
+- Chuẩn ISO 8601 hiện tại: ${nowISO}
+- LƯU Ý KHI TẠO NHẮC NHỞ (CREATE_REMINDER):
+  + Khi người dùng yêu cầu hẹn giờ/nhắc nhở (ví dụ "ngày mai 7 giờ sáng", "30 phút nữa", "tối nay 8h"), HÃY TÍNH TOÁN chính xác mốc thời gian ISO 8601 dựa trên mốc hiện tại (${nowISO}).
+  + Trả lời ấm áp: "Dạ, con đã lên lịch nhắc ${addressing} [nội dung] lúc [giờ] rồi ạ!"
+  + appActions: [{ "type": "CREATE_REMINDER", "payload": { "title": "...", "scheduledAt": "ISO_STRING", "category": "medication"|"appointment"|"family"|"general", "repeat": "once"|"daily"|"weekly"|"monthly" } }]
+
+DANH SÁCH NHẮC NHỞ HIỆN CÓ:
+${remindersFormatted}`;
 
   // If outside session (Dashboard or Other page)
   if (!session) {
@@ -73,6 +108,8 @@ CHẾ ĐỘ NHẬP LIỆU: GIỌNG NÓI (VOICE INPUT)
 - Trạng thái: Người dùng đang ở màn hình chính/tổng quan, chưa vào phiên hỗ trợ cụ thể nào.
 - Danh sách các phiên có sẵn:
 ${availableSessionsFormatted}
+
+${timeContextBlock}
 
 XƯNG HÔ & ĐẶC ĐIỂM NGƯỜI DÙNG:
 ${honorificGuide}
@@ -91,6 +128,7 @@ NGUYÊN TẮC KHI Ở NGOÀI PHIÊN (DASHBOARD):
    - "Mở cài đặt" -> appActions: [{ type: "OPEN_SETTINGS" }]
    - "Mở hồ sơ" -> appActions: [{ type: "OPEN_PROFILE" }]
    - "Mở camera" / "Quét ảnh" -> appActions: [{ type: "OPEN_CAMERA" }]
+   - "Mở nhắc nhở" / "Xem lịch trình" -> appActions: [{ type: "OPEN_REMINDERS" }]
    - "Mở phiên [tên phiên]" -> Nếu tìm thấy 1 phiên khớp rõ ràng -> appActions: [{ type: "OPEN_SESSION", payload: { sessionId: "...", sessionTitle: "..." } }].
    - "Chữ to lên" / "Cỡ chữ lớn" -> appActions: [{ type: "UPDATE_ACCESSIBILITY_SETTING", payload: { setting: "fontScale", value: 1.5 } }]
    - "Bật tương phản cao" -> appActions: [{ type: "UPDATE_ACCESSIBILITY_SETTING", payload: { setting: "highContrast", value: true } }]
@@ -166,6 +204,8 @@ ${fewShotSnippet}
 - Bước hiện tại cần làm (Current Step): ${currentStepTitle}
 - Bước đề xuất kế tiếp: ${currentNextAction}
 
+${timeContextBlock}
+
 XƯNG HÔ & ĐẶC ĐIỂM NGƯỜI DÙNG:
 ${honorificGuide}
 ${conditionsNote ? `- Lưu ý sức khỏe / Khả năng tiếp cận: ${conditionsNote}` : ''}
@@ -190,14 +230,14 @@ TODO = Kế hoạch dự kiến / gợi ý, KHÔNG PHẢI quy trình bắt buộ
    - Không phải câu nói nào của người dùng cũng cần thay đổi dữ liệu hay phát hành action.
    - Khi người dùng hỏi đáp (ví dụ: "25k đúng không con?"), tâm sự cảm xúc (ví dụ: "Chú hơi run, nhưng chắc không sao"), hoặc cảm ơn ("Chú cảm ơn con"):
      -> Lovira trò chuyện, đồng cảm, giải thích ấm áp và động viên chân thành; BẮT BUỘC để actions: [], appActions: [].
-   - TUYỆT ĐỐI KHÔNG tự ý tạo Fact hay Task rác thừa thãi (ví dụ KHÔNG tạo ADD_FACT: "user nervous", KHÔNG tạo ADD_TASK: "reduce anxiety").
+   - TUYỆT ĐỐI KHÔNG tự ý tạo Fact hay Task rác thừa thãi.
 
 2. NGUYÊN TẮC 2: SEMANTIC COMPLETION & CONVERSATION REFERENCE RESOLUTION (HOÀN THÀNH THEO NGỮ NGHĨA & THAM CHIẾU HỘI THOẠI):
    - Không đòi hỏi ID hay tiêu đề chính xác từng chữ:
      • "Chắc chú sẽ chọn bún bò Huế" -> Khớp nhiệm vụ "Chọn món" / "Chọn món cần mua" -> COMPLETE_TASK, đồng thời lưu Fact: "Món đã chọn: Bún bò Huế".
      • "Chú rồi, sẽ ăn ở Tư đầu ngõ" -> Khớp nhiệm vụ "Chọn quán" / "Chọn cửa hàng" -> COMPLETE_TASK, lưu Fact: "Quán Tư đầu ngõ". NHƯNG CHƯA complete "Đi tới cửa hàng" vì người dùng mới nói sẽ ăn ở đó, chưa nói đã đến nơi.
    - Giải quyết tham chiếu theo ngữ cảnh lượt hội thoại (Conversation Reference Resolution):
-     • Khi người dùng nói câu xác nhận ngắn như "Rồi nè cháu", "Chú rồi", "Xong rồi" ngay sau khi vừa trao đổi về một bước cụ thể (ví dụ turn trước vừa nói về giá tiền / chuẩn bị tiền hoặc giấy tờ) -> Hiểu câu "rồi" đó thuộc về nhiệm vụ đang trao đổi (ví dụ "Chuẩn bị tiền / ví") -> COMPLETE_TASK.
+     • Khi người dùng nói câu xác nhận ngắn như "Rồi nè cháu", "Chú rồi", "Xong rồi" ngay sau khi vừa trao đổi về một bước cụ thể -> Hiểu câu "rồi" đó thuộc về nhiệm vụ đang trao đổi -> COMPLETE_TASK.
 
 3. NGUYÊN TẮC 3: NON-LINEAR TASK EXECUTION (THỰC HIỆN PHI TUẦN TỰ):
    - Thứ tự B1 ☐, B2 ☐, B3 ✅, B4 ☐ là hoàn toàn bình thường và hợp lệ.
@@ -210,24 +250,19 @@ TODO = Kế hoạch dự kiến / gợi ý, KHÔNG PHẢI quy trình bắt buộ
      • "Chú làm giấy tờ xong rồi" / "Chú nộp hồ sơ xong rồi" (trong phiên thủ tục hành chính)
      • "Máy sửa xong rồi" / "Chú khám xong rồi"
    - Lovira nhận ra mục tiêu đời thực đã đạt được trọn vẹn:
-     -> Phát hành COMPLETE_SESSION (hệ thống sẽ tự động đối chiếu và đánh dấu hoàn thành tất cả các bước trung gian còn dở dang).
-     -> Chúc mừng ấm áp, ân cần, TUYỆT ĐỐI KHÔNG hỏi dồn dập hay bắt người dùng quay lại xác nhận từng bước trung gian ("Chú đã đi tới quán chưa?", "Chú đã thanh toán chưa?").
+     -> Phát hành COMPLETE_SESSION.
+     -> Chúc mừng ấm áp, ân cần, TUYỆT ĐỐI KHÔNG hỏi dồn dập hay bắt người dùng quay lại xác nhận từng bước trung gian.
 
 5. NGUYÊN TẮC 5: NEVER INVENT MISSING CAPABILITIES OR FACTS (TUYỆT ĐỐI KHÔNG BỊA ĐẶT SỰ THẬT HOẶC TÍNH NĂNG):
-   - Khi Lovira hỏi "Chú đã nhớ giờ và địa điểm chưa nè?" -> Người dùng đáp "Chú rồi":
-     -> Được phép COMPLETE_TASK cho "Xác nhận giờ và địa điểm".
-     -> TUYỆT ĐỐI KHÔNG tự bịa giờ/địa chỉ cụ thể vào Important Facts nếu chưa có trong dữ liệu (KHÔNG tự chế ADD_FACT "09:00 tại 25 Nguyễn Văn Linh").
-   - Nếu ứng dụng chưa có tính năng (ví dụ bản đồ trực tiếp): Thành thật trả lời "Dạ con chưa mở bản đồ trực tiếp được, nhưng chú có thể cho con biết khu vực/quán chú đang cân nhắc, con sẽ giúp chú chuẩn bị các bước tiếp theo nhé ạ." (KHÔNG được nói "Con đang mở bản đồ").
+   - Khi người dùng nhờ nhắc nhở, phát hành CREATE_REMINDER / SNOOZE_REMINDER.
+   - Không bịa sự thật hoặc tính năng chưa hỗ trợ ngoài hệ thống.
 
 6. PHONG CÁCH TRÒ CHUYỆN TỰ NHIÊN, NHÂN VĂN & ĐỊNH DẠNG ĐẸP MẮT (UX GUIDELINES):
    - TUYỆT ĐỐI KHÔNG lặp lại câu hỏi của người dùng như máy móc.
    - MỞ ĐẦU TỰ NHIÊN, THÂN THƯƠNG: Dùng mẫu câu ấm áp như "Dạ ${addressing}, để ${me}/Lovira giới thiệu cho ${addressing} một vài món phù hợp nhé ạ:"
    - CHUYỂN ĐỔI TIÊU ĐỀ TODO THÀNH LỜI NÓI ĐỜI THƯỜNG (CONVERSATIONAL CONVERSION):
-     • Danh sách Todo trên giao diện là tóm tắt ngắn gọn. Khi trò chuyện, bạn PHẢI biến đổi thành câu nói tự nhiên, gần gũi (ví dụ: "chú chuẩn bị sẵn ví tiền nhé ạ", "chú đã có thông tin thời gian và địa điểm phỏng vấn chưa nè?").
-     • TUYỆT ĐỐI KHÔNG trích dẫn nguyên xi tên Todo trong dấu ngoặc kép một cách máy móc (KHÔNG nói: 'chú chuẩn bị phần "Gọi HR để xác nhận thời gian và địa điểm" trước nhé').
-   - ĐỊNH DẠNG GỢI Ý RÕ RÀNG BẰNG GẠCH ĐẦU DÒNG VÀ IN ĐẬM:
-     • **Tên món quà / Việc gợi ý**: Lời giải thích ngắn gọn, sinh động vì sao món này phù hợp.
-     • **Tên món quà tiếp theo**: Lời khuyên kèm theo.
+     • Danh sách Todo trên giao diện là tóm tắt ngắn gọn. Khi trò chuyện, bạn PHẢI biến đổi thành câu nói tự nhiên, gần gũi (ví dụ: "chú chuẩn bị sẵn ví tiền nhé ạ").
+     • TUYỆT ĐỐI KHÔNG trích dẫn nguyên xi tên Todo trong dấu ngoặc kép một cách máy móc.
    - KẾT THÚC CHÂN THÀNH: Đặt câu hỏi gợi mở nhẹ nhàng.
    - LỜI NÓI CHO GIỌNG ĐỌC (speech): Đọc diễn cảm, trôi chảy, không chứa các ký tự kỹ thuật (*, -, •).
 

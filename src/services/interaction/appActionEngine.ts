@@ -12,6 +12,8 @@ export interface AppActionRuntimeContext {
   openCamera: () => void;
   openReminders?: () => void;
   updateAccessibilitySetting?: (key: string, value: any) => void;
+  saveUpdatedSession?: (session: any) => void;
+  refreshSessionsList?: () => void;
   showToast: (msg: string) => void;
 }
 
@@ -68,6 +70,27 @@ export async function applyAppAction(
         return false;
       }
 
+      case 'UPDATE_REMINDER': {
+        const reminderId = action.payload?.reminderId;
+        if (reminderId) {
+          const updates: any = {};
+          if (action.payload?.title) updates.title = action.payload.title;
+          if (action.payload?.scheduledAt) updates.scheduledAt = action.payload.scheduledAt;
+          if (action.payload?.notes !== undefined) updates.notes = action.payload.notes;
+          if (action.payload?.category) updates.category = action.payload.category;
+          if (action.payload?.repeat) updates.repeat = action.payload.repeat;
+          if (action.payload?.priority) updates.priority = action.payload.priority;
+          if (action.payload?.reminder) Object.assign(updates, action.payload.reminder);
+
+          const updated = reminderService.updateReminder(reminderId, updates);
+          if (updated) {
+            context.showToast(`✏️ Đã cập nhật nhắc nhở: ${updated.title}`);
+            return true;
+          }
+        }
+        return false;
+      }
+
       case 'SNOOZE_REMINDER': {
         const reminderId = action.payload?.reminderId;
         const preset = action.payload?.snoozePreset || '10m';
@@ -106,7 +129,14 @@ export async function applyAppAction(
           const session = storageService.getSession(sessionId);
           if (session) {
             session.pinned = !session.pinned;
-            storageService.saveSession(session);
+            if (context.saveUpdatedSession) {
+              context.saveUpdatedSession(session);
+            } else {
+              storageService.saveSession(session);
+            }
+            if (context.refreshSessionsList) {
+              context.refreshSessionsList();
+            }
             context.showToast(session.pinned ? '📌 Đã ghim phiên' : 'Đã bỏ ghim phiên');
             return true;
           }
@@ -120,7 +150,14 @@ export async function applyAppAction(
           const session = storageService.getSession(sessionId);
           if (session) {
             session.status = session.status === 'archived' ? 'active' : 'archived';
-            storageService.saveSession(session);
+            if (context.saveUpdatedSession) {
+              context.saveUpdatedSession(session);
+            } else {
+              storageService.saveSession(session);
+            }
+            if (context.refreshSessionsList) {
+              context.refreshSessionsList();
+            }
             context.showToast(session.status === 'archived' ? '📦 Đã lưu trữ phiên' : 'Đã khôi phục phiên');
             return true;
           }

@@ -37,6 +37,7 @@ import { PermissionRequestModal } from './components/common/PermissionRequestMod
 import { OnboardingModal } from './components/common/OnboardingModal';
 import { NotificationDrawer } from './components/notifications/NotificationDrawer';
 import { notificationService } from './services/notificationService';
+import { reminderService } from './services/reminderService';
 import { AppNotification, NotificationType } from './types';
 
 function AppContent() {
@@ -203,6 +204,11 @@ function AppContent() {
   useEffect(() => {
     storageService.saveAISettings(aiSettings);
   }, [aiSettings]);
+
+  // Init reminder scheduler background checker
+  useEffect(() => {
+    reminderService.initScheduler();
+  }, []);
 
   const handleTabChange = (tab: NavTab) => {
     navigate(getPathForTab(tab));

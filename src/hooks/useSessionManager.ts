@@ -597,6 +597,8 @@ export function useSessionManager({
       updateAccessibilitySetting: (key: string, value: any) => {
         setAccessibility((prev: any) => ({ ...prev, [key]: value }));
       },
+      saveUpdatedSession,
+      refreshSessionsList,
       showToast,
     };
 

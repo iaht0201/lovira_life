@@ -12,7 +12,6 @@ export interface Reminder {
   repeat: ReminderRepeat;
   priority: ReminderPriority;
   status: ReminderStatus;
-  completed?: boolean;
   sessionId?: string;
   taskId?: string;
   createdAt: string;

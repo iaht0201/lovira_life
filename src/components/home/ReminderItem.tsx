@@ -52,7 +52,7 @@ export const ReminderItem: React.FC<ReminderItemProps> = ({
   const fullReminder = isFullReminder ? (reminder as Reminder) : null;
 
   const category = reminder.category || 'general';
-  const completed = reminder.completed || false;
+  const completed = isFullReminder ? fullReminder!.status === 'completed' : (reminder as any).completed || (reminder as any).status === 'completed' || false;
 
   const displayTime = isFullReminder
     ? formatVietnameseReminderTime(fullReminder!.scheduledAt, fullReminder!.repeat)

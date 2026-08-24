@@ -34,6 +34,53 @@ export const AVAILABLE_APP_CAPABILITIES: AppCapability[] = [
     parametersDescription: 'payload: { goal: string }',
   },
   {
+    name: 'Mở trang nhắc nhở & lịch trình',
+    actionType: 'OPEN_REMINDERS',
+    description: 'Mở trang quản lý lịch trình, nhắc nhở uống thuốc và cuộc hẹn.',
+  },
+  {
+    name: 'Tạo nhắc nhở / Lên lịch hẹn',
+    actionType: 'CREATE_REMINDER',
+    description: 'Tạo một nhắc nhở mới với thời gian, tiêu đề, danh mục và lặp lại.',
+    parametersDescription: 'payload: { title: string, scheduledAt: string (ISO 8601), category?: "medication"|"appointment"|"family"|"general", repeat?: "once"|"daily"|"weekly"|"monthly", priority?: "normal"|"high", notes?: string }',
+  },
+  {
+    name: 'Cập nhật nhắc nhở',
+    actionType: 'UPDATE_REMINDER',
+    description: 'Chỉnh sửa thông tin nhắc nhở (tiêu đề, giờ hẹn, ghi chú).',
+    parametersDescription: 'payload: { reminderId: string, title?: string, scheduledAt?: string, notes?: string }',
+  },
+  {
+    name: 'Xóa nhắc nhở (hệ thống sẽ hỏi xác nhận)',
+    actionType: 'DELETE_REMINDER',
+    description: 'Xóa nhắc nhở khỏi hệ thống sau khi được người dùng xác nhận.',
+    parametersDescription: 'payload: { reminderId: string, title?: string }',
+  },
+  {
+    name: 'Hoãn nhắc nhở / Báo lại sau',
+    actionType: 'SNOOZE_REMINDER',
+    description: 'Hoãn nhắc nhở thêm 10 phút, 30 phút, 1 giờ hoặc sang ngày mai.',
+    parametersDescription: 'payload: { reminderId: string, snoozePreset?: "10m"|"30m"|"1h"|"tonight"|"tomorrow" }',
+  },
+  {
+    name: 'Đánh dấu hoàn thành nhắc nhở',
+    actionType: 'COMPLETE_REMINDER',
+    description: 'Đánh dấu nhắc nhở đã thực hiện xong.',
+    parametersDescription: 'payload: { reminderId: string }',
+  },
+  {
+    name: 'Ghim / Bỏ ghim phiên',
+    actionType: 'PIN_SESSION',
+    description: 'Ghim phiên hỗ trợ lên đầu danh sách hoặc bỏ ghim.',
+    parametersDescription: 'payload: { sessionId: string }',
+  },
+  {
+    name: 'Lưu trữ / Bỏ lưu trữ phiên',
+    actionType: 'ARCHIVE_SESSION',
+    description: 'Chuyển phiên đã hoàn thành vào mục lưu trữ hoặc khôi phục.',
+    parametersDescription: 'payload: { sessionId: string }',
+  },
+  {
     name: 'Mở cài đặt',
     actionType: 'OPEN_SETTINGS',
     description: 'Mở trang cài đặt trợ năng, tuỳ chọn âm thanh và giao diện.',
@@ -57,11 +104,10 @@ export const AVAILABLE_APP_CAPABILITIES: AppCapability[] = [
 ];
 
 export const UNAVAILABLE_CAPABILITIES_LIST: string[] = [
-  'Bản đồ, GPS, định vị vị trí, tìm đường hay mở ứng dụng bản đồ',
-  'Gọi điện thoại, nhắn tin SMS ngoài thiết bị',
-  'Đặt xe taxi / Grab / đặt bàn ăn / thanh toán ví điện tử',
-  'Gửi email, đồng bộ lịch tự động ra bên ngoài',
-  'Tìm kiếm danh sách cửa hàng, quán xá thời gian thực ngoài ứng dụng',
+  'Bản đồ, GPS, định vị vị trí, tìm đường hay mở ứng dụng Google Maps trực tiếp',
+  'Gọi điện thoại, gửi tin nhắn SMS ra ngoài thiết bị',
+  'Đặt xe taxi / Grab / đặt bàn ăn nhà hàng / thanh toán tiền qua ví điện tử bên ngoài',
+  'Gửi email tự động ra bên ngoài',
 ];
 
 /**
@@ -78,16 +124,18 @@ export function getCapabilityGroundingPrompt(): string {
 ==================================================
 CAPABILITY GROUNDING CONTRACT — QUY TẮC NĂNG LỰC BẮT BUỘC (CRITICAL):
 --------------------------------------------------
-1. HỆ THỐNG CHỈ HỖ TRỢ DUY NHẤT CÁC NĂNG LỰC ĐIỀU HƯỚNG/THAO TÁC ỨNG DỤNG SAU (AVAILABLE_APP_CAPABILITIES):
+1. HỆ THỐNG HỖ TRỢ ĐẦY ĐỦ CÁC NĂNG LỰC ĐIỀU HƯỚNG/THAO TÁC ỨNG DỤNG SAU (AVAILABLE_APP_CAPABILITIES):
 ${capabilitiesFormatted}
 
-2. CÁC NĂNG LỰC HOÀN TOÀN KHÔNG CÓ (UNAVAILABLE CAPABILITIES):
+2. CÁC NĂNG LỰC NGOÀI HỆ THỐNG KHÔNG CÓ (UNAVAILABLE CAPABILITIES):
 ${unavailableFormatted}
 
-3. QUY TẮC CHỐNG ẢO GIÁC NĂNG LỰC (ANTI-HALLUCINATION CONTRACT):
-- Lovira TUYỆT ĐỐI KHÔNG ĐƯỢC nói trong câu trả lời (reply/speech) rằng mình "đang mở bản đồ", "đã mở bản đồ", "đang tìm tiệm gần nhà", "đã gọi xe", "đã gửi email", "đã đặt lịch", v.v.
-- Không bao giờ giả lập một chức năng không có thật trong lời nói.
-- Khi người dùng nhờ việc mà Lovira không có công cụ thực hiện trực tiếp (ví dụ: "tìm đường", "mở bản đồ", "gọi xe giúp tôi"):
+3. QUY TẮC CHỐNG ẢO GIÁC NĂNG LỰC & XỬ LÝ NHẮC NHỞ (ANTI-HALLUCINATION CONTRACT):
+- ĐỐI VỚI NHẮC NHỞ & LỊCH TRÌNH: Ứng dụng Lovira ĐÃ CÓ TÍNH NĂNG NHẮC NHỞ & LỊCH TRÌNH THẬT SỰ (CREATE_REMINDER, SNOOZE_REMINDER, COMPLETE_REMINDER, DELETE_REMINDER, OPEN_REMINDERS).
+  Khi người dùng nhờ nhắc nhở (ví dụ: "Mai 7h sáng nhắc tôi mang CCCD đi khám", "30 phút nữa nhắc tôi uống thuốc"), bạn HÃY PHÁT HÀNH appActions CREATE_REMINDER tương ứng và trả lời xác nhận rõ ràng, ấm áp.
+- ĐỐI VỚI XÓA NHẮC NHỞ: Luôn hỏi xác nhận trước khi xóa, phát hành DELETE_REMINDER.
+- TUYỆT ĐỐI KHÔNG giả lập tính năng ngoài hệ thống như "đang mở Google Maps", "đã gọi xe Grab", "đã chuyển khoản ngân hàng", "đã gửi email".
+- Khi người dùng nhờ việc ngoài hệ thống (ví dụ: "tìm đường", "gọi xe giúp tôi"):
   + Hãy giải thích ngắn gọn, từ tốn rằng Lovira chưa hỗ trợ mở bản đồ hoặc gọi xe trực tiếp.
   + Sau đó tiếp tục đồng hành bằng lời khuyên, gợi ý các việc cần chuẩn bị hoặc dặn dò người dùng.
   + ĐỂ "actions": [] VÀ "appActions": [].

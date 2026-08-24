@@ -99,7 +99,17 @@ class StorageService {
   getSessionsList(): BriefSessionHeader[] {
     try {
       const raw = localStorage.getItem(KEY_SESSIONS_LIST);
-      return raw ? JSON.parse(raw) : [];
+      if (!raw) return [];
+      const list: BriefSessionHeader[] = JSON.parse(raw);
+      if (!Array.isArray(list)) return [];
+
+      // Sort: pinned first, then updatedAt descending
+      return list.sort((a, b) => {
+        if (Boolean(a.pinned) !== Boolean(b.pinned)) {
+          return a.pinned ? -1 : 1;
+        }
+        return new Date(b.updatedAt || 0).getTime() - new Date(a.updatedAt || 0).getTime();
+      });
     } catch {
       return [];
     }

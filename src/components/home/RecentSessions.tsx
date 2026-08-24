@@ -18,6 +18,8 @@ export const RecentSessions: React.FC<RecentSessionsProps> = ({
   onViewAll,
   onCreateSession,
 }) => {
+  const activeSessions = sessions.filter((s) => s.status !== 'archived');
+
   return (
     <section className="bg-lovira-card border border-lovira rounded-[22px] p-5 sm:p-6 shadow-lovira transition-colors">
       {/* Header */}
@@ -25,7 +27,7 @@ export const RecentSessions: React.FC<RecentSessionsProps> = ({
         <h3 className="text-[18px] sm:text-[20px] font-[800] text-lovira-title">
           Phiên gần đây
         </h3>
-        {sessions.length > 0 && (
+        {activeSessions.length > 0 && (
           <button
             onClick={onViewAll}
             className="flex items-center gap-1 text-[13px] sm:text-[14px] font-[700] text-lovira-purple hover:opacity-80 transition-opacity cursor-pointer"
@@ -37,9 +39,9 @@ export const RecentSessions: React.FC<RecentSessionsProps> = ({
       </div>
 
       {/* Sessions List or Empty State */}
-      {sessions.length > 0 ? (
+      {activeSessions.length > 0 ? (
         <div className="space-y-2.5">
-          {sessions.slice(0, 3).map((session) => (
+          {activeSessions.slice(0, 3).map((session) => (
             <RecentSessionItem
               key={session.id}
               session={session}

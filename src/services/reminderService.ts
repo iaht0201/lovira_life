@@ -96,7 +96,7 @@ class ReminderService {
   getUpcomingReminders(): Reminder[] {
     const list = this.getReminders();
     return list
-      .filter((r) => r.status === 'active' && !r.completed)
+      .filter((r) => r.status === 'active')
       .sort((a, b) => new Date(a.scheduledAt).getTime() - new Date(b.scheduledAt).getTime());
   }
 
@@ -551,7 +551,7 @@ class ReminderService {
             try {
               new Notification(`⏰ ${rem.title}`, {
                 body: rem.notes || `Đến giờ hẹn: ${this.formatReminderDateTime(rem.scheduledAt)}`,
-                icon: '/lovira-icon.png',
+                icon: '/brand/logo-icon.png',
                 tag: rem.id,
               });
             } catch (e) {
@@ -610,12 +610,7 @@ class ReminderService {
     const dtStamp = formatICSDate(new Date());
     const uid = `lovira-${Date.now()}-${Math.random().toString(36).substr(2, 6)}@lovira.app`;
 
-    let rrule = '';
-    if (item.repeat === 'daily') rrule = '\nRRULE:FREQ=DAILY';
-    else if (item.repeat === 'weekly') rrule = '\nRRULE:FREQ=WEEKLY';
-    else if (item.repeat === 'monthly') rrule = '\nRRULE:FREQ=MONTHLY';
-
-    return [
+    const icsLines = [
       'BEGIN:VCALENDAR',
       'VERSION:2.0',
       'PRODID:-//Lovira AI//Lich Nhac Nho//VI',
@@ -625,7 +620,14 @@ class ReminderService {
       `UID:${uid}`,
       `DTSTAMP:${dtStamp}`,
       `DTSTART:${dtStart}`,
-      `DTEND:${dtEnd}${rrule}`,
+      `DTEND:${dtEnd}`,
+    ];
+
+    if (item.repeat === 'daily') icsLines.push('RRULE:FREQ=DAILY');
+    else if (item.repeat === 'weekly') icsLines.push('RRULE:FREQ=WEEKLY');
+    else if (item.repeat === 'monthly') icsLines.push('RRULE:FREQ=MONTHLY');
+
+    icsLines.push(
       `SUMMARY:${item.title.replace(/\n/g, ' ')}`,
       `DESCRIPTION:${(item.description || 'Lên lịch bởi Lovira Trợ lý Đời sống').replace(/\n/g, '\\n')}`,
       item.location ? `LOCATION:${item.location}` : '',
@@ -635,10 +637,10 @@ class ReminderService {
       `DESCRIPTION:Nhắc nhở: ${item.title}`,
       'END:VALARM',
       'END:VEVENT',
-      'END:VCALENDAR',
-    ]
-      .filter(Boolean)
-      .join('\r\n');
+      'END:VCALENDAR'
+    );
+
+    return icsLines.filter(Boolean).join('\r\n');
   }
 
   /**

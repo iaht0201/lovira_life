@@ -35,7 +35,7 @@ export const UpcomingReminders: React.FC<UpcomingRemindersProps> = ({
     const unsubscribe = reminderService.subscribe((all) => {
       // Filter uncompleted and upcoming
       const upcoming = all
-        .filter((r) => !r.completed)
+        .filter((r) => r.status === 'active')
         .sort((a, b) => new Date(a.scheduledAt).getTime() - new Date(b.scheduledAt).getTime());
       setReminders(upcoming);
     });
