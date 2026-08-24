@@ -166,7 +166,7 @@ export const ChatMessageRenderer: React.FC<ChatMessageRendererProps> = ({
           className={`p-3.5 sm:p-4 rounded-2xl text-xs sm:text-sm leading-relaxed transition-all relative ${
             isUser
               ? 'bg-[#287C78] text-white rounded-tr-xs shadow-xs font-medium'
-              : 'bg-white dark:bg-[#1E2B2A] text-text-primary rounded-tl-xs shadow-xs'
+              : 'bg-[#F3F7F6] dark:bg-[#1E2B2A] text-[#1C2226] dark:text-[#F2F7F7] border border-[#DEECE9] dark:border-transparent rounded-tl-xs shadow-xs'
           }`}
         >
           <div className="space-y-2.5">
@@ -178,7 +178,7 @@ export const ChatMessageRenderer: React.FC<ChatMessageRendererProps> = ({
                     className={`flex items-start gap-2.5 p-2.5 rounded-xl transition-colors ${
                       isUser
                         ? 'bg-[#1F625F] text-white'
-                        : 'bg-[#F2F8F7] dark:bg-[#152222] text-text-primary'
+                        : 'bg-white dark:bg-[#152222] text-[#1C2226] dark:text-[#F2F7F7] border border-[#E2ECEB] dark:border-transparent shadow-2xs'
                     }`}
                   >
                     <span
@@ -213,7 +213,7 @@ export const ChatMessageRenderer: React.FC<ChatMessageRendererProps> = ({
               }
 
               return (
-                <p key={idx} className="whitespace-pre-wrap leading-relaxed text-[13px] sm:text-[14px]">
+                <p key={idx} className="whitespace-pre-wrap leading-relaxed text-[13px] sm:text-[14px] text-[#1C2226] dark:text-[#F2F7F7]">
                   {renderFormattedInlineText(block.content)}
                 </p>
               );
@@ -225,7 +225,7 @@ export const ChatMessageRenderer: React.FC<ChatMessageRendererProps> = ({
             className={`flex items-center gap-2 pt-2 mt-1.5 text-[11px] ${
               isUser
                 ? 'text-teal-100 justify-end'
-                : 'text-text-secondary justify-between opacity-80'
+                : 'text-[#7A848B] dark:text-[#8E9E9E] justify-between'
             }`}
           >
             {!isUser && (
@@ -234,7 +234,7 @@ export const ChatMessageRenderer: React.FC<ChatMessageRendererProps> = ({
                   <button
                     type="button"
                     onClick={() => onSpeak(cleanSpeechText)}
-                    className="inline-flex items-center gap-1 font-semibold text-[#287C78] dark:text-[#42A39E] hover:opacity-80 transition-opacity cursor-pointer"
+                    className="inline-flex items-center gap-1 font-bold text-[#287C78] dark:text-[#42A39E] hover:underline transition-opacity cursor-pointer"
                   >
                     <Volume2 className={`w-3.5 h-3.5 ${isSpeaking ? 'animate-pulse text-amber-500' : ''}`} />
                     <span>Đọc to</span>
@@ -244,7 +244,7 @@ export const ChatMessageRenderer: React.FC<ChatMessageRendererProps> = ({
                 <button
                   type="button"
                   onClick={handleCopy}
-                  className="inline-flex items-center gap-1 hover:text-text-primary transition-colors cursor-pointer"
+                  className="inline-flex items-center gap-1 hover:text-[#1C2226] dark:hover:text-white transition-colors cursor-pointer"
                 >
                   {copied ? (
                     <span className="text-emerald-600 dark:text-emerald-400 font-bold">✓ Đã chép</span>
@@ -255,7 +255,7 @@ export const ChatMessageRenderer: React.FC<ChatMessageRendererProps> = ({
               </div>
             )}
 
-            {timeStr && <span>{timeStr}</span>}
+            {timeStr && <span className="font-medium">{timeStr}</span>}
           </div>
         </div>
       </div>

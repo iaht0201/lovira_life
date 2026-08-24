@@ -59,13 +59,13 @@ export const SessionListSidebar: React.FC<SessionListSidebarProps> = ({
   };
 
   return (
-    <div className={`shrink-0 bg-[#FAF8F3] dark:bg-[#141E1E] flex flex-col h-full ${isMobile ? 'w-full' : 'w-[290px] xl:w-[320px]'} ${className}`}>
+    <div className={`shrink-0 bg-white dark:bg-[#141E1E] border-r border-[#F0EDE4] dark:border-[#202E2E] flex flex-col h-full ${isMobile ? 'w-full' : 'w-[290px] xl:w-[320px]'} ${className}`}>
       {/* Header */}
       {showHeader && (
-        <div className="p-4 flex items-center justify-between shrink-0 bg-transparent">
+        <div className="p-4 flex items-center justify-between shrink-0 bg-white dark:bg-[#141E1E] border-b border-[#F0EDE4] dark:border-[#202E2E]">
           <div>
-            <h2 className="text-base font-bold text-lovira-title tracking-tight">Cuộc trò chuyện</h2>
-            <p className="text-[11px] font-medium text-lovira-muted">Các phiên đời sống của bạn</p>
+            <h2 className="text-base font-extrabold text-[#1C2226] dark:text-[#F2F7F7] tracking-tight">Cuộc trò chuyện</h2>
+            <p className="text-[11px] font-medium text-[#7A848B] dark:text-[#8E9E9E]">Các phiên đời sống của bạn</p>
           </div>
           <div className="flex items-center gap-1.5">
             <button
@@ -81,13 +81,13 @@ export const SessionListSidebar: React.FC<SessionListSidebarProps> = ({
       )}
 
       {/* Sessions Scrollable List */}
-      <div className="flex-1 overflow-y-auto p-3 space-y-2 custom-scrollbar">
+      <div className="flex-1 overflow-y-auto p-3 space-y-2.5 custom-scrollbar bg-[#FAF9F6] dark:bg-[#101818]">
         {sessionsList.length === 0 ? (
           <div className="text-center py-10 px-4 space-y-3">
             <div className="w-10 h-10 rounded-full bg-[#E4F0EF] text-[#287C78] dark:bg-[#203B3A] dark:text-[#42A39E] flex items-center justify-center mx-auto">
               <Sparkles className="w-5 h-5" />
             </div>
-            <p className="text-xs font-semibold text-lovira-muted">Chưa có cuộc trò chuyện nào</p>
+            <p className="text-xs font-semibold text-[#7A848B] dark:text-[#8E9E9E]">Chưa có cuộc trò chuyện nào</p>
             <button
               onClick={onCreateNewSession}
               className="text-xs font-bold text-[#287C78] hover:underline cursor-pointer"
@@ -106,8 +106,8 @@ export const SessionListSidebar: React.FC<SessionListSidebarProps> = ({
                 onClick={() => onOpenSession(s.id)}
                 className={`w-full p-3.5 rounded-2xl text-left transition-all flex items-start gap-3 group relative cursor-pointer ${
                   isActive
-                    ? 'bg-[#E4F0EF] dark:bg-[#223B3A] text-lovira-title shadow-xs'
-                    : 'bg-white dark:bg-[#1B2626] hover:bg-[#F0EDE4] dark:hover:bg-[#243232] text-lovira-title shadow-2xs'
+                    ? 'bg-[#EAF4F3] dark:bg-[#223B3A] text-[#1C2226] dark:text-[#F2F7F7] shadow-xs'
+                    : 'bg-white dark:bg-[#1B2626] hover:bg-[#F2EFE9] dark:hover:bg-[#243232] text-[#1C2226] dark:text-[#F2F7F7] shadow-2xs border border-[#EDEAE1] dark:border-transparent'
                 }`}
               >
                 {/* Active Accent Bar */}
@@ -120,7 +120,7 @@ export const SessionListSidebar: React.FC<SessionListSidebarProps> = ({
                   className={`w-9 h-9 rounded-xl flex items-center justify-center shrink-0 ${
                     isActive
                       ? 'bg-white dark:bg-[#1B2626] text-[#287C78] shadow-2xs'
-                      : 'bg-[#F0EDE4] dark:bg-[#202E2E] group-hover:bg-white dark:group-hover:bg-[#1B2626]'
+                      : 'bg-[#F4F3EE] dark:bg-[#202E2E] group-hover:bg-white dark:group-hover:bg-[#1B2626]'
                   }`}
                 >
                   {getScenarioIcon(s.scenarioType)}
@@ -131,12 +131,12 @@ export const SessionListSidebar: React.FC<SessionListSidebarProps> = ({
                   <div className="flex items-center justify-between gap-1">
                     <h3
                       className={`text-xs font-bold truncate ${
-                        isActive ? 'text-[#287C78] dark:text-[#42A39E]' : 'text-lovira-title'
+                        isActive ? 'text-[#287C78] dark:text-[#42A39E]' : 'text-[#1C2226] dark:text-[#F2F7F7]'
                       }`}
                     >
                       {s.title}
                     </h3>
-                    <span className="text-[10px] font-medium text-lovira-muted shrink-0">
+                    <span className="text-[10px] font-medium text-[#7A848B] dark:text-[#8E9E9E] shrink-0">
                       {s.updatedAt ? new Date(s.updatedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : ''}
                     </span>
                   </div>
@@ -146,8 +146,8 @@ export const SessionListSidebar: React.FC<SessionListSidebarProps> = ({
                       {getStatusBadge(s.status)}
                       {progressText && (
                         <>
-                          <span className="text-lovira-muted">·</span>
-                          <span className="font-semibold text-lovira-muted">{progressText}</span>
+                          <span className="text-[#A0AAB0]">·</span>
+                          <span className="font-semibold text-[#7A848B] dark:text-[#8E9E9E]">{progressText}</span>
                         </>
                       )}
                     </div>
@@ -160,10 +160,10 @@ export const SessionListSidebar: React.FC<SessionListSidebarProps> = ({
       </div>
 
       {/* Footer Create New Session Button */}
-      <div className="p-3 border-t border-lovira-subtle bg-lovira-card shrink-0">
+      <div className="p-3 border-t border-[#F0EDE4] dark:border-[#202E2E] bg-white dark:bg-[#141E1E] shrink-0">
         <button
           onClick={onCreateNewSession}
-          className="w-full py-2.5 px-3 rounded-xl bg-lovira-badge-purple hover:bg-lovira-sidebar-active text-lovira-purple font-bold text-xs flex items-center justify-center gap-2 border border-lovira-purple transition-all cursor-pointer"
+          className="w-full py-2.5 px-3 rounded-xl bg-[#EAF4F3] hover:bg-[#DEEFEA] dark:bg-[#1B2E2D] dark:hover:bg-[#243D3B] text-[#287C78] dark:text-[#42A39E] font-bold text-xs flex items-center justify-center gap-2 transition-all cursor-pointer"
         >
           <Plus className="w-4 h-4" />
           <span>Tạo phiên làm việc mới</span>

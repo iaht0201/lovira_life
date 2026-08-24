@@ -35,6 +35,26 @@ export const AppShell: React.FC<AppShellProps> = ({
   children,
 }) => {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState<boolean>(() => {
+    try {
+      return localStorage.getItem('lovira_sidebar_collapsed') === 'true';
+    } catch {
+      return false;
+    }
+  });
+
+  const toggleSidebar = () => {
+    setIsSidebarCollapsed((prev) => {
+      const next = !prev;
+      try {
+        localStorage.setItem('lovira_sidebar_collapsed', String(next));
+      } catch {
+        // ignore
+      }
+      return next;
+    });
+  };
+
   const isChatTab = activeTab === 'chat' || activeTab === 'session';
 
   return (
@@ -46,6 +66,8 @@ export const AppShell: React.FC<AppShellProps> = ({
         onCreateSession={onCreateSession}
         userName={userName}
         planName={planName}
+        isCollapsed={isSidebarCollapsed}
+        onToggleCollapse={toggleSidebar}
       />
 
       {/* Mobile Slide-over Navigation Sidebar Drawer */}
@@ -72,6 +94,8 @@ export const AppShell: React.FC<AppShellProps> = ({
           onOpenMobileMenu={() => setIsMobileMenuOpen(true)}
           onOpenNotifications={onOpenNotifications}
           hasNotifications={hasNotifications}
+          isSidebarCollapsed={isSidebarCollapsed}
+          onToggleSidebarCollapse={toggleSidebar}
         />
 
         {/* Page Main Content */}

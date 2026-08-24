@@ -66,7 +66,7 @@ export const LifeSessionPage: React.FC<LifeSessionPageProps> = ({
   const [isMobileSessionsOpen, setIsMobileSessionsOpen] = useState(false);
 
   return (
-    <div className="flex-1 h-full min-h-0 flex flex-col bg-surface overflow-hidden relative sm:rounded-2xl shadow-sm">
+    <div className="flex-1 h-full min-h-0 flex flex-col bg-white dark:bg-[#141E1E] overflow-hidden relative sm:rounded-2xl shadow-lovira border border-transparent dark:border-[#1F2E2E]">
       {/* Session Conversation Header */}
       <SessionConversationHeader
         session={session}

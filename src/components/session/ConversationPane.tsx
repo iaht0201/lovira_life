@@ -92,17 +92,17 @@ export const ConversationPane: React.FC<ConversationPaneProps> = ({
   };
 
   return (
-    <div className="flex-1 flex flex-col h-full bg-[#FAF8F3] dark:bg-[#121818] relative overflow-hidden">
+    <div className="flex-1 flex flex-col h-full bg-white dark:bg-[#121818] relative overflow-hidden">
       {/* Messages Stream Area */}
-      <div className="flex-1 overflow-y-auto p-3.5 sm:p-6 space-y-3 custom-scrollbar">
+      <div className="flex-1 overflow-y-auto p-3.5 sm:p-6 space-y-3.5 custom-scrollbar bg-white dark:bg-[#121818]">
         {messages.length === 0 ? (
           <div className="flex flex-col items-center justify-center min-h-[300px] text-center p-6 space-y-4 my-auto">
             <div className="w-16 h-16 rounded-full overflow-hidden shadow-md bg-[#287C78] animate-bounce">
               <img src={APP_IMAGES.avatar} alt="Lovira" className="w-full h-full object-cover" />
             </div>
             <div className="space-y-1.5 max-w-sm">
-              <h3 className="text-base font-bold text-text-primary">Chào chú 👋</h3>
-              <p className="text-xs text-text-secondary leading-relaxed">
+              <h3 className="text-base font-bold text-[#1C2226] dark:text-[#F2F7F7]">Chào chú 👋</h3>
+              <p className="text-xs text-[#586268] dark:text-[#C0CCCC] leading-relaxed">
                 Con là Lovira. Con sẽ đồng hành cùng chú trong phiên này. Chú cứ nói tự nhiên như đang nói chuyện với người bên cạnh nhen!
               </p>
             </div>
@@ -135,7 +135,7 @@ export const ConversationPane: React.FC<ConversationPaneProps> = ({
 
         {/* Loading Indicator */}
         {isLoading && (
-          <div className="flex items-center gap-3 p-3.5 sm:p-4 rounded-2xl bg-white dark:bg-[#1B2928] text-xs text-[#287C78] dark:text-[#42A39E] max-w-[85%] animate-pulse shadow-xs my-2">
+          <div className="flex items-center gap-3 p-3.5 sm:p-4 rounded-2xl bg-[#F0F8F7] dark:bg-[#1B2928] text-xs text-[#287C78] dark:text-[#42A39E] border border-[#D5ECE8] dark:border-transparent max-w-[85%] animate-pulse shadow-xs my-2">
             <Loader2 className="w-4 h-4 animate-spin shrink-0 text-[#287C78]" />
             <span className="font-semibold">Lovira đang suy nghĩ và sắp xếp thông tin cho chú...</span>
           </div>
@@ -146,16 +146,16 @@ export const ConversationPane: React.FC<ConversationPaneProps> = ({
 
       {/* Suggested Reply Chips */}
       {quickPrompts.length > 0 && (
-        <div className="px-3.5 sm:px-6 py-2.5 bg-white/80 dark:bg-[#182424]/80 backdrop-blur-md shrink-0">
+        <div className="px-3.5 sm:px-6 py-2.5 bg-white/95 dark:bg-[#182424]/90 border-t border-[#F0EDE4] dark:border-[#202E2E] backdrop-blur-md shrink-0">
           <div className="flex items-center gap-2 overflow-x-auto custom-scrollbar whitespace-nowrap pb-0.5">
-            <span className="text-[11px] font-bold text-text-secondary shrink-0 hidden sm:inline">Gợi ý nhanh:</span>
+            <span className="text-[11px] font-bold text-[#586268] dark:text-[#C0CCCC] shrink-0 hidden sm:inline">Gợi ý nhanh:</span>
             {quickPrompts.map((promptText, idx) => (
               <button
                 key={idx}
                 type="button"
                 disabled={isLoading}
                 onClick={() => handleQuickPrompt(promptText)}
-                className="h-[36px] px-4 rounded-full text-xs font-semibold bg-[#F0EDE4] dark:bg-[#203030] text-[#287C78] dark:text-[#42A39E] hover:bg-[#E4F0EF] dark:hover:bg-[#253D3C] transition-all shadow-2xs shrink-0 cursor-pointer disabled:opacity-50"
+                className="h-[36px] px-4 rounded-full text-xs font-semibold bg-[#F0F6F5] dark:bg-[#203030] text-[#206864] dark:text-[#42A39E] hover:bg-[#DFECEB] dark:hover:bg-[#253D3C] border border-[#D8E8E6] dark:border-transparent transition-all shadow-2xs shrink-0 cursor-pointer disabled:opacity-50"
               >
                 {promptText}
               </button>
@@ -166,13 +166,13 @@ export const ConversationPane: React.FC<ConversationPaneProps> = ({
 
       {/* Listening / Processing Overlay Status in Chat */}
       {isListening && (
-        <div className="mx-3.5 sm:mx-6 mb-2 p-3 rounded-2xl bg-[#E4F0EF] dark:bg-[#1B2928] text-xs font-semibold text-[#287C78] dark:text-[#42A39E] flex items-center justify-between animate-in fade-in shadow-xs">
+        <div className="mx-3.5 sm:mx-6 mb-2 p-3 rounded-2xl bg-[#EAF4F3] dark:bg-[#1B2928] text-xs font-semibold text-[#287C78] dark:text-[#42A39E] border border-[#D5ECE8] dark:border-transparent flex items-center justify-between animate-in fade-in shadow-xs">
           <div className="flex items-center gap-2.5 min-w-0 pr-2">
             <span className="relative flex h-3 w-3 shrink-0">
               <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-rose-500"></span>
               <span className="relative inline-flex rounded-full h-3 w-3 bg-rose-600"></span>
             </span>
-            <span className="truncate italic">
+            <span className="truncate italic font-medium">
               {interimTranscript ? `"${interimTranscript}"` : '🔴 Lovira đang nghe chú nói...'}
             </span>
           </div>
@@ -200,7 +200,7 @@ export const ConversationPane: React.FC<ConversationPaneProps> = ({
       )}
 
       {/* Sticky Bottom Message Composer */}
-      <div className="p-3 sm:p-4 bg-white dark:bg-[#182424] shadow-xs shrink-0">
+      <div className="p-3 sm:p-4 bg-white dark:bg-[#182424] border-t border-[#F0EDE4] dark:border-[#202E2E] shrink-0">
         <form onSubmit={handleSubmit} className="flex items-center gap-2 max-w-4xl mx-auto">
           <button
             type="button"
@@ -208,7 +208,7 @@ export const ConversationPane: React.FC<ConversationPaneProps> = ({
             className={`w-11 h-11 sm:w-12 sm:h-12 rounded-2xl flex items-center justify-center shrink-0 transition-all cursor-pointer ${
               isListening
                 ? 'bg-rose-500 text-white animate-pulse shadow-xs'
-                : 'bg-[#F0EDE4] dark:bg-[#203030] text-text-secondary hover:text-[#287C78] hover:bg-[#E4F0EF] dark:hover:bg-[#253D3C]'
+                : 'bg-[#F6F4EF] hover:bg-[#EAF4F3] text-[#586268] hover:text-[#287C78] dark:bg-[#203030] dark:text-[#C0CCCC] dark:hover:bg-[#253D3C]'
             }`}
             title={isListening ? 'Bấm để hoàn tất' : 'Nói bằng giọng nói'}
             aria-label="Micro"
@@ -219,7 +219,7 @@ export const ConversationPane: React.FC<ConversationPaneProps> = ({
           <button
             type="button"
             onClick={onOpenCamera}
-            className="w-11 h-11 sm:w-12 sm:h-12 rounded-2xl bg-[#F0EDE4] dark:bg-[#203030] text-text-secondary hover:text-amber-600 hover:bg-[#FDF3E7] transition-colors flex items-center justify-center shrink-0 cursor-pointer"
+            className="w-11 h-11 sm:w-12 sm:h-12 rounded-2xl bg-[#F6F4EF] hover:bg-[#FDF2F4] text-[#586268] hover:text-[#E76F91] dark:bg-[#203030] dark:text-[#C0CCCC] transition-colors flex items-center justify-center shrink-0 cursor-pointer"
             title="Nhìn giúp tôi — Quét ảnh tài liệu"
             aria-label="Mở camera"
           >
@@ -232,7 +232,7 @@ export const ConversationPane: React.FC<ConversationPaneProps> = ({
             onChange={(e) => setInput(e.target.value)}
             placeholder="Nhắn cho Lovira..."
             disabled={isLoading}
-            className="flex-1 min-w-0 h-11 sm:h-12 px-4 rounded-2xl bg-[#F0EDE4] dark:bg-[#203030] text-text-primary text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-[#287C78] transition-all"
+            className="flex-1 min-w-0 h-11 sm:h-12 px-4 rounded-2xl bg-[#F6F5F0] focus:bg-white text-[#1C2226] dark:bg-[#203030] dark:text-[#F2F7F7] dark:focus:bg-[#253737] text-xs sm:text-sm border border-[#EDEAE1] dark:border-transparent focus:border-[#287C78] focus:outline-none transition-all"
           />
 
           <button

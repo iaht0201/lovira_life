@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { APP_IMAGES } from '../../assets/images';
+import { BrandLogo } from '../common/BrandLogo';
 import {
   Search,
   Bell,
@@ -13,6 +13,8 @@ import {
   ChevronDown,
   SlidersHorizontal,
   Menu,
+  PanelLeftClose,
+  PanelLeftOpen,
 } from 'lucide-react';
 import { AccessibilitySettings } from '../../types';
 
@@ -24,6 +26,8 @@ interface TopbarProps {
   onOpenNotifications?: () => void;
   onOpenProfile?: () => void;
   onOpenMobileMenu?: () => void;
+  isSidebarCollapsed?: boolean;
+  onToggleSidebarCollapse?: () => void;
   hasNotifications?: boolean;
 }
 
@@ -35,6 +39,8 @@ export const Topbar: React.FC<TopbarProps> = ({
   onOpenNotifications,
   onOpenProfile,
   onOpenMobileMenu,
+  isSidebarCollapsed = false,
+  onToggleSidebarCollapse,
   hasNotifications = true,
 }) => {
   const [searchQuery, setSearchQuery] = useState('');
@@ -104,13 +110,25 @@ export const Topbar: React.FC<TopbarProps> = ({
           <Menu className="w-[18px] h-[18px] sm:w-[20px] sm:h-[20px] text-[#287C78] dark:text-[#42A39E]" />
         </button>
         <div className="flex items-center gap-1.5">
-          <img
-            src={APP_IMAGES.logoClient}
-            alt="Lovira"
-            className="h-[28px] sm:h-[32px] w-auto max-w-[130px] object-contain select-none"
-          />
+          <BrandLogo variant="full" size="sm" />
         </div>
       </div>
+
+      {/* Desktop Sidebar Toggle Button */}
+      {onToggleSidebarCollapse && (
+        <button
+          onClick={onToggleSidebarCollapse}
+          className="hidden md:flex w-[38px] h-[38px] rounded-[12px] bg-lovira-card hover:bg-lovira-card-hover text-lovira-title items-center justify-center transition-colors cursor-pointer shadow-2xs mr-3 shrink-0"
+          title={isSidebarCollapsed ? 'Mở rộng thanh điều hướng' : 'Thu gọn thanh điều hướng'}
+          aria-label={isSidebarCollapsed ? 'Mở rộng thanh điều hướng' : 'Thu gọn thanh điều hướng'}
+        >
+          {isSidebarCollapsed ? (
+            <PanelLeftOpen className="w-[18px] h-[18px] text-[#287C78] dark:text-[#42A39E]" />
+          ) : (
+            <PanelLeftClose className="w-[18px] h-[18px] text-lovira-muted hover:text-[#287C78]" />
+          )}
+        </button>
+      )}
 
       {/* Search Input (Desktop & Tablet) */}
       <div className="relative flex-1 max-w-[240px] sm:max-w-[280px] lg:max-w-[320px] hidden sm:block">

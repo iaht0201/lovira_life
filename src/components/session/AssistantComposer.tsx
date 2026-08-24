@@ -97,7 +97,7 @@ export const AssistantComposer: React.FC<AssistantComposerProps> = ({
       </div>
 
       {/* Messages Stream Box */}
-      <div className="max-h-80 sm:max-h-96 overflow-y-auto space-y-3.5 p-3 sm:p-4 rounded-xl bg-lovira-input border border-lovira scroll-smooth">
+      <div className="max-h-80 sm:max-h-96 overflow-y-auto space-y-3.5 p-3 sm:p-4 rounded-xl bg-[#FAF9F6] dark:bg-[#101818] border border-[#EDEAE1] dark:border-transparent scroll-smooth">
         {messages.length === 0 ? (
           <div className="text-center py-6 text-xs text-lovira-muted">
             Chưa có tin nhắn nào. Hãy gõ hoặc bấm micro để bắt đầu trò chuyện cùng Lovira!

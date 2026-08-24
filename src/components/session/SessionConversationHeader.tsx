@@ -45,13 +45,13 @@ export const SessionConversationHeader: React.FC<SessionConversationHeaderProps>
   };
 
   return (
-    <div className="h-[52px] sm:h-[64px] px-3 sm:px-6 bg-white dark:bg-[#182424] flex items-center justify-between shrink-0 sticky top-0 z-20 shadow-xs">
+    <div className="h-[56px] sm:h-[64px] px-3.5 sm:px-6 bg-white dark:bg-[#182424] border-b border-[#F0EDE4] dark:border-[#202E2E] flex items-center justify-between shrink-0 sticky top-0 z-20">
       {/* Left: Back (Mobile), Mobile Sessions Toggle, Title & Status */}
       <div className="flex items-center gap-2.5 min-w-0">
         {onBack && (
           <button
             onClick={onBack}
-            className="p-2 rounded-xl text-text-secondary hover:text-text-primary hover:bg-[#F0EDE4] dark:hover:bg-[#202E2E] transition-colors shrink-0 md:hidden cursor-pointer"
+            className="p-2 rounded-xl text-[#586268] hover:text-[#1C2226] hover:bg-[#F6F4EF] dark:text-[#C0CCCC] dark:hover:text-white dark:hover:bg-[#202E2E] transition-colors shrink-0 md:hidden cursor-pointer"
             title="Quay lại"
             aria-label="Quay lại"
           >
@@ -62,7 +62,7 @@ export const SessionConversationHeader: React.FC<SessionConversationHeaderProps>
         {onToggleMobileSessionsList && (
           <button
             onClick={onToggleMobileSessionsList}
-            className="p-2 rounded-xl text-text-secondary hover:text-text-primary hover:bg-[#F0EDE4] dark:hover:bg-[#202E2E] transition-colors shrink-0 lg:hidden cursor-pointer"
+            className="p-2 rounded-xl text-[#586268] hover:text-[#1C2226] hover:bg-[#F6F4EF] dark:text-[#C0CCCC] dark:hover:text-white dark:hover:bg-[#202E2E] transition-colors shrink-0 lg:hidden cursor-pointer"
             title="Danh sách cuộc trò chuyện"
             aria-label="Danh sách cuộc trò chuyện"
           >
@@ -72,15 +72,15 @@ export const SessionConversationHeader: React.FC<SessionConversationHeaderProps>
 
         <div className="min-w-0 space-y-0.5">
           <div className="flex items-center gap-2">
-            <h1 className="text-sm sm:text-base font-extrabold text-text-primary truncate tracking-tight">
+            <h1 className="text-sm sm:text-base font-extrabold text-[#1C2226] dark:text-[#F2F7F7] truncate tracking-tight">
               {session.title}
             </h1>
             <div className="shrink-0">{getStatusBadge(session.status)}</div>
           </div>
-          <p className="text-[11px] font-medium text-text-secondary truncate">
+          <p className="text-[11px] font-medium text-[#7A848B] dark:text-[#8E9E9E] truncate">
             {totalCount > 0 ? `${completedCount}/${totalCount} việc hoàn thành` : 'Trợ lý sẵn sàng đồng hành'}
-            <span className="mx-1">·</span>
-            <span>Cập nhật mới nhất</span>
+            <span className="mx-1.5">·</span>
+            <span>Trực tuyến</span>
           </p>
         </div>
       </div>
@@ -89,12 +89,12 @@ export const SessionConversationHeader: React.FC<SessionConversationHeaderProps>
       <div className="flex items-center gap-1.5 shrink-0">
         <button
           onClick={onToggleDetailDrawer}
-          className="p-2.5 rounded-xl bg-[#F0EDE4] dark:bg-[#202E2E] text-text-secondary hover:text-[#287C78] dark:hover:text-[#42A39E] transition-all flex items-center gap-1.5 cursor-pointer shadow-2xs"
+          className="px-3 py-2 rounded-xl bg-[#F6F4EF] hover:bg-[#EAF4F3] dark:bg-[#202E2E] dark:hover:bg-[#283C3B] text-[#1C2226] dark:text-[#F2F7F7] transition-all flex items-center gap-2 cursor-pointer border border-[#EDEAE1] dark:border-transparent"
           title="Xem Chi tiết Phiên & Công việc"
           aria-label="Mở chi tiết phiên"
         >
           <Sliders className="w-4 h-4 text-[#287C78] dark:text-[#42A39E]" />
-          <span className="hidden sm:inline text-xs font-bold text-text-primary">Chi tiết phiên</span>
+          <span className="hidden sm:inline text-xs font-bold">Chi tiết phiên</span>
         </button>
       </div>
     </div>
