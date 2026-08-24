@@ -15,6 +15,8 @@ interface AppShellProps {
   onVoiceClick: () => void;
   accessibility?: AccessibilitySettings;
   onUpdateAccessibility?: (settings: AccessibilitySettings) => void;
+  onOpenNotifications?: () => void;
+  hasNotifications?: boolean;
   children: React.ReactNode;
 }
 
@@ -28,6 +30,8 @@ export const AppShell: React.FC<AppShellProps> = ({
   onVoiceClick,
   accessibility,
   onUpdateAccessibility,
+  onOpenNotifications,
+  hasNotifications = false,
   children,
 }) => {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
@@ -66,6 +70,8 @@ export const AppShell: React.FC<AppShellProps> = ({
           onOpenSettings={() => onTabChange('settings')}
           onOpenProfile={() => onTabChange('profile')}
           onOpenMobileMenu={() => setIsMobileMenuOpen(true)}
+          onOpenNotifications={onOpenNotifications}
+          hasNotifications={hasNotifications}
         />
 
         {/* Page Main Content */}

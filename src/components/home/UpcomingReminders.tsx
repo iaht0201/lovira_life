@@ -29,13 +29,15 @@ interface UpcomingRemindersProps {
 }
 
 export const UpcomingReminders: React.FC<UpcomingRemindersProps> = ({
-  reminders = DEFAULT_REMINDERS,
+  reminders,
   onAddReminder,
 }) => {
-  const [items, setItems] = useState<ReminderData[]>(reminders);
+  const [localItems, setLocalItems] = useState<ReminderData[]>(DEFAULT_REMINDERS);
+
+  const displayItems = reminders || localItems;
 
   const handleToggle = (id: string) => {
-    setItems((prev) =>
+    setLocalItems((prev) =>
       prev.map((item) =>
         item.id === id ? { ...item, completed: !item.completed } : item
       )
@@ -47,7 +49,7 @@ export const UpcomingReminders: React.FC<UpcomingRemindersProps> = ({
       {/* Header */}
       <div className="flex items-center justify-between mb-4">
         <div className="flex items-center gap-2">
-          <div className="w-[30px] h-[30px] rounded-[10px] bg-[#FFF3E8] dark:bg-[#3D2518] text-[#FF8C42] flex items-center justify-center">
+          <div className="w-[32px] h-[32px] rounded-[10px] bg-[#FFF3E8] dark:bg-[#3D2518] text-[#FF701A] dark:text-[#FFA066] flex items-center justify-center shrink-0">
             <Bell className="w-[16px] h-[16px]" />
           </div>
           <h3 className="text-[18px] sm:text-[20px] font-[800] text-lovira-title">
@@ -59,7 +61,7 @@ export const UpcomingReminders: React.FC<UpcomingRemindersProps> = ({
           <button
             onClick={onAddReminder}
             className="w-[28px] h-[28px] rounded-full bg-lovira-badge-purple text-lovira-purple hover:opacity-80 flex items-center justify-center transition-colors cursor-pointer"
-            title="Thêm nhắc nhở"
+            title="Tạo & Ghi chú nhắc nhở chi tiết"
           >
             <Plus className="w-[16px] h-[16px]" />
           </button>
@@ -68,7 +70,7 @@ export const UpcomingReminders: React.FC<UpcomingRemindersProps> = ({
 
       {/* Reminders List */}
       <div className="space-y-2.5">
-        {items.map((rem) => (
+        {displayItems.map((rem) => (
           <ReminderItem key={rem.id} reminder={rem} onToggle={handleToggle} />
         ))}
       </div>

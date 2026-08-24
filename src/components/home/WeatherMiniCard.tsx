@@ -77,9 +77,9 @@ export const WeatherMiniCard: React.FC<WeatherMiniCardProps> = ({
       </div>
 
       <div className="flex flex-col items-end space-y-2">
-        <div className="w-[48px] h-[48px] rounded-[16px] bg-[#FFF3E8] dark:bg-[#3D2518] text-[#FF8C42] flex items-center justify-center shrink-0 shadow-xs">
+        <div className="w-[48px] h-[48px] rounded-[16px] bg-[#FFF3E8] dark:bg-[#3D2518] text-[#FF701A] dark:text-[#FFA066] flex items-center justify-center shrink-0 shadow-xs">
           {weather.loading ? (
-            <RefreshCw className="w-[22px] h-[22px] animate-spin text-[#FF8C42]" />
+            <RefreshCw className="w-[22px] h-[22px] animate-spin text-[#FF701A] dark:text-[#FFA066]" />
           ) : (
             renderWeatherIcon()
           )}

@@ -19,24 +19,24 @@ export const QuickActionCard: React.FC<QuickActionCardProps> = ({
 }) => {
   const accentStyles = {
     purple: {
-      bg: 'bg-lovira-badge-purple',
-      text: 'text-lovira-purple',
-      borderHover: 'hover:border-lovira-purple',
+      bg: 'bg-[#F1E9FF] dark:bg-[#2F2154]',
+      text: 'text-[#7C4DFF] dark:text-[#A45CFF]',
+      borderHover: 'hover:border-[#7C4DFF]',
     },
     orange: {
       bg: 'bg-[#FFF3E8] dark:bg-[#3D2518]',
-      text: 'text-[#FF8C42] dark:text-[#FFA066]',
-      borderHover: 'hover:border-[#FF8C42]',
+      text: 'text-[#FF701A] dark:text-[#FFA066]',
+      borderHover: 'hover:border-[#FF701A]',
     },
     pink: {
-      bg: 'bg-[#FFF0F7] dark:bg-[#3D1A2B]',
-      text: 'text-[#FF5CA8] dark:text-[#FF70B5]',
-      borderHover: 'hover:border-[#FF5CA8]',
+      bg: 'bg-[#FFEBF5] dark:bg-[#3D1A2B]',
+      text: 'text-[#E63988] dark:text-[#FF70B5]',
+      borderHover: 'hover:border-[#E63988]',
     },
     blue: {
-      bg: 'bg-[#EBF3FF] dark:bg-[#1A2A44]',
-      text: 'text-[#4F8CFF] dark:text-[#70A5FF]',
-      borderHover: 'hover:border-[#4F8CFF]',
+      bg: 'bg-[#E8F2FF] dark:bg-[#1A2A44]',
+      text: 'text-[#2B70E4] dark:text-[#70A5FF]',
+      borderHover: 'hover:border-[#2B70E4]',
     },
   }[accent];
 

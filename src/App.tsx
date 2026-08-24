@@ -29,6 +29,9 @@ import { SplashScreen } from './components/common/SplashScreen';
 import { PWAInstallPrompt } from './components/common/PWAInstallPrompt';
 import { PermissionRequestModal } from './components/common/PermissionRequestModal';
 import { OnboardingModal } from './components/common/OnboardingModal';
+import { NotificationDrawer } from './components/notifications/NotificationDrawer';
+import { notificationService } from './services/notificationService';
+import { AppNotification, NotificationType } from './types';
 
 function AppContent() {
   const [showSplash, setShowSplash] = useState(true);
@@ -57,6 +60,53 @@ function AppContent() {
 
   const [cameraModalOpen, setCameraModalOpen] = useState(false);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
+
+  // Notification Drawer State
+  const [notificationDrawerOpen, setNotificationDrawerOpen] = useState(false);
+  const [notifications, setNotifications] = useState<AppNotification[]>(() =>
+    notificationService.getNotifications()
+  );
+
+  const unreadNotifCount = notifications.filter((n) => !n.read).length;
+
+  const handleMarkNotifAsRead = (id: string) => {
+    const updated = notificationService.markAsRead(id);
+    setNotifications(updated);
+  };
+
+  const handleMarkAllNotifsAsRead = () => {
+    const updated = notificationService.markAllAsRead();
+    setNotifications(updated);
+    showToast('Đã đánh dấu tất cả thông báo là đã đọc');
+  };
+
+  const handleDeleteNotif = (id: string) => {
+    const updated = notificationService.deleteNotification(id);
+    setNotifications(updated);
+  };
+
+  const handleClearAllNotifs = () => {
+    const updated = notificationService.clearAll();
+    setNotifications(updated);
+    showToast('Đã xóa tất cả thông báo');
+  };
+
+  const handleResetDefaultNotifs = () => {
+    const updated = notificationService.resetToDefaults();
+    setNotifications(updated);
+    showToast('Đã khôi phục thông báo mặc định');
+  };
+
+  const handleAddNotif = (data: {
+    title: string;
+    message: string;
+    type: NotificationType;
+    actionTab?: any;
+  }) => {
+    notificationService.addNotification(data);
+    setNotifications(notificationService.getNotifications());
+    showToast(`Đã lưu thông báo: "${data.title}"`);
+  };
 
   const { accessibility, setAccessibility } = useAccessibility();
 
@@ -135,6 +185,8 @@ function AppContent() {
         }
         accessibility={accessibility}
         onUpdateAccessibility={setAccessibility}
+        onOpenNotifications={() => setNotificationDrawerOpen(true)}
+        hasNotifications={unreadNotifCount > 0}
       >
         {/* Profile Invite Banner */}
         {!userProfile &&
@@ -160,6 +212,7 @@ function AppContent() {
             onDeleteSession={(id) => handleDeleteSession(id, setConfirmModal)}
             onOpenTasks={() => setActiveTab('tasks')}
             onOpenReminders={() => setActiveTab('reminders')}
+            onOpenCamera={() => setCameraModalOpen(true)}
             onOpenChat={() => {
               if (activeSession) {
                 setActiveTab('session');
@@ -305,6 +358,20 @@ function AppContent() {
             activeSession?.messages[activeSession.messages.length - 1]?.text ||
             'Lovira Life sẵn sàng đồng hành cùng bạn!'
           }
+        />
+
+        {/* Notification Drawer */}
+        <NotificationDrawer
+          isOpen={notificationDrawerOpen}
+          onClose={() => setNotificationDrawerOpen(false)}
+          notifications={notifications}
+          onMarkAsRead={handleMarkNotifAsRead}
+          onMarkAllAsRead={handleMarkAllNotifsAsRead}
+          onDeleteNotification={handleDeleteNotif}
+          onClearAll={handleClearAllNotifs}
+          onResetDefaults={handleResetDefaultNotifs}
+          onAddNotification={handleAddNotif}
+          onNavigate={(tab) => setActiveTab(tab)}
         />
 
         {/* PWA Mobile Install Banner */}

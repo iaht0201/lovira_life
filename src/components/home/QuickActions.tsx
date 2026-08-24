@@ -1,41 +1,45 @@
 import React from 'react';
-import { Plus, CheckSquare, Bell, MessageSquare } from 'lucide-react';
+import { Plus, Camera, Bell, MessageSquare } from 'lucide-react';
 import { QuickActionCard } from './QuickActionCard';
 
 interface QuickActionsProps {
   onCreateSession: () => void;
-  onOpenTasks: () => void;
+  onOpenCamera?: () => void;
+  onOpenTasks?: () => void;
   onOpenReminders: () => void;
   onOpenChat: () => void;
 }
 
 export const QuickActions: React.FC<QuickActionsProps> = ({
   onCreateSession,
+  onOpenCamera,
   onOpenTasks,
   onOpenReminders,
   onOpenChat,
 }) => {
+  const handleCameraClick = onOpenCamera || onOpenTasks || (() => {});
+
   const actions = [
     {
       id: 'create_session' as const,
       title: 'Tạo phiên mới',
-      description: 'Bắt đầu với một mục tiêu mới',
+      description: 'Bắt đầu với một chủ đề công việc mới',
       icon: Plus,
       accent: 'purple' as const,
       onClick: onCreateSession,
     },
     {
-      id: 'tasks' as const,
-      title: 'Việc cần làm',
-      description: 'Xem danh sách việc của chú',
-      icon: CheckSquare,
+      id: 'camera' as const,
+      title: 'Nhìn giúp tôi',
+      description: 'Chụp ảnh phiếu khám, đơn thuốc, sổ thứ tự',
+      icon: Camera,
       accent: 'purple' as const,
-      onClick: onOpenTasks,
+      onClick: handleCameraClick,
     },
     {
       id: 'reminders' as const,
       title: 'Nhắc nhở',
-      description: 'Quản lý các nhắc nhở',
+      description: 'Tạo & Quản lý các nhắc nhở chi tiết',
       icon: Bell,
       accent: 'orange' as const,
       onClick: onOpenReminders,
@@ -43,7 +47,7 @@ export const QuickActions: React.FC<QuickActionsProps> = ({
     {
       id: 'chat' as const,
       title: 'Trò chuyện',
-      description: 'Nói chuyện với Lovira',
+      description: 'Nói chuyện & Hỏi đáp cùng Lovira',
       icon: MessageSquare,
       accent: 'purple' as const,
       onClick: onOpenChat,

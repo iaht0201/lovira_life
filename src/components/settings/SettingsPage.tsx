@@ -66,12 +66,12 @@ export const SettingsPage: React.FC<SettingsPageProps> = ({
     e.preventDefault();
     onUpdateAISettings({
       ...aiSettings,
-      provider,
-      selectedModel,
+      provider: 'gemini',
+      selectedModel: 'gemini-2.5-flash',
       apiKey: apiKeyInput.trim(),
-      demoMode: provider === 'demo',
+      demoMode: false,
     });
-    setTestResult('Đã lưu cấu hình AI thành công!');
+    setTestResult('Đã lưu Gemini API Key thành công!');
     setTimeout(() => setTestResult(null), 3000);
   };
 
@@ -112,7 +112,7 @@ export const SettingsPage: React.FC<SettingsPageProps> = ({
             </p>
           </div>
 
-          <div className="w-[48px] h-[48px] rounded-[16px] bg-lovira-purple text-white flex items-center justify-center shrink-0 shadow-xs">
+          <div className="w-[48px] h-[48px] rounded-[16px] bg-[#7C4DFF] text-white flex items-center justify-center shrink-0 shadow-xs">
             <SlidersHorizontal className="w-[24px] h-[24px]" />
           </div>
         </div>
@@ -306,7 +306,7 @@ export const SettingsPage: React.FC<SettingsPageProps> = ({
       <section className="p-6 rounded-[22px] bg-lovira-card border border-lovira shadow-2xs space-y-4">
         <div className="flex items-center justify-between border-b border-lovira-subtle pb-3.5">
           <div className="flex items-center gap-2.5">
-            <div className="w-[36px] h-[36px] rounded-[12px] bg-[#EAFBF5] dark:bg-[#143B2E] text-[#188B68] dark:text-[#34D399] flex items-center justify-center font-[700]">
+            <div className="w-[36px] h-[36px] rounded-[12px] bg-[#ECFDF5] dark:bg-[#064E3B] text-[#059669] dark:text-[#34D399] flex items-center justify-center font-[700]">
               <Volume2 className="w-[18px] h-[18px]" />
             </div>
             <div>
@@ -318,10 +318,10 @@ export const SettingsPage: React.FC<SettingsPageProps> = ({
           </div>
 
           <span
-            className={`text-[11px] font-[700] px-2.5 py-1 rounded-full border ${
+            className={`text-[11px] font-[700] px-3 py-1 rounded-full border ${
               voiceSupport === 'available'
-                ? 'bg-[#EAFBF5] dark:bg-[#143B2E] text-[#188B68] dark:text-[#34D399] border-[#BDE8D8] dark:border-[#1F5441]'
-                : 'bg-amber-500/10 text-amber-800 dark:text-amber-300 border-amber-500/30'
+                ? 'bg-[#ECFDF5] text-[#047857] border-[#A7F3D0] dark:bg-[#064E3B] dark:text-[#34D399] dark:border-[#047857]'
+                : 'bg-[#FEF3C7] text-[#92400E] border-[#FCD34D] dark:bg-[#451A03] dark:text-[#FDE68A] dark:border-[#78350F]'
             }`}
           >
             {voiceSupport === 'available' ? '✓ Đã có gói vi-VN' : '⚠️ Chưa có gói vi-VN'}
@@ -335,126 +335,62 @@ export const SettingsPage: React.FC<SettingsPageProps> = ({
 
           <button
             onClick={handleTestTTS}
-            className="flex items-center gap-2 min-h-[42px] px-4 py-2 rounded-[12px] bg-[#188B68] text-white font-[700] text-[12px] shadow-xs hover:opacity-90 transition-opacity cursor-pointer"
+            className="flex items-center gap-2 min-h-[42px] px-5 py-2.5 rounded-[12px] bg-[#7C4DFF] hover:bg-[#6D3CF0] text-white font-[700] text-[13px] shadow-xs transition-colors cursor-pointer"
           >
-            <Volume2 className="w-[16px] h-[16px]" />
+            <Volume2 className="w-[18px] h-[18px]" />
             <span>Thử nghe giọng đọc tiếng Việt</span>
           </button>
 
           {voiceSupport === 'unavailable' && (
-            <div className="p-4 rounded-[16px] bg-amber-500/10 border border-amber-500/30 space-y-2 text-[12px] text-lovira-title">
-              <div className="flex items-center gap-1.5 font-[700] text-amber-800 dark:text-amber-300">
-                <HelpCircle className="w-[16px] h-[16px]" />
+            <div className="p-4 rounded-[16px] bg-[#FFFBEB] dark:bg-[#2A1808] border border-[#FCD34D] dark:border-[#B45309] space-y-2 text-[12px]">
+              <div className="flex items-center gap-1.5 font-[800] text-[#B45309] dark:text-[#FBBF24]">
+                <HelpCircle className="w-[18px] h-[18px] shrink-0" />
                 <span>Hướng dẫn tải gói giọng nói tiếng Việt:</span>
               </div>
-              <ul className="list-disc pl-5 space-y-1 text-lovira-muted">
-                <li><strong>Android:</strong> Cài đặt hệ thống → Ngôn ngữ & Nhập liệu → Đầu ra chuyển văn bản thành giọng nói (TTS) → Tải gói giọng nói tiếng Việt.</li>
-                <li><strong>iOS / iPhone:</strong> Cài đặt → Trợ năng → Nội dung được đọc → Giọng nói → Tiếng Việt → Tải gói giọng nói.</li>
+              <ul className="list-disc pl-5 space-y-1.5 text-[#78350F] dark:text-[#FEF3C7] font-[500]">
+                <li><strong className="font-[800] text-[#92400E] dark:text-[#FDE68A]">Android:</strong> Cài đặt hệ thống → Ngôn ngữ & Nhập liệu → Đầu ra chuyển văn bản thành giọng nói (TTS) → Tải gói giọng nói tiếng Việt.</li>
+                <li><strong className="font-[800] text-[#92400E] dark:text-[#FDE68A]">iOS / iPhone:</strong> Cài đặt → Trợ năng → Nội dung được đọc → Giọng nói → Tiếng Việt → Tải gói giọng nói.</li>
               </ul>
             </div>
           )}
         </div>
       </section>
 
-      {/* 4. AI PROVIDER & MODEL POOL */}
+      {/* 4. GEMINI API KEY SECTION */}
       <section className="p-6 rounded-[22px] bg-lovira-card border border-lovira shadow-2xs space-y-4">
         <div className="flex items-center gap-2.5 border-b border-lovira-subtle pb-3.5">
           <div className="w-[36px] h-[36px] rounded-[12px] bg-lovira-badge-purple text-lovira-purple flex items-center justify-center font-[700]">
-            <Bot className="w-[18px] h-[18px]" />
+            <Key className="w-[18px] h-[18px]" />
           </div>
           <div>
             <h3 className="text-[16px] font-[800] text-lovira-title">
-              Cấu hình Nhà cung cấp AI (Gemini / Groq)
+              Cấu hình khóa Google Gemini API
             </h3>
-            <p className="text-[12px] font-[500] text-lovira-muted">Chọn mô hình trí tuệ nhân tạo phục vụ trò chuyện</p>
+            <p className="text-[12px] font-[500] text-lovira-muted">
+              Nhập API Key để Lovira hỗ trợ phân tích đơn thuốc, đọc ảnh và suy luận trí tuệ nhân tạo
+            </p>
           </div>
         </div>
 
         <form onSubmit={handleSaveAI} className="space-y-4">
-          <div className="space-y-2">
+          <div className="space-y-1.5">
             <label className="text-[12px] font-[700] text-lovira-title block">
-              Chế độ hoạt động & Nhà cung cấp:
+              Khóa Gemini API Secret Key:
             </label>
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
-              <button
-                type="button"
-                onClick={() => setProvider('demo')}
-                className={`p-3 rounded-[14px] border text-left transition-all cursor-pointer ${
-                  provider === 'demo'
-                    ? 'bg-lovira-badge-purple border-lovira-purple font-[700] text-lovira-purple'
-                    : 'bg-lovira-input border-lovira text-lovira-title'
-                }`}
-              >
-                <div className="text-[12px] font-[700]">Chế độ Demo Cục bộ</div>
-                <div className="text-[11px] font-[500] text-lovira-muted">Không cần API key, phản hồi tức thì</div>
-              </button>
-
-              <button
-                type="button"
-                onClick={() => setProvider('gemini')}
-                className={`p-3 rounded-[14px] border text-left transition-all cursor-pointer ${
-                  provider === 'gemini'
-                    ? 'bg-lovira-badge-purple border-lovira-purple font-[700] text-lovira-purple'
-                    : 'bg-lovira-input border-lovira text-lovira-title'
-                }`}
-              >
-                <div className="text-[12px] font-[700]">Google Gemini API</div>
-                <div className="text-[11px] font-[500] text-lovira-muted">Đọc ảnh đa thức & suy luận tự động</div>
-              </button>
-
-              <button
-                type="button"
-                onClick={() => setProvider('groq')}
-                className={`p-3 rounded-[14px] border text-left transition-all cursor-pointer ${
-                  provider === 'groq'
-                    ? 'bg-lovira-badge-purple border-lovira-purple font-[700] text-lovira-purple'
-                    : 'bg-lovira-input border-lovira text-lovira-title'
-                }`}
-              >
-                <div className="text-[12px] font-[700]">Groq API</div>
-                <div className="text-[11px] font-[500] text-lovira-muted">Tốc độ xử lý ngôn ngữ siêu nhanh</div>
-              </button>
+            <div className="relative">
+              <input
+                type="password"
+                value={apiKeyInput}
+                onChange={(e) => setApiKeyInput(e.target.value)}
+                placeholder="Nhập Gemini API Key (AIzaSy...)..."
+                className="w-full p-3 pr-10 rounded-[12px] border border-lovira bg-lovira-input text-lovira-title text-[12px] font-mono focus:outline-none focus:border-lovira-purple"
+              />
+              <Key className="w-[16px] h-[16px] absolute right-3 top-3.5 text-lovira-muted pointer-events-none" />
             </div>
+            <p className="text-[11px] font-[500] text-lovira-muted">
+              🔒 Khoá API của bạn được bảo mật và lưu an toàn cục bộ trong trình duyệt.
+            </p>
           </div>
-
-          {/* Model selection */}
-          <div className="space-y-1">
-            <label className="text-[12px] font-[700] text-lovira-title block">
-              Chọn Mô hình (Model Profile):
-            </label>
-            <select
-              value={selectedModel}
-              onChange={(e) => setSelectedModel(e.target.value)}
-              className="w-full p-3 rounded-[12px] border border-lovira bg-lovira-input text-lovira-title text-[12px] font-[600] focus:outline-none focus:border-lovira-purple"
-            >
-              {MODEL_POOL.map((m) => (
-                <option key={m.id} value={m.id}>
-                  {m.id} ({m.provider.toUpperCase()} • {m.capability})
-                </option>
-              ))}
-            </select>
-          </div>
-
-          {provider !== 'demo' && (
-            <div className="space-y-1">
-              <label className="text-[12px] font-[700] text-lovira-title block">
-                Khóa API Secret Key ({provider.toUpperCase()}):
-              </label>
-              <div className="relative">
-                <input
-                  type="password"
-                  value={apiKeyInput}
-                  onChange={(e) => setApiKeyInput(e.target.value)}
-                  placeholder={`Nhập ${provider.toUpperCase()} API Key...`}
-                  className="w-full p-3 pr-10 rounded-[12px] border border-lovira bg-lovira-input text-lovira-title text-[12px] focus:outline-none focus:border-lovira-purple"
-                />
-                <Key className="w-[16px] h-[16px] absolute right-3 top-3.5 text-lovira-muted pointer-events-none" />
-              </div>
-              <p className="text-[11px] font-[500] text-lovira-muted">
-                Khoá API được lưu an toàn cục bộ trong trình duyệt của bạn.
-              </p>
-            </div>
-          )}
 
           {testResult && (
             <div className="p-3 rounded-[12px] bg-[#EAFBF5] dark:bg-[#143B2E] border border-[#BDE8D8] text-[#188B68] dark:text-[#34D399] text-[12px] font-[700]">
@@ -462,12 +398,13 @@ export const SettingsPage: React.FC<SettingsPageProps> = ({
             </div>
           )}
 
-          <div className="pt-2">
+          <div className="pt-1">
             <button
               type="submit"
-              className="min-h-[42px] px-6 py-2 rounded-[12px] bg-lovira-purple text-white font-[700] text-[12px] shadow-xs hover:opacity-90 transition-opacity cursor-pointer"
+              className="min-h-[42px] px-6 py-2 rounded-[12px] bg-lovira-purple text-white font-[700] text-[12px] shadow-xs hover:opacity-90 transition-opacity cursor-pointer flex items-center gap-2"
             >
-              Lưu cấu hình AI
+              <ShieldCheck className="w-4 h-4" />
+              <span>Lưu khóa Gemini API Key</span>
             </button>
           </div>
         </form>

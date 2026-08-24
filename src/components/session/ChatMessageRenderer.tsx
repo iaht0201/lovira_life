@@ -173,7 +173,7 @@ export const ChatMessageRenderer: React.FC<ChatMessageRendererProps> = ({
                     className={`flex items-start gap-2 p-1.5 rounded-xl ${
                       isUser
                         ? 'bg-purple-700 text-white'
-                        : 'bg-white dark:bg-[#1E1830] text-text-primary border border-lovira-subtle'
+                        : 'bg-white dark:bg-[#1E1830] text-lovira-title border border-lovira-subtle'
                     }`}
                   >
                     <span
@@ -220,7 +220,7 @@ export const ChatMessageRenderer: React.FC<ChatMessageRendererProps> = ({
             className={`flex items-center gap-2 pt-2 mt-1 text-[10px] ${
               isUser
                 ? 'text-purple-100 justify-end'
-                : 'text-text-secondary justify-between border-t border-lovira-subtle'
+                : 'text-lovira-muted justify-between border-t border-lovira-subtle'
             }`}
           >
             {!isUser && (
@@ -239,7 +239,7 @@ export const ChatMessageRenderer: React.FC<ChatMessageRendererProps> = ({
                 <button
                   type="button"
                   onClick={handleCopy}
-                  className="inline-flex items-center gap-0.5 hover:text-text-primary transition-colors cursor-pointer"
+                  className="inline-flex items-center gap-0.5 hover:text-lovira-title transition-colors cursor-pointer"
                 >
                   {copied ? (
                     <span className="text-emerald-600 font-bold">✓ Đã chép</span>

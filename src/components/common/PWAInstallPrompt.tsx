@@ -77,8 +77,8 @@ export const PWAInstallPrompt: React.FC = () => {
     } else if (isIOS) {
       setShowIOSGuide(true);
     } else {
-      // Fallback info
-      alert('Để cài đặt Lovira: Mở menu tùy chọn trình duyệt (3 dấu chấm) -> Chọn "Thêm vào Màn hình chính" / "Install App"');
+      // Fallback info if beforeinstallprompt hasn't fired yet
+      alert('Vui lòng chọn "Thêm vào Màn hình chính" (Add to Home Screen) từ menu 3 dấu chấm của trình duyệt để tải ứng dụng.');
     }
   };
 

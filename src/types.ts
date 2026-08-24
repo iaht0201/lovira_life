@@ -3,6 +3,7 @@ import { PendingInteraction } from './services/interaction/interactionTypes';
 
 export * from './types/userProfile';
 export * from './types/clarification';
+export * from './types/notification';
 export * from './services/voice/voiceTypes';
 export * from './services/interaction/interactionTypes';
 export * from './services/interaction/appActionTypes';

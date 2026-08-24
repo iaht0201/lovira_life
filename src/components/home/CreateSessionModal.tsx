@@ -1,6 +1,20 @@
 import React, { useState } from 'react';
-import { Briefcase, Stethoscope, ShoppingBag, Landmark, Sparkles, X, Plus } from 'lucide-react';
+import {
+  Sparkles,
+  X,
+  Plus,
+  Stethoscope,
+  Landmark,
+  ShoppingBag,
+  Briefcase,
+  Smartphone,
+  Car,
+  Plane,
+  HelpCircle,
+  CheckCircle2,
+} from 'lucide-react';
 import { ScenarioType } from '../../types';
+import { sfx } from '../../utils/sfx';
 
 interface CreateSessionModalProps {
   isOpen: boolean;
@@ -13,58 +27,70 @@ export const CreateSessionModal: React.FC<CreateSessionModalProps> = ({
   onClose,
   onCreateFromTemplate,
 }) => {
-  const [selectedType, setSelectedType] = useState<ScenarioType | 'custom_goal'>('medical');
-  const [customGoal, setCustomGoal] = useState('');
+  const [topicInput, setTopicInput] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   if (!isOpen) return null;
 
-  const presets = [
+  const quickTopics = [
     {
-      type: 'medical' as ScenarioType,
       title: '🏥 Đi khám sức khỏe',
-      desc: 'Bác sĩ, phiếu khám, chuẩn bị giấy tờ & đơn thuốc',
+      desc: 'Bác sĩ, phiếu khám, đơn thuốc & xét nghiệm',
+      scenario: 'medical' as ScenarioType,
+      text: 'Đi khám sức khỏe tại bệnh viện',
       icon: Stethoscope,
     },
     {
-      type: 'administrative' as ScenarioType,
-      title: '📄 Thủ tục hành chính',
-      desc: 'Làm CCCD, hộ chiếu, xác nhận cư trú, đăng ký xe',
+      title: '📄 Làm thủ tục hành chính',
+      desc: 'Làm CCCD, hộ chiếu, xác nhận cư trú, sổ đỏ',
+      scenario: 'administrative' as ScenarioType,
+      text: 'Làm thủ tục hành chính & giấy tờ',
       icon: Landmark,
     },
     {
-      type: 'shopping' as ScenarioType,
-      title: '🛍️ Mua sắm & Chợ',
-      desc: 'Lập danh sách mua hàng, tính tiền & ghi chú',
+      title: '🛒 Mua sắm & Đi chợ',
+      desc: 'Lập danh sách mua sắm, tính tiền & ghi chú',
+      scenario: 'shopping' as ScenarioType,
+      text: 'Lập danh sách đi chợ & mua sắm',
       icon: ShoppingBag,
     },
     {
-      type: 'custom' as ScenarioType,
-      title: '💼 Đi phỏng vấn xin việc',
-      desc: 'In CV, hồ sơ, trang phục & phỏng vấn',
-      icon: Briefcase,
-      customText: 'Đi phỏng vấn xin việc',
+      title: '📱 Hỏi cách dùng điện thoại',
+      desc: 'Cách dùng Zalo, gửi ảnh, gọi video, đọc tin tức',
+      scenario: 'custom' as ScenarioType,
+      text: 'Hướng dẫn sử dụng điện thoại & Zalo',
+      icon: Smartphone,
     },
     {
-      type: 'custom_goal' as const,
-      title: '✨ Mục tiêu tự chọn khác...',
-      desc: 'Nhập bất kỳ mục tiêu đời sống nào chú muốn',
-      icon: Sparkles,
+      title: '🚗 Đăng ký xe & Bằng lái',
+      desc: 'Đổi bằng lái, đăng ký xe máy/ô tô',
+      scenario: 'custom' as ScenarioType,
+      text: 'Đăng ký xe & Đổi bằng lái',
+      icon: Car,
+    },
+    {
+      title: '💼 Đi xin việc & Phỏng vấn',
+      desc: 'Hồ sơ, CV, trang phục & câu hỏi phỏng vấn',
+      scenario: 'custom' as ScenarioType,
+      text: 'Đi phỏng vấn & Chuẩn bị hồ sơ xin việc',
+      icon: Briefcase,
     },
   ];
 
+  const handleSelectTopic = (text: string) => {
+    setTopicInput(text);
+    sfx.playTap();
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    const finalTopic = topicInput.trim() || 'Phiên làm việc tự do cùng Lovira';
     setIsSubmitting(true);
+    sfx.playSuccess();
     try {
-      if (selectedType === 'custom_goal') {
-        if (!customGoal.trim()) return;
-        await onCreateFromTemplate('custom', customGoal.trim());
-      } else if (selectedType === 'custom') {
-        await onCreateFromTemplate('custom', 'Đi phỏng vấn xin việc');
-      } else {
-        await onCreateFromTemplate(selectedType as ScenarioType);
-      }
+      // Create session with custom topic
+      await onCreateFromTemplate('custom', finalTopic);
+      setTopicInput('');
       onClose();
     } catch (err) {
       console.error(err);
@@ -74,97 +100,133 @@ export const CreateSessionModal: React.FC<CreateSessionModalProps> = ({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/60 backdrop-blur-xs p-0 sm:p-4 transition-all">
-      {/* Container - Bottom Sheet on Mobile, Modal on Desktop */}
-      <div className="w-full sm:max-w-[480px] bg-lovira-card rounded-t-[28px] sm:rounded-[28px] border border-lovira shadow-lovira-lg overflow-hidden p-6 space-y-5 animate-in slide-in-from-bottom duration-200">
-        {/* Modal Header */}
-        <div className="flex items-start justify-between border-b border-lovira-subtle pb-4">
-          <div>
-            <h3 className="text-[20px] font-[800] text-lovira-title">
-              Tạo phiên mới
-            </h3>
-            <p className="text-[13px] font-[500] text-lovira-muted mt-0.5">
-              Chú muốn Lovira đồng hành công việc gì ạ?
-            </p>
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/90 backdrop-blur-md p-3 sm:p-4 overflow-y-auto animate-in fade-in duration-200">
+      {/* Modal Container - Solid 100% opacity background (no transparency) */}
+      <div className="bg-white dark:bg-[#1C162E] opacity-100 border-2 border-purple-500/40 rounded-3xl max-w-lg w-full p-5 sm:p-6 shadow-2xl space-y-5 relative z-10 text-gray-900 dark:text-white my-auto">
+        
+        {/* Header */}
+        <div className="flex items-start justify-between border-b border-gray-200 dark:border-gray-800 pb-4">
+          <div className="flex items-center gap-3">
+            <div className="w-11 h-11 rounded-2xl bg-gradient-to-br from-[#7C4DFF] to-[#A45CFF] text-white flex items-center justify-center shadow-md shrink-0">
+              <Plus className="w-6 h-6" />
+            </div>
+            <div>
+              <h2 className="text-lg sm:text-xl font-black tracking-tight text-gray-900 dark:text-white">
+                Tạo phiên làm việc mới
+              </h2>
+              <p className="text-xs text-gray-500 dark:text-gray-400 font-medium">
+                Tự do gõ chủ đề hoặc chọn gợi ý nhanh bên dưới
+              </p>
+            </div>
           </div>
+
           <button
             onClick={onClose}
-            className="w-[32px] h-[32px] rounded-full bg-lovira-badge-purple text-lovira-purple hover:opacity-80 flex items-center justify-center transition-colors cursor-pointer"
+            className="p-2 rounded-xl text-gray-400 hover:text-gray-700 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors cursor-pointer"
+            aria-label="Đóng"
           >
-            <X className="w-[18px] h-[18px]" />
+            <X className="w-5 h-5" />
           </button>
         </div>
 
-        {/* Form Options */}
-        <form onSubmit={handleSubmit} className="space-y-3">
-          <div className="space-y-2 max-h-[320px] overflow-y-auto pr-1">
-            {presets.map((preset) => {
-              const isSelected = selectedType === preset.type;
-              return (
-                <button
-                  type="button"
-                  key={preset.title}
-                  onClick={() => setSelectedType(preset.type as any)}
-                  className={`w-full text-left p-3.5 rounded-[16px] border transition-all flex items-center gap-3.5 cursor-pointer ${
-                    isSelected
-                      ? 'bg-lovira-badge-purple border-lovira-purple text-lovira-purple shadow-xs'
-                      : 'bg-lovira-card border-lovira hover:bg-lovira-card-hover text-lovira-title'
-                  }`}
-                >
-                  <div
-                    className={`w-[38px] h-[38px] rounded-[12px] flex items-center justify-center shrink-0 ${
-                      isSelected ? 'bg-lovira-purple text-white' : 'bg-lovira-badge-purple text-lovira-purple'
-                    }`}
-                  >
-                    <preset.icon className="w-[18px] h-[18px]" />
-                  </div>
-                  <div className="min-w-0 flex-1">
-                    <p className="text-[14px] font-[700] truncate">{preset.title}</p>
-                    <p className="text-[12px] text-lovira-muted truncate mt-0.5">
-                      {preset.desc}
-                    </p>
-                  </div>
-                </button>
-              );
-            })}
-          </div>
+        {/* Main Form */}
+        <form onSubmit={handleSubmit} className="space-y-4">
+          
+          {/* Custom Topic Input */}
+          <div className="space-y-1.5">
+            <label className="block text-xs font-black uppercase tracking-wider text-purple-700 dark:text-purple-300 flex items-center gap-1.5">
+              <Sparkles className="w-4 h-4 text-purple-500" />
+              <span>Chủ đề / Mục tiêu công việc của chú:</span>
+            </label>
 
-          {/* Custom Input if 'custom_goal' selected */}
-          {selectedType === 'custom_goal' && (
-            <div className="pt-2">
-              <label className="block text-[12px] font-[700] text-lovira-title mb-1">
-                Mục tiêu công việc của chú:
-              </label>
+            <div className="relative">
               <input
                 type="text"
-                value={customGoal}
-                onChange={(e) => setCustomGoal(e.target.value)}
-                placeholder="Ví dụ: Đi đón cháu đi học về..."
                 autoFocus
-                className="w-full h-[44px] px-4 rounded-[12px] bg-lovira-input border border-lovira-purple text-[14px] text-lovira-main focus:outline-none focus:ring-2 focus:ring-lovira-purple/20"
+                placeholder="Ví dụ: Đăng ký BHYT, Hỏi đường đi Chợ Rẫy, Học dùng Zalo..."
+                value={topicInput}
+                onChange={(e) => setTopicInput(e.target.value)}
+                className="w-full h-12 px-4 text-sm font-bold bg-gray-50 dark:bg-[#251D3A] border-2 border-purple-500/50 dark:border-purple-400/60 rounded-2xl focus:border-purple-600 focus:ring-2 focus:ring-purple-500/20 outline-none text-gray-900 dark:text-white transition-all shadow-inner"
               />
+              {topicInput && (
+                <button
+                  type="button"
+                  onClick={() => setTopicInput('')}
+                  className="absolute right-3 top-3 text-gray-400 hover:text-gray-600 dark:hover:text-white"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              )}
             </div>
-          )}
+            <p className="text-[11px] text-gray-500 dark:text-gray-400 pl-1 font-medium">
+              💡 Chú có thể nhập bất kỳ nội dung hoặc mục tiêu cá nhân nào mà không bị bó buộc.
+            </p>
+          </div>
+
+          {/* Quick Topic Chips / Suggestions */}
+          <div className="space-y-2 pt-1">
+            <label className="block text-xs font-bold text-gray-500 dark:text-gray-400 flex items-center gap-1">
+              <HelpCircle className="w-3.5 h-3.5" />
+              <span>Hoặc bấm chọn nhanh các chủ đề gợi ý phổ biến:</span>
+            </label>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 max-h-[220px] overflow-y-auto pr-1">
+              {quickTopics.map((topic) => {
+                const isSelected = topicInput === topic.text;
+                const Icon = topic.icon;
+                return (
+                  <button
+                    key={topic.title}
+                    type="button"
+                    onClick={() => handleSelectTopic(topic.text)}
+                    className={`p-3 rounded-2xl border-2 text-left transition-all cursor-pointer flex items-center gap-3 ${
+                      isSelected
+                        ? 'bg-purple-500/15 border-purple-600 text-purple-700 dark:text-purple-300 shadow-xs'
+                        : 'bg-gray-50 dark:bg-[#251D3A] border-gray-200 dark:border-gray-800 hover:border-purple-500/40 text-gray-800 dark:text-gray-200'
+                    }`}
+                  >
+                    <div
+                      className={`w-9 h-9 rounded-xl flex items-center justify-center shrink-0 ${
+                        isSelected
+                          ? 'bg-purple-600 text-white'
+                          : 'bg-purple-500/10 text-purple-600 dark:text-purple-400'
+                      }`}
+                    >
+                      <Icon className="w-4 h-4" />
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <p className="text-xs font-extrabold truncate">{topic.title}</p>
+                      <p className="text-[11px] text-gray-500 dark:text-gray-400 truncate mt-0.5 font-medium">
+                        {topic.desc}
+                      </p>
+                    </div>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
 
           {/* Action Buttons */}
-          <div className="pt-3 flex items-center gap-3">
+          <div className="flex items-center gap-3 pt-3 border-t border-gray-100 dark:border-gray-800">
             <button
               type="button"
               onClick={onClose}
-              className="flex-1 h-[46px] rounded-[12px] border border-lovira bg-lovira-card hover:bg-lovira-card-hover text-lovira-muted font-[700] text-[14px] transition-colors cursor-pointer"
+              className="flex-1 py-3 text-xs font-bold rounded-xl border border-gray-300 dark:border-gray-700 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors cursor-pointer text-gray-700 dark:text-gray-300"
             >
               Hủy
             </button>
             <button
               type="submit"
-              disabled={isSubmitting || (selectedType === 'custom_goal' && !customGoal.trim())}
-              className="flex-1 h-[46px] rounded-[12px] bg-lovira-purple hover:opacity-90 text-white font-[700] text-[14px] transition-all shadow-sm cursor-pointer disabled:opacity-50 flex items-center justify-center gap-2"
+              disabled={isSubmitting}
+              className="flex-1 py-3 text-xs font-black bg-gradient-to-r from-[#7C4DFF] to-[#A45CFF] hover:opacity-90 text-white rounded-xl shadow-lg transition-all cursor-pointer flex items-center justify-center gap-1.5 disabled:opacity-50"
             >
-              <Plus className="w-[18px] h-[18px]" />
-              <span>{isSubmitting ? 'Đang tạo...' : 'Bắt đầu ngay'}</span>
+              <CheckCircle2 className="w-4 h-4" />
+              <span>{isSubmitting ? 'Đang khởi tạo...' : 'Bắt đầu phiên ngay'}</span>
             </button>
           </div>
+
         </form>
+
       </div>
     </div>
   );

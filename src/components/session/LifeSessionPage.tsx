@@ -94,17 +94,25 @@ export const LifeSessionPage: React.FC<LifeSessionPageProps> = ({
 
         {/* Mobile / Tablet Sessions Drawer Overlay (< 1024px) */}
         {isMobileSessionsOpen && (
-          <div className="fixed inset-0 z-50 lg:hidden flex">
+          <div className="fixed inset-0 z-[100] lg:hidden flex">
             <div
-              className="fixed inset-0 bg-black/60 transition-opacity"
+              className="fixed inset-0 bg-black/70 backdrop-blur-sm transition-opacity"
               onClick={() => setIsMobileSessionsOpen(false)}
             />
-            <div className="relative z-10 w-[290px] sm:w-[320px] h-full bg-surface shadow-2xl flex flex-col animate-in slide-in-from-left duration-200">
-              <div className="p-3 border-b border-default flex items-center justify-between bg-surface-raised">
-                <span className="text-xs font-bold text-text-primary pl-2">Danh sách cuộc trò chuyện</span>
+            <div className="relative z-[101] w-[85%] max-w-[320px] h-full bg-lovira-sidebar shadow-2xl flex flex-col animate-in slide-in-from-left duration-200 overflow-hidden">
+              <div className="p-3.5 border-b border-lovira-subtle flex items-center justify-between bg-lovira-card shrink-0">
+                <div className="flex items-center gap-2.5">
+                  <div className="w-8 h-8 rounded-xl bg-lovira-badge-purple text-lovira-purple flex items-center justify-center font-bold text-sm shrink-0">
+                    💬
+                  </div>
+                  <div>
+                    <span className="text-xs sm:text-sm font-bold text-lovira-title block leading-tight">Danh sách cuộc trò chuyện</span>
+                    <span className="text-[10px] sm:text-[11px] font-medium text-lovira-muted block leading-tight mt-0.5">Các phiên đời sống của bạn</span>
+                  </div>
+                </div>
                 <button
                   onClick={() => setIsMobileSessionsOpen(false)}
-                  className="p-1.5 rounded-lg hover:bg-surface text-text-secondary cursor-pointer"
+                  className="p-2 rounded-xl bg-lovira-input hover:bg-lovira-card-hover text-lovira-title cursor-pointer transition-colors"
                   aria-label="Đóng danh sách"
                 >
                   <X className="w-5 h-5" />
@@ -121,6 +129,8 @@ export const LifeSessionPage: React.FC<LifeSessionPageProps> = ({
                   onCreateNewSession?.();
                   setIsMobileSessionsOpen(false);
                 }}
+                showHeader={false}
+                isMobile
                 className="flex flex-1 w-full border-r-0"
               />
             </div>
