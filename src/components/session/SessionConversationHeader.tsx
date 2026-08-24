@@ -22,21 +22,21 @@ export const SessionConversationHeader: React.FC<SessionConversationHeaderProps>
     switch (status) {
       case 'completed':
         return (
-          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-emerald-100 dark:bg-emerald-950/60 text-emerald-800 dark:text-emerald-300 border border-emerald-500/20">
+          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-emerald-100 dark:bg-emerald-950/60 text-emerald-800 dark:text-emerald-300">
             <CheckCircle2 className="w-3 h-3" />
             Đã hoàn thành
           </span>
         );
       case 'paused':
         return (
-          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-amber-100 dark:bg-amber-950/60 text-amber-800 dark:text-amber-300 border border-amber-500/20">
+          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-amber-100 dark:bg-amber-950/60 text-amber-800 dark:text-amber-300">
             <PauseCircle className="w-3 h-3" />
             Tạm dừng
           </span>
         );
       default:
         return (
-          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-[#EBF5F4] dark:bg-[#1B2928] text-[#287C78] dark:text-[#42A39E] border border-[#287C78]/20">
+          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-[#E4F0EF] dark:bg-[#1B2928] text-[#287C78] dark:text-[#42A39E]">
             <PlayCircle className="w-3 h-3" />
             Đang thực hiện
           </span>
@@ -45,13 +45,13 @@ export const SessionConversationHeader: React.FC<SessionConversationHeaderProps>
   };
 
   return (
-    <div className="h-[50px] sm:h-[64px] px-3 sm:px-6 bg-surface border-b border-lovira-subtle flex items-center justify-between shrink-0 sticky top-0 z-20 shadow-2xs">
+    <div className="h-[52px] sm:h-[64px] px-3 sm:px-6 bg-white dark:bg-[#182424] flex items-center justify-between shrink-0 sticky top-0 z-20 shadow-xs">
       {/* Left: Back (Mobile), Mobile Sessions Toggle, Title & Status */}
       <div className="flex items-center gap-2.5 min-w-0">
         {onBack && (
           <button
             onClick={onBack}
-            className="p-2 rounded-xl text-text-secondary hover:text-text-primary hover:bg-surface-raised transition-colors shrink-0 md:hidden cursor-pointer"
+            className="p-2 rounded-xl text-text-secondary hover:text-text-primary hover:bg-[#F0EDE4] dark:hover:bg-[#202E2E] transition-colors shrink-0 md:hidden cursor-pointer"
             title="Quay lại"
             aria-label="Quay lại"
           >
@@ -62,7 +62,7 @@ export const SessionConversationHeader: React.FC<SessionConversationHeaderProps>
         {onToggleMobileSessionsList && (
           <button
             onClick={onToggleMobileSessionsList}
-            className="p-2 rounded-xl text-text-secondary hover:text-text-primary hover:bg-surface-raised transition-colors shrink-0 lg:hidden cursor-pointer"
+            className="p-2 rounded-xl text-text-secondary hover:text-text-primary hover:bg-[#F0EDE4] dark:hover:bg-[#202E2E] transition-colors shrink-0 lg:hidden cursor-pointer"
             title="Danh sách cuộc trò chuyện"
             aria-label="Danh sách cuộc trò chuyện"
           >
@@ -89,7 +89,7 @@ export const SessionConversationHeader: React.FC<SessionConversationHeaderProps>
       <div className="flex items-center gap-1.5 shrink-0">
         <button
           onClick={onToggleDetailDrawer}
-          className="p-2.5 rounded-xl bg-surface-raised border border-lovira-subtle hover:border-[#287C78] text-text-secondary hover:text-[#287C78] transition-all flex items-center gap-1.5 cursor-pointer shadow-2xs"
+          className="p-2.5 rounded-xl bg-[#F0EDE4] dark:bg-[#202E2E] text-text-secondary hover:text-[#287C78] dark:hover:text-[#42A39E] transition-all flex items-center gap-1.5 cursor-pointer shadow-2xs"
           title="Xem Chi tiết Phiên & Công việc"
           aria-label="Mở chi tiết phiên"
         >

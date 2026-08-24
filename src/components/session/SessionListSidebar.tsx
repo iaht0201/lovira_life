@@ -59,10 +59,10 @@ export const SessionListSidebar: React.FC<SessionListSidebarProps> = ({
   };
 
   return (
-    <div className={`shrink-0 bg-lovira-sidebar border-r border-lovira flex flex-col h-full ${isMobile ? 'w-full' : 'w-[290px] xl:w-[320px]'} ${className}`}>
+    <div className={`shrink-0 bg-[#FAF8F3] dark:bg-[#141E1E] flex flex-col h-full ${isMobile ? 'w-full' : 'w-[290px] xl:w-[320px]'} ${className}`}>
       {/* Header */}
       {showHeader && (
-        <div className="p-4 border-b border-lovira-subtle flex items-center justify-between shrink-0 bg-lovira-card">
+        <div className="p-4 flex items-center justify-between shrink-0 bg-transparent">
           <div>
             <h2 className="text-base font-bold text-lovira-title tracking-tight">Cuộc trò chuyện</h2>
             <p className="text-[11px] font-medium text-lovira-muted">Các phiên đời sống của bạn</p>
@@ -70,7 +70,7 @@ export const SessionListSidebar: React.FC<SessionListSidebarProps> = ({
           <div className="flex items-center gap-1.5">
             <button
               onClick={onCreateNewSession}
-              className="p-2 rounded-xl bg-lovira-purple hover:bg-lovira-purple-hover text-white transition-colors shadow-2xs cursor-pointer"
+              className="p-2 rounded-xl bg-[#287C78] hover:bg-[#1F625F] text-white transition-colors shadow-2xs cursor-pointer"
               title="Tạo phiên trò chuyện mới"
               aria-label="Tạo phiên trò chuyện mới"
             >
@@ -81,16 +81,16 @@ export const SessionListSidebar: React.FC<SessionListSidebarProps> = ({
       )}
 
       {/* Sessions Scrollable List */}
-      <div className="flex-1 overflow-y-auto p-3 space-y-2 custom-scrollbar bg-lovira-sidebar">
+      <div className="flex-1 overflow-y-auto p-3 space-y-2 custom-scrollbar">
         {sessionsList.length === 0 ? (
           <div className="text-center py-10 px-4 space-y-3">
-            <div className="w-10 h-10 rounded-full bg-lovira-badge-purple text-lovira-purple flex items-center justify-center mx-auto">
+            <div className="w-10 h-10 rounded-full bg-[#E4F0EF] text-[#287C78] dark:bg-[#203B3A] dark:text-[#42A39E] flex items-center justify-center mx-auto">
               <Sparkles className="w-5 h-5" />
             </div>
             <p className="text-xs font-semibold text-lovira-muted">Chưa có cuộc trò chuyện nào</p>
             <button
               onClick={onCreateNewSession}
-              className="text-xs font-bold text-lovira-purple hover:underline cursor-pointer"
+              className="text-xs font-bold text-[#287C78] hover:underline cursor-pointer"
             >
               + Tạo phiên đầu tiên
             </button>
@@ -104,10 +104,10 @@ export const SessionListSidebar: React.FC<SessionListSidebarProps> = ({
               <button
                 key={s.id}
                 onClick={() => onOpenSession(s.id)}
-                className={`w-full p-3 rounded-2xl text-left transition-all border flex items-start gap-3 group relative cursor-pointer ${
+                className={`w-full p-3.5 rounded-2xl text-left transition-all flex items-start gap-3 group relative cursor-pointer ${
                   isActive
-                    ? 'bg-lovira-sidebar-active border-lovira-purple text-lovira-title shadow-xs'
-                    : 'bg-lovira-card hover:bg-lovira-card-hover border-lovira text-lovira-title'
+                    ? 'bg-[#E4F0EF] dark:bg-[#223B3A] text-lovira-title shadow-xs'
+                    : 'bg-white dark:bg-[#1B2626] hover:bg-[#F0EDE4] dark:hover:bg-[#243232] text-lovira-title shadow-2xs'
                 }`}
               >
                 {/* Active Accent Bar */}
@@ -117,10 +117,10 @@ export const SessionListSidebar: React.FC<SessionListSidebarProps> = ({
 
                 {/* Scenario Icon Badge */}
                 <div
-                  className={`w-9 h-9 rounded-xl flex items-center justify-center shrink-0 border ${
+                  className={`w-9 h-9 rounded-xl flex items-center justify-center shrink-0 ${
                     isActive
-                      ? 'bg-lovira-card border-lovira-purple shadow-2xs'
-                      : 'bg-lovira-input border-lovira group-hover:bg-lovira-card'
+                      ? 'bg-white dark:bg-[#1B2626] text-[#287C78] shadow-2xs'
+                      : 'bg-[#F0EDE4] dark:bg-[#202E2E] group-hover:bg-white dark:group-hover:bg-[#1B2626]'
                   }`}
                 >
                   {getScenarioIcon(s.scenarioType)}
@@ -131,7 +131,7 @@ export const SessionListSidebar: React.FC<SessionListSidebarProps> = ({
                   <div className="flex items-center justify-between gap-1">
                     <h3
                       className={`text-xs font-bold truncate ${
-                        isActive ? 'text-lovira-purple' : 'text-lovira-title'
+                        isActive ? 'text-[#287C78] dark:text-[#42A39E]' : 'text-lovira-title'
                       }`}
                     >
                       {s.title}

@@ -1,4 +1,5 @@
 import React from 'react';
+import { APP_IMAGES } from '../../assets/images';
 import {
   LayoutDashboard,
   MessageSquare,
@@ -101,10 +102,9 @@ export const MobileSidebarDrawer: React.FC<MobileSidebarDrawerProps> = ({
         <div className="h-[64px] px-4 flex items-center justify-between border-b border-lovira-subtle bg-lovira-topbar shrink-0">
           <div className="flex items-center gap-1.5">
             <img
-              src="/images/logo_client.png"
+              src={APP_IMAGES.logoClient}
               alt="Lovira"
               className="h-[34px] w-auto max-w-[140px] object-contain select-none"
-              referrerPolicy="no-referrer"
             />
           </div>
           <button

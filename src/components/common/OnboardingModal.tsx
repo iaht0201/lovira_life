@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { APP_IMAGES } from '../../assets/images';
 import {
   Sparkles,
   Heart,
@@ -40,7 +41,7 @@ export const OnboardingModal: React.FC<OnboardingModalProps> = ({
     {
       icon: (
         <div className="w-16 h-16 rounded-full overflow-hidden shadow-xs border border-[#287C78]/20 bg-[#287C78]">
-          <img src="/images/avatar.png" alt="Lovira" className="w-full h-full object-cover" referrerPolicy="no-referrer" />
+          <img src={APP_IMAGES.avatar} alt="Lovira" className="w-full h-full object-cover" />
         </div>
       ),
       title: 'Chào mừng ông/bà đến với Lovira ♥',

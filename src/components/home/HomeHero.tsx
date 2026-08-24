@@ -1,4 +1,5 @@
 import React from 'react';
+import { APP_IMAGES } from '../../assets/images';
 
 interface HomeHeroProps {
   userName?: string;
@@ -14,10 +15,9 @@ export const HomeHero: React.FC<HomeHeroProps> = ({
     <section className="relative rounded-[20px] sm:rounded-[28px] overflow-hidden border border-[#287C78]/30 shadow-lovira min-h-[140px] sm:min-h-[180px] md:min-h-[210px] flex items-center bg-[#184441] transition-all">
       {/* Background Banner Image */}
       <img
-        src="/images/banner.png?v=2"
+        src={APP_IMAGES.banner}
         alt="Lovira Banner"
         className="absolute inset-0 w-full h-full object-cover object-right sm:object-center select-none pointer-events-none"
-        referrerPolicy="no-referrer"
       />
 
       {/* Soft gradient overlay on the left to maximize text contrast & legibility for seniors */}

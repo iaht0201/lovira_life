@@ -1,4 +1,5 @@
 import React from 'react';
+import { APP_IMAGES } from '../../assets/images';
 
 import {
   LayoutDashboard,
@@ -47,20 +48,19 @@ export const DesktopSidebar: React.FC<DesktopSidebarProps> = ({
 
   return (
     <aside
-      className="hidden md:flex flex-col w-[230px] h-screen sticky top-0 bg-lovira-sidebar border-r border-lovira shrink-0 z-30 select-none transition-colors"
+      className="hidden md:flex flex-col w-[230px] h-screen sticky top-0 bg-lovira-sidebar shrink-0 z-30 select-none transition-colors shadow-xs"
       aria-label="Sidebar điều hướng"
     >
       {/* 6.1 Logo Area */}
-      <div className="h-[76px] px-6 flex items-center shrink-0 border-b border-lovira-subtle">
+      <div className="h-[76px] px-6 flex items-center shrink-0">
         <button
           onClick={() => onTabChange('dashboard')}
           className="flex items-center gap-2 group text-left cursor-pointer focus:outline-none"
         >
           <img
-            src="/images/logo_client.png"
+            src={APP_IMAGES.logoClient}
             alt="Lovira"
             className="h-[38px] w-auto max-w-[160px] object-contain group-hover:scale-[1.02] transition-transform select-none"
-            referrerPolicy="no-referrer"
           />
         </button>
       </div>
@@ -77,13 +77,13 @@ export const DesktopSidebar: React.FC<DesktopSidebarProps> = ({
               aria-current={isActive ? 'page' : undefined}
               className={`w-full flex items-center gap-3 h-[46px] px-4 rounded-[12px] text-[14px] font-[600] transition-all cursor-pointer ${
                 isActive
-                  ? 'bg-lovira-sidebar-active text-lovira-purple shadow-xs font-[700]'
+                  ? 'bg-lovira-sidebar-active text-[#287C78] dark:text-[#42A39E] shadow-2xs font-[700]'
                   : 'text-lovira-muted hover:bg-lovira-card-hover hover:text-lovira-title'
               }`}
             >
               <Icon
                 className={`w-[20px] h-[20px] shrink-0 ${
-                  isActive ? 'text-lovira-purple' : 'text-lovira-muted'
+                  isActive ? 'text-[#287C78] dark:text-[#42A39E]' : 'text-lovira-muted'
                 }`}
                 aria-hidden="true"
               />
@@ -96,7 +96,7 @@ export const DesktopSidebar: React.FC<DesktopSidebarProps> = ({
         <div className="pt-3">
           <button
             onClick={onCreateSession}
-            className="w-full flex items-center justify-center gap-2 h-[44px] px-4 rounded-[12px] bg-lovira-badge-purple hover:opacity-90 text-lovira-purple border border-lovira-purple font-[700] text-[14px] transition-all shadow-xs cursor-pointer active:scale-[0.98]"
+            className="w-full flex items-center justify-center gap-2 h-[44px] px-4 rounded-[12px] bg-[#287C78] hover:bg-[#1F625F] text-white font-[700] text-[14px] transition-all shadow-xs cursor-pointer active:scale-[0.98]"
           >
             <Plus className="w-[18px] h-[18px]" aria-hidden="true" />
             <span>Tạo phiên mới</span>
@@ -105,10 +105,10 @@ export const DesktopSidebar: React.FC<DesktopSidebarProps> = ({
       </div>
 
       {/* 6.4 User Profile Mini Card */}
-      <div className="p-3.5 border-t border-lovira bg-lovira-sidebar shrink-0">
-        <div className="flex items-center justify-between p-2 rounded-[14px] bg-lovira-card border border-lovira">
+      <div className="p-3.5 bg-lovira-sidebar shrink-0">
+        <div className="flex items-center justify-between p-2 rounded-[14px] bg-lovira-card shadow-2xs">
           <div className="flex items-center gap-3 min-w-0">
-            <div className="w-[40px] h-[40px] rounded-full bg-lovira-badge-purple border border-lovira-purple flex items-center justify-center shrink-0 overflow-hidden">
+            <div className="w-[40px] h-[40px] rounded-full bg-lovira-badge-purple flex items-center justify-center shrink-0 overflow-hidden">
               <span className="text-[18px] font-bold">👴</span>
             </div>
             <div className="min-w-0">
@@ -122,7 +122,7 @@ export const DesktopSidebar: React.FC<DesktopSidebarProps> = ({
           </div>
           <button
             onClick={() => onTabChange('profile')}
-            className="w-[28px] h-[28px] rounded-full bg-lovira-input border border-lovira hover:bg-lovira-sidebar-active text-lovira-purple flex items-center justify-center text-[14px] font-bold shrink-0 transition-colors cursor-pointer"
+            className="w-[28px] h-[28px] rounded-full bg-lovira-input hover:bg-lovira-sidebar-active text-lovira-purple flex items-center justify-center text-[14px] font-bold shrink-0 transition-colors cursor-pointer"
             title="Quản lý hồ sơ"
             aria-label="Quản lý hồ sơ"
           >

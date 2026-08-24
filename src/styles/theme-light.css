@@ -1,34 +1,35 @@
-/* Lovira Light Theme Palette - Clean, Harmonized Teal & Warm Cream */
+/* Lovira Light Theme Palette - Clean, Harmonized Teal & Warm Cream (Borderless Aesthetic) */
 :root {
   --bg-base: #F6F4EF;
   --bg-surface: #FFFFFF;
   --bg-surface-raised: #FAF8F3;
   --bg-card: #FFFFFF;
-  --bg-card-hover: #F3F0E8;
+  --bg-card-hover: #F0EDE4;
   --bg-sidebar: #FFFFFF;
   --bg-sidebar-active: #E4F0EF;
-  --bg-topbar: rgba(246, 244, 239, 0.95);
-  --bg-input: #EFECE4;
+  --bg-topbar: rgba(246, 244, 239, 0.98);
+  --bg-input: #EDEAE1;
   --bg-hero: linear-gradient(135deg, #FFFFFF 0%, #FAF8F3 50%, #FDF2F5 100%);
   --bg-badge-purple: #E4F0EF;
 
-  --text-primary: #20252A;
-  --text-secondary: #60676D;
-  --text-muted: #788088;
+  --text-primary: #1C2226;
+  --text-secondary: #586268;
+  --text-muted: #7A848B;
   --text-brand: #287C78;
-  --text-on-hero: #20252A;
+  --text-on-hero: #1C2226;
 
-  --border-default: #DDDCD5;
-  --border-subtle: #E8E7E1;
-  --border-brand: rgba(40, 124, 120, 0.35);
+  --border-default: transparent;
+  --border-subtle: transparent;
+  --border-brand: transparent;
 
   --color-primary: #287C78;
   --color-primary-hover: #1F625F;
   --color-accent: #E76F91;
-  --color-success: #3E7C59;
+  --color-success: #2E7D56;
   --color-warning: #C66A27;
   --color-danger: #D93838;
   --color-focus-ring: #287C78;
 }
+
 
 

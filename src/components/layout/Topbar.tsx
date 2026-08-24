@@ -1,4 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
+import { APP_IMAGES } from '../../assets/images';
 import {
   Search,
   Bell,
@@ -91,23 +92,22 @@ export const Topbar: React.FC<TopbarProps> = ({
       accessibility.vslEnabled);
 
   return (
-    <header className="h-[48px] sm:h-[64px] bg-lovira-topbar backdrop-blur-md border-b border-lovira-subtle px-2.5 sm:px-6 md:px-8 flex items-center justify-between sticky top-0 z-30 shrink-0 transition-colors">
+    <header className="h-[48px] sm:h-[64px] bg-lovira-topbar backdrop-blur-md px-2.5 sm:px-6 md:px-8 flex items-center justify-between sticky top-0 z-30 shrink-0 transition-colors shadow-2xs">
       {/* Mobile Hamburger Menu & Brand Name */}
       <div className="md:hidden flex items-center gap-2">
         <button
           onClick={onOpenMobileMenu}
-          className="w-[34px] h-[34px] sm:w-[38px] sm:h-[38px] rounded-[10px] sm:rounded-[12px] bg-lovira-card border border-lovira hover:bg-lovira-card-hover text-lovira-title flex items-center justify-center transition-colors cursor-pointer"
+          className="w-[34px] h-[34px] sm:w-[38px] sm:h-[38px] rounded-[10px] sm:rounded-[12px] bg-lovira-card hover:bg-lovira-card-hover text-lovira-title flex items-center justify-center transition-colors cursor-pointer shadow-2xs"
           title="Mở menu điều hướng"
           aria-label="Mở menu điều hướng"
         >
-          <Menu className="w-[18px] h-[18px] sm:w-[20px] sm:h-[20px] text-lovira-purple" />
+          <Menu className="w-[18px] h-[18px] sm:w-[20px] sm:h-[20px] text-[#287C78] dark:text-[#42A39E]" />
         </button>
         <div className="flex items-center gap-1.5">
           <img
-            src="/images/logo_client.png"
+            src={APP_IMAGES.logoClient}
             alt="Lovira"
             className="h-[28px] sm:h-[32px] w-auto max-w-[130px] object-contain select-none"
-            referrerPolicy="no-referrer"
           />
         </div>
       </div>
@@ -120,7 +120,7 @@ export const Topbar: React.FC<TopbarProps> = ({
           value={searchQuery}
           onChange={handleSearchChange}
           placeholder="Tìm kiếm..."
-          className="w-full h-[40px] pl-10 pr-4 rounded-[12px] bg-lovira-input border border-lovira text-[14px] text-lovira-main placeholder-lovira-sub focus:outline-none focus:border-lovira-purple focus:ring-2 focus:ring-lovira-purple/20 transition-all"
+          className="w-full h-[40px] pl-10 pr-4 rounded-[12px] bg-lovira-input text-[14px] text-lovira-main placeholder-lovira-sub focus:outline-none focus:ring-2 focus:ring-[#287C78] transition-all"
         />
       </div>
 
@@ -131,15 +131,15 @@ export const Topbar: React.FC<TopbarProps> = ({
           <div className="relative hidden sm:block" ref={dropdownRef}>
             <button
               onClick={() => setShowDropdown(!showDropdown)}
-              className={`h-[38px] px-3 rounded-[12px] border transition-all flex items-center gap-1.5 cursor-pointer text-[12px] font-[700] ${
+              className={`h-[38px] px-3.5 rounded-[12px] transition-all flex items-center gap-1.5 cursor-pointer text-[12px] font-[700] shadow-2xs ${
                 isCustomAccessActive
-                  ? 'bg-lovira-badge-purple border-lovira-purple text-lovira-purple shadow-2xs'
-                  : 'bg-lovira-card border-lovira text-lovira-muted hover:text-lovira-title hover:bg-lovira-card-hover'
+                  ? 'bg-lovira-badge-purple text-[#287C78] dark:text-[#42A39E]'
+                  : 'bg-lovira-card text-lovira-muted hover:text-lovira-title hover:bg-lovira-card-hover'
               }`}
               title="Tùy chỉnh giao diện & Trợ năng"
               aria-expanded={showDropdown}
             >
-              <SlidersHorizontal className="w-[15px] h-[15px] text-lovira-purple" />
+              <SlidersHorizontal className="w-[15px] h-[15px] text-[#287C78] dark:text-[#42A39E]" />
               <span>Trợ năng & Giao diện</span>
               <ChevronDown
                 className={`w-[13px] h-[13px] transition-transform duration-200 ${
@@ -150,15 +150,15 @@ export const Topbar: React.FC<TopbarProps> = ({
 
             {/* Dropdown Menu Panel */}
             {showDropdown && (
-              <div className="absolute right-0 top-[46px] w-[280px] p-3.5 rounded-[18px] bg-lovira-card border border-lovira shadow-lovira-lg z-50 space-y-3.5 animate-in fade-in slide-in-from-top-2 duration-150">
+              <div className="absolute right-0 top-[46px] w-[280px] p-3.5 rounded-[18px] bg-lovira-card shadow-lovira-lg z-50 space-y-3.5 animate-in fade-in slide-in-from-top-2 duration-150">
                 {/* Header title */}
-                <div className="flex items-center justify-between pb-2 border-b border-lovira-subtle">
+                <div className="flex items-center justify-between pb-2">
                   <span className="text-[12px] font-[800] text-lovira-title flex items-center gap-1.5">
-                    <SlidersHorizontal className="w-[14px] h-[14px] text-lovira-purple" />
+                    <SlidersHorizontal className="w-[14px] h-[14px] text-[#287C78] dark:text-[#42A39E]" />
                     Tùy chỉnh Trợ năng
                   </span>
                   {isCustomAccessActive && (
-                    <span className="text-[10px] font-[700] px-1.5 py-0.5 rounded-full bg-lovira-purple text-white">
+                    <span className="text-[10px] font-[700] px-1.5 py-0.5 rounded-full bg-[#287C78] text-white">
                       Đang bật
                     </span>
                   )}
@@ -172,7 +172,7 @@ export const Topbar: React.FC<TopbarProps> = ({
                   <div className="grid grid-cols-2 gap-1.5">
                     <button
                       onClick={toggleTheme}
-                      className="px-2.5 py-2 rounded-[10px] text-[12px] font-[700] flex items-center justify-center gap-1.5 bg-lovira-input hover:bg-lovira-card-hover border border-lovira text-lovira-title transition-all cursor-pointer"
+                      className="px-2.5 py-2 rounded-[10px] text-[12px] font-[700] flex items-center justify-center gap-1.5 bg-lovira-input hover:bg-lovira-card-hover text-lovira-title transition-all cursor-pointer shadow-2xs"
                     >
                       {accessibility.theme === 'dark' ? (
                         <>
@@ -189,10 +189,10 @@ export const Topbar: React.FC<TopbarProps> = ({
 
                     <button
                       onClick={toggleHighContrast}
-                      className={`px-2.5 py-2 rounded-[10px] text-[12px] font-[700] flex items-center justify-center gap-1.5 border transition-all cursor-pointer ${
+                      className={`px-2.5 py-2 rounded-[10px] text-[12px] font-[700] flex items-center justify-center gap-1.5 transition-all cursor-pointer shadow-2xs ${
                         accessibility.highContrast
-                          ? 'bg-amber-400 text-black border-amber-500 font-bold'
-                          : 'bg-lovira-input border-lovira text-lovira-muted hover:text-lovira-title hover:bg-lovira-card-hover'
+                          ? 'bg-amber-400 text-black font-bold'
+                          : 'bg-lovira-input text-lovira-muted hover:text-lovira-title hover:bg-lovira-card-hover'
                       }`}
                     >
                       <Eye className="w-[14px] h-[14px]" />
@@ -205,7 +205,7 @@ export const Topbar: React.FC<TopbarProps> = ({
                 <div className="space-y-1.5">
                   <div className="text-[11px] font-[700] text-lovira-muted uppercase tracking-wider flex items-center justify-between">
                     <span>Cỡ chữ hiển thị</span>
-                    <span className="text-lovira-purple font-[800]">
+                    <span className="text-[#287C78] dark:text-[#42A39E] font-[800]">
                       {Math.round(accessibility.fontScale * 100)}%
                     </span>
                   </div>
@@ -219,8 +219,8 @@ export const Topbar: React.FC<TopbarProps> = ({
                           onClick={() => handleFontChange(scale)}
                           className={`py-1.5 rounded-[8px] text-[11px] font-[800] text-center transition-all cursor-pointer ${
                             isSelected
-                              ? 'bg-lovira-purple text-white shadow-2xs'
-                              : 'bg-lovira-input text-lovira-muted hover:text-lovira-title hover:bg-lovira-card-hover border border-lovira'
+                              ? 'bg-[#287C78] text-white shadow-2xs'
+                              : 'bg-lovira-input text-lovira-muted hover:text-lovira-title hover:bg-lovira-card-hover'
                           }`}
                         >
                           {label}
@@ -231,13 +231,13 @@ export const Topbar: React.FC<TopbarProps> = ({
                 </div>
 
                 {/* 3. Assistive Toggles */}
-                <div className="pt-2 border-t border-lovira-subtle space-y-1.5">
+                <div className="pt-2 space-y-1.5">
                   <button
                     onClick={toggleSpeech}
-                    className="w-full px-2.5 py-2 rounded-[10px] text-[12px] font-[600] flex items-center justify-between bg-lovira-input hover:bg-lovira-card-hover border border-lovira text-lovira-title transition-all cursor-pointer"
+                    className="w-full px-2.5 py-2 rounded-[10px] text-[12px] font-[600] flex items-center justify-between bg-lovira-input hover:bg-lovira-card-hover text-lovira-title transition-all cursor-pointer shadow-2xs"
                   >
                     <span className="flex items-center gap-1.5">
-                      <Volume2 className="w-[14px] h-[14px] text-lovira-purple" />
+                      <Volume2 className="w-[14px] h-[14px] text-[#287C78] dark:text-[#42A39E]" />
                       <span>Đọc phản hồi bằng giọng nói</span>
                     </span>
                     <span
@@ -253,7 +253,7 @@ export const Topbar: React.FC<TopbarProps> = ({
 
                   <button
                     onClick={toggleVSL}
-                    className="w-full px-2.5 py-2 rounded-[10px] text-[12px] font-[600] flex items-center justify-between bg-lovira-input hover:bg-lovira-card-hover border border-lovira text-lovira-title transition-all cursor-pointer"
+                    className="w-full px-2.5 py-2 rounded-[10px] text-[12px] font-[600] flex items-center justify-between bg-lovira-input hover:bg-lovira-card-hover text-lovira-title transition-all cursor-pointer shadow-2xs"
                   >
                     <span className="flex items-center gap-1.5">
                       <Sparkles className="w-[14px] h-[14px] text-indigo-500" />
@@ -278,7 +278,7 @@ export const Topbar: React.FC<TopbarProps> = ({
         {/* Notification Button */}
         <button
           onClick={onOpenNotifications}
-          className="relative w-[34px] h-[34px] sm:w-[40px] sm:h-[40px] rounded-[10px] sm:rounded-[12px] bg-lovira-card border border-lovira hover:bg-lovira-card-hover text-lovira-muted hover:text-lovira-main flex items-center justify-center transition-colors cursor-pointer"
+          className="relative w-[34px] h-[34px] sm:w-[40px] sm:h-[40px] rounded-[10px] sm:rounded-[12px] bg-lovira-card hover:bg-lovira-card-hover text-lovira-muted hover:text-lovira-main flex items-center justify-center transition-colors cursor-pointer shadow-2xs"
           title="Thông báo"
           aria-label="Thông báo"
         >
@@ -291,7 +291,7 @@ export const Topbar: React.FC<TopbarProps> = ({
         {/* Settings Button (Desktop/Tablet only) */}
         <button
           onClick={onOpenSettings}
-          className="hidden sm:flex w-[40px] h-[40px] rounded-[12px] bg-lovira-card border border-lovira hover:bg-lovira-card-hover text-lovira-muted hover:text-lovira-main items-center justify-center transition-colors cursor-pointer"
+          className="hidden sm:flex w-[40px] h-[40px] rounded-[12px] bg-lovira-card hover:bg-lovira-card-hover text-lovira-muted hover:text-lovira-main items-center justify-center transition-colors cursor-pointer shadow-2xs"
           title="Cài đặt"
           aria-label="Cài đặt"
         >
@@ -301,7 +301,7 @@ export const Topbar: React.FC<TopbarProps> = ({
         {/* User Avatar Button */}
         <button
           onClick={onOpenProfile}
-          className="w-[34px] h-[34px] sm:w-[40px] sm:h-[40px] rounded-full bg-lovira-badge-purple border border-lovira-purple hover:ring-2 hover:ring-lovira-purple/30 flex items-center justify-center overflow-hidden transition-all cursor-pointer ml-0.5"
+          className="w-[34px] h-[34px] sm:w-[40px] sm:h-[40px] rounded-full bg-lovira-badge-purple hover:ring-2 hover:ring-[#287C78]/30 flex items-center justify-center overflow-hidden transition-all cursor-pointer ml-0.5 shadow-2xs"
           title="Hồ sơ cá nhân"
           aria-label="Hồ sơ cá nhân"
         >

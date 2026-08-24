@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { APP_IMAGES } from '../../assets/images';
 import { Volume2, Check, Copy, Sparkles, Bot, User, CheckCircle2 } from 'lucide-react';
 import { SessionMessage } from '../../types';
 
@@ -141,7 +142,7 @@ export const ChatMessageRenderer: React.FC<ChatMessageRendererProps> = ({
       {!isUser ? (
         <div className="w-8 h-8 rounded-full overflow-hidden shrink-0 shadow-2xs mt-1 border border-[#287C78]/20 bg-[#287C78]">
           {showAvatar ? (
-            <img src="/images/avatar.png" alt="Lovira" className="w-full h-full object-cover" referrerPolicy="no-referrer" />
+            <img src={APP_IMAGES.avatar} alt="Lovira" className="w-full h-full object-cover" />
           ) : (
             <div className="w-8 h-8" />
           )}
@@ -156,40 +157,40 @@ export const ChatMessageRenderer: React.FC<ChatMessageRendererProps> = ({
       <div
         className={`flex flex-col space-y-1 min-w-0 ${
           isUser
-            ? 'items-end max-w-[78%] sm:max-w-[68%]'
-            : 'items-start max-w-[86%] sm:max-w-[72%]'
+            ? 'items-end max-w-[82%] sm:max-w-[70%]'
+            : 'items-start max-w-[88%] sm:max-w-[76%]'
         }`}
       >
         {/* Message Card */}
         <div
           className={`p-3.5 sm:p-4 rounded-2xl text-xs sm:text-sm leading-relaxed transition-all relative ${
             isUser
-              ? 'bg-[#287C78] text-white rounded-tr-xs shadow-2xs font-medium'
-              : 'bg-[#EBF5F4] dark:bg-[#1B2928] text-[#20252A] dark:text-[#E2ECEB] rounded-tl-xs border border-lovira-subtle shadow-2xs'
+              ? 'bg-[#287C78] text-white rounded-tr-xs shadow-xs font-medium'
+              : 'bg-white dark:bg-[#1E2B2A] text-text-primary rounded-tl-xs shadow-xs'
           }`}
         >
-          <div className="space-y-2">
+          <div className="space-y-2.5">
             {blocks.map((block, idx) => {
               if (block.type === 'numbered') {
                 return (
                   <div
                     key={idx}
-                    className={`flex items-start gap-2 p-1.5 rounded-xl ${
+                    className={`flex items-start gap-2.5 p-2.5 rounded-xl transition-colors ${
                       isUser
                         ? 'bg-[#1F625F] text-white'
-                        : 'bg-white dark:bg-[#142221] text-lovira-title border border-lovira-subtle'
+                        : 'bg-[#F2F8F7] dark:bg-[#152222] text-text-primary'
                     }`}
                   >
                     <span
-                      className={`inline-flex items-center justify-center w-5 h-5 rounded-full text-[10px] font-extrabold shrink-0 mt-0.5 ${
+                      className={`inline-flex items-center justify-center w-5 h-5 rounded-full text-[11px] font-bold shrink-0 mt-0.5 ${
                         isUser
                           ? 'bg-white text-[#287C78]'
-                          : 'bg-[#D2E7E5] text-[#287C78] dark:bg-[#203D3B] dark:text-[#42A39E]'
+                          : 'bg-[#287C78] text-white dark:bg-[#42A39E] dark:text-[#101818]'
                       }`}
                     >
                       {block.number}
                     </span>
-                    <div className="flex-1 leading-snug">
+                    <div className="flex-1 text-[13px] sm:text-[14px] leading-relaxed font-normal">
                       {renderFormattedInlineText(block.content)}
                     </div>
                   </div>
@@ -198,13 +199,13 @@ export const ChatMessageRenderer: React.FC<ChatMessageRendererProps> = ({
 
               if (block.type === 'bullet') {
                 return (
-                  <div key={idx} className="flex items-start gap-2 pl-1">
+                  <div key={idx} className="flex items-start gap-2.5 pl-1">
                     <span
-                      className={`w-1.5 h-1.5 rounded-full shrink-0 mt-2 ${
-                        isUser ? 'bg-white' : 'bg-[#287C78]'
+                      className={`w-2 h-2 rounded-full shrink-0 mt-2 ${
+                        isUser ? 'bg-white' : 'bg-[#287C78] dark:bg-[#42A39E]'
                       }`}
                     />
-                    <div className="flex-1 leading-snug">
+                    <div className="flex-1 leading-relaxed">
                       {renderFormattedInlineText(block.content)}
                     </div>
                   </div>
@@ -212,7 +213,7 @@ export const ChatMessageRenderer: React.FC<ChatMessageRendererProps> = ({
               }
 
               return (
-                <p key={idx} className="whitespace-pre-wrap leading-relaxed">
+                <p key={idx} className="whitespace-pre-wrap leading-relaxed text-[13px] sm:text-[14px]">
                   {renderFormattedInlineText(block.content)}
                 </p>
               );
@@ -221,21 +222,21 @@ export const ChatMessageRenderer: React.FC<ChatMessageRendererProps> = ({
 
           {/* Time & Action row */}
           <div
-            className={`flex items-center gap-2 pt-2 mt-1 text-[10px] ${
+            className={`flex items-center gap-2 pt-2 mt-1.5 text-[11px] ${
               isUser
                 ? 'text-teal-100 justify-end'
-                : 'text-lovira-muted justify-between border-t border-lovira-subtle'
+                : 'text-text-secondary justify-between opacity-80'
             }`}
           >
             {!isUser && (
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-3">
                 {onSpeak && (
                   <button
                     type="button"
                     onClick={() => onSpeak(cleanSpeechText)}
-                    className="inline-flex items-center gap-1 font-bold text-[#287C78] dark:text-[#42A39E] hover:underline transition-colors cursor-pointer"
+                    className="inline-flex items-center gap-1 font-semibold text-[#287C78] dark:text-[#42A39E] hover:opacity-80 transition-opacity cursor-pointer"
                   >
-                    <Volume2 className={`w-3 h-3 ${isSpeaking ? 'animate-pulse text-amber-500' : ''}`} />
+                    <Volume2 className={`w-3.5 h-3.5 ${isSpeaking ? 'animate-pulse text-amber-500' : ''}`} />
                     <span>Đọc to</span>
                   </button>
                 )}
@@ -243,10 +244,10 @@ export const ChatMessageRenderer: React.FC<ChatMessageRendererProps> = ({
                 <button
                   type="button"
                   onClick={handleCopy}
-                  className="inline-flex items-center gap-0.5 hover:text-lovira-title transition-colors cursor-pointer"
+                  className="inline-flex items-center gap-1 hover:text-text-primary transition-colors cursor-pointer"
                 >
                   {copied ? (
-                    <span className="text-emerald-600 font-bold">✓ Đã chép</span>
+                    <span className="text-emerald-600 dark:text-emerald-400 font-bold">✓ Đã chép</span>
                   ) : (
                     <span>Sao chép</span>
                   )}

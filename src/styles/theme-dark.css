@@ -1,26 +1,26 @@
-/* Lovira Dark Theme Palette - Soft Teal Slate & Care Assistant Palette */
+/* Lovira Dark Theme Palette - Soft Teal Slate & Care Assistant Palette (Borderless Aesthetic) */
 html.dark {
   --bg-base: #101818;
-  --bg-surface: #182222;
-  --bg-surface-raised: #202C2C;
-  --bg-card: #1B2626;
-  --bg-card-hover: #243232;
+  --bg-surface: #182424;
+  --bg-surface-raised: #1F2E2E;
+  --bg-card: #1C2A2A;
+  --bg-card-hover: #253737;
   --bg-sidebar: #141E1E;
   --bg-sidebar-active: #223B3A;
-  --bg-topbar: rgba(24, 34, 34, 0.92);
-  --bg-input: #202E2E;
+  --bg-topbar: rgba(20, 30, 30, 0.95);
+  --bg-input: #1F2E2E;
   --bg-hero: linear-gradient(135deg, #182A29 0%, #223D3C 50%, #2A2F3D 100%);
   --bg-badge-purple: #203A39;
 
-  --text-primary: #F0F4F4;
-  --text-secondary: #C2CECE;
-  --text-muted: #9AA8A8;
+  --text-primary: #F2F7F7;
+  --text-secondary: #C0CCCC;
+  --text-muted: #8E9E9E;
   --text-brand: #42A39E;
   --text-on-hero: #FFFFFF;
 
-  --border-default: rgba(255, 255, 255, 0.12);
-  --border-subtle: rgba(255, 255, 255, 0.07);
-  --border-brand: rgba(66, 163, 158, 0.35);
+  --border-default: transparent;
+  --border-subtle: transparent;
+  --border-brand: transparent;
 
   --color-primary: #287C78;
   --color-primary-hover: #42A39E;
@@ -30,4 +30,5 @@ html.dark {
   --color-danger: #FF6666;
   --color-focus-ring: #42A39E;
 }
+
 

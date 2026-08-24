@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import { APP_IMAGES } from '../../assets/images';
 import { Smartphone, Download, X, Share, PlusSquare, CheckCircle2 } from 'lucide-react';
 import { sfx } from '../../utils/sfx';
 
@@ -98,7 +99,7 @@ export const PWAInstallPrompt: React.FC = () => {
           <div className="flex items-start justify-between gap-3">
             <div className="flex items-center gap-3">
               <div className="w-11 h-11 rounded-xl overflow-hidden shadow-xs shrink-0 border border-[#287C78]/20 bg-[#287C78]">
-                <img src="/images/avatar.png" alt="Lovira" className="w-full h-full object-cover" referrerPolicy="no-referrer" />
+                <img src={APP_IMAGES.avatar} alt="Lovira" className="w-full h-full object-cover" />
               </div>
               <div>
                 <h4 className="text-xs sm:text-sm font-bold text-lovira-title flex items-center gap-1.5">
