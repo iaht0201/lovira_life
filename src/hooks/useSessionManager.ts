@@ -671,10 +671,34 @@ export function useSessionManager({
           }
         }
         if (finalReply) {
+          if (activeSession && isSessionContext) {
+            const now = new Date().toISOString();
+            const userMsg = {
+              id: `msg-${Date.now()}`,
+              sender: 'user' as const,
+              text: trimmedText,
+              timestamp: now,
+              inputMode,
+            };
+            const loviraMsg = {
+              id: `msg-${Date.now() + 1}`,
+              sender: 'lovira' as const,
+              text: finalReply,
+              timestamp: new Date().toISOString(),
+            };
+            const updatedSession = {
+              ...activeSession,
+              messages: [...activeSession.messages, userMsg, loviraMsg],
+              updatedAt: now,
+            };
+            setActiveSession(updatedSession);
+            saveUpdatedSession(updatedSession);
+          }
+
+          showToast(finalReply);
           if (inputMode === 'voice' || accessibilitySettings.speakResponse) {
             speakWithVoiceStatus(finalReply);
           } else {
-            showToast(finalReply);
             setVoiceStatus('idle');
           }
         } else {
@@ -721,6 +745,31 @@ export function useSessionManager({
         expiresAt: Date.now() + 180000,
       });
 
+      if (activeSession && isSessionContext) {
+        const now = new Date().toISOString();
+        const userMsg = {
+          id: `msg-${Date.now()}`,
+          sender: 'user' as const,
+          text: trimmedText,
+          timestamp: now,
+          inputMode,
+        };
+        const loviraMsg = {
+          id: `msg-${Date.now() + 1}`,
+          sender: 'lovira' as const,
+          text: askMsg,
+          timestamp: new Date().toISOString(),
+          suggestedReplies: ['7 giờ sáng', '8 giờ tối', '15 phút nữa'],
+        };
+        const updatedSession = {
+          ...activeSession,
+          messages: [...activeSession.messages, userMsg, loviraMsg],
+          updatedAt: now,
+        };
+        setActiveSession(updatedSession);
+        saveUpdatedSession(updatedSession);
+      }
+
       showToast(askMsg);
       if (inputMode === 'voice' || accessibilitySettings.speakResponse) {
         speakWithVoiceStatus(askMsg);
@@ -750,6 +799,32 @@ export function useSessionManager({
         const timeFormatted = dObj.toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' });
         const dateFormatted = dObj.toLocaleDateString('vi-VN');
         const confirmMsg = `Dạ, con đã lên lịch nhắc nhở "${parsedReminder.title}" vào lúc ${timeFormatted} (${dateFormatted}) rồi ạ.`;
+
+        if (activeSession && isSessionContext) {
+          const now = new Date().toISOString();
+          const userMsg = {
+            id: `msg-${Date.now()}`,
+            sender: 'user' as const,
+            text: trimmedText,
+            timestamp: now,
+            inputMode,
+          };
+          const loviraMsg = {
+            id: `msg-${Date.now() + 1}`,
+            sender: 'lovira' as const,
+            text: confirmMsg,
+            timestamp: new Date().toISOString(),
+            suggestedReplies: ['Xem tất cả lịch nhắc', 'Tạo thêm nhắc nhở'],
+          };
+          const updatedSession = {
+            ...activeSession,
+            messages: [...activeSession.messages, userMsg, loviraMsg],
+            updatedAt: now,
+          };
+          setActiveSession(updatedSession);
+          saveUpdatedSession(updatedSession);
+        }
+
         showToast(confirmMsg);
         if (inputMode === 'voice' || accessibilitySettings.speakResponse) {
           speakWithVoiceStatus(confirmMsg);
@@ -759,9 +834,34 @@ export function useSessionManager({
         setIsLoading(false);
         return;
       } else if (execRes.reason) {
-        showToast(`Dạ, ${execRes.reason}`);
+        const reasonMsg = `Dạ, ${execRes.reason}`;
+        if (activeSession && isSessionContext) {
+          const now = new Date().toISOString();
+          const userMsg = {
+            id: `msg-${Date.now()}`,
+            sender: 'user' as const,
+            text: trimmedText,
+            timestamp: now,
+            inputMode,
+          };
+          const loviraMsg = {
+            id: `msg-${Date.now() + 1}`,
+            sender: 'lovira' as const,
+            text: reasonMsg,
+            timestamp: new Date().toISOString(),
+          };
+          const updatedSession = {
+            ...activeSession,
+            messages: [...activeSession.messages, userMsg, loviraMsg],
+            updatedAt: now,
+          };
+          setActiveSession(updatedSession);
+          saveUpdatedSession(updatedSession);
+        }
+
+        showToast(reasonMsg);
         if (inputMode === 'voice' || accessibilitySettings.speakResponse) {
-          speakWithVoiceStatus(`Dạ, ${execRes.reason}`);
+          speakWithVoiceStatus(reasonMsg);
         } else {
           setVoiceStatus('idle');
         }
@@ -770,8 +870,12 @@ export function useSessionManager({
       }
     }
 
-    // B. Inside Active Session
-    if (activeSession && isSessionContext) {
+    // B. Main Interaction Flow (Works across all pages: Home, Chat, Reminders, Settings)
+    const sessionToUse =
+      activeSession ||
+      (sessionsList.length > 0 ? storageService.getSession(sessionsList[0].id) : null);
+
+    if (sessionToUse) {
       const now = new Date().toISOString();
       const userMsg = {
         id: `msg-${Date.now()}`,
@@ -782,8 +886,8 @@ export function useSessionManager({
       };
 
       const sessionWithUserMsg = {
-        ...activeSession,
-        messages: [...activeSession.messages, userMsg],
+        ...sessionToUse,
+        messages: [...sessionToUse.messages, userMsg],
         updatedAt: now,
       };
 
@@ -841,7 +945,7 @@ export function useSessionManager({
           }
         }
 
-        // Step 3: CAPABILITY / RESPONSE GROUNDING (Strictly ground reply against execution reality & registry)
+        // Step 3: CAPABILITY / RESPONSE GROUNDING
         const groundingResult = validateAndGroundAIResponse({
           rawReply,
           rawSpeech,
@@ -881,6 +985,8 @@ export function useSessionManager({
           setCameraModalOpen(true);
         }
 
+        showToast(finalReplyText);
+
         if (inputMode === 'voice' || accessibilitySettings.speakResponse) {
           speakWithVoiceStatus(finalSpeechText);
         } else {
@@ -889,7 +995,7 @@ export function useSessionManager({
       } catch (e: any) {
         if (e.name === 'AbortError') return;
 
-        console.warn('Backend chat unreachable, trying offline local fallback:', e);
+        console.warn('Backend chat unreachable or offline, running local intent engine:', e);
         const localResult = parseLocalIntent(trimmedText, sessionWithUserMsg, userProfile);
         if (localResult) {
           const batchTrigger = inputMode === 'voice' ? 'voice' : 'chat';
@@ -921,14 +1027,21 @@ export function useSessionManager({
           sessionAfterActions.messages.push(loviraMsg);
           saveUpdatedSession(sessionAfterActions);
 
+          showToast(groundingResult.finalReply);
+
           if (inputMode === 'voice' || accessibilitySettings.speakResponse) {
             speakWithVoiceStatus(groundingResult.finalSpeech);
           } else {
             setVoiceStatus('idle');
           }
         } else {
-          showToast('Không có kết nối mạng. Lovira vẫn lưu trữ cục bộ an toàn!');
-          setVoiceStatus('idle');
+          const errMsg = 'Dạ, con đã nghe thấy nhưng tạm thời chưa có kết nối mạng. Chú có thể thử lại nhé!';
+          showToast(errMsg);
+          if (inputMode === 'voice' || accessibilitySettings.speakResponse) {
+            speakWithVoiceStatus(errMsg);
+          } else {
+            setVoiceStatus('idle');
+          }
         }
       } finally {
         setIsLoading(false);
@@ -936,7 +1049,7 @@ export function useSessionManager({
       return;
     }
 
-    // C. Outside Session
+    // C. Fallback when no session exists at all
     try {
       const res = await fetch('/api/chat', {
         method: 'POST',

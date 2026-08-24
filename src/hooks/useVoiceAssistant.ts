@@ -50,6 +50,7 @@ export function useVoiceAssistant(options: UseVoiceAssistantOptions = {}) {
     stopSpeaking();
     setVoiceError(undefined);
     setInterimTranscript('');
+    setVoiceStatus('listening');
 
     const started = speechRecognitionService.startListening({
       onStart: () => {

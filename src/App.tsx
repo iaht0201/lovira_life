@@ -38,6 +38,7 @@ import { OnboardingModal } from './components/common/OnboardingModal';
 import { NotificationDrawer } from './components/notifications/NotificationDrawer';
 import { notificationService } from './services/notificationService';
 import { reminderService } from './services/reminderService';
+import { VoiceAssistantOverlay } from './components/voice/VoiceAssistantOverlay';
 import { AppNotification, NotificationType } from './types';
 
 function AppContent() {
@@ -152,17 +153,27 @@ function AppContent() {
     }, 4000);
   };
 
+  const [lastVoiceResponseText, setLastVoiceResponseText] = useState<string | undefined>(undefined);
+
   const {
     voiceStatus,
     setVoiceStatus,
     interimTranscript,
-    speakWithVoiceStatus,
+    voiceError,
+    setVoiceError,
+    speakWithVoiceStatus: originalSpeak,
+    stopSpeakingAudio,
     startListening,
     stopListening,
     cancelListening,
   } = useVoiceAssistant({
     speakResponse: accessibility.speakResponse,
   });
+
+  const speakWithVoiceStatus = React.useCallback((text: string, onEndCallback?: () => void) => {
+    setLastVoiceResponseText(text);
+    originalSpeak(text, onEndCallback);
+  }, [originalSpeak]);
 
   const {
     activeSession,
@@ -528,6 +539,32 @@ function AppContent() {
 
         {/* Toast Notification */}
         {toastMessage && <Toast message={toastMessage} />}
+
+        {/* Global Voice Assistant Listening/Speaking Overlay */}
+        <VoiceAssistantOverlay
+          voiceStatus={voiceStatus}
+          interimTranscript={interimTranscript}
+          voiceError={voiceError}
+          lastResponseText={lastVoiceResponseText}
+          onStopListening={stopListening}
+          onCancel={() => {
+            cancelListening();
+            stopSpeakingAudio();
+            setVoiceError(undefined);
+          }}
+          onRetry={() => {
+            setVoiceError(undefined);
+            startListening((transcript) =>
+              sendInteraction(transcript, {
+                inputMode: 'voice',
+                activeTab: isSessionRoute ? 'session' : activeTab,
+                pageContext: currentGlobalPageContext,
+              })
+            );
+          }}
+          onOpenChat={() => navigate('/chat')}
+          onStopSpeaking={stopSpeakingAudio}
+        />
       </AppShell>
     </>
   );

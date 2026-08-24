@@ -3,6 +3,7 @@ import {
   AgentAction,
   UserProfile,
 } from '../types';
+import { reminderService } from './reminderService';
 import {
   findBestMatchingTask,
   resolveCurrentStep,
@@ -30,15 +31,68 @@ export interface LocalIntentResult {
  */
 export function parseLocalIntent(
   text: string,
-  session: LifeSession,
+  session?: LifeSession | null,
   userProfile?: UserProfile | null
 ): LocalIntentResult | null {
-  if (!text || !text.trim() || !session) return null;
+  if (!text || !text.trim()) return null;
 
   const tTrimmed = text.trim();
   const tLower = tTrimmed.toLowerCase();
   const honorifics = deduceHonorifics(userProfile, text);
   const { addressing, me, praise, da, a } = honorifics;
+
+  // 0. Query Reminders / Schedule ("Lịch nhắc của chú thế nào?", "Hôm nay chú có hẹn gì không?", "Xem lịch nhắc")
+  const isReminderQuery =
+    (tLower.includes('lịch nhắc') ||
+      tLower.includes('nhắc nhở') ||
+      tLower.includes('lịch hẹn') ||
+      tLower.includes('có hẹn') ||
+      tLower.includes('danh sách nhắc') ||
+      tLower.includes('việc cần làm')) &&
+    (tLower.includes('gì') ||
+      tLower.includes('nào') ||
+      tLower.includes('xem') ||
+      tLower.includes('thế nào') ||
+      tLower.includes('kiểm tra') ||
+      tLower.includes('danh sách') ||
+      tLower.includes('hôm nay') ||
+      tLower.includes('sắp tới') ||
+      tLower.includes('chưa'));
+
+  if (isReminderQuery) {
+    const upcoming = reminderService.getUpcomingReminders();
+    if (upcoming.length === 0) {
+      return {
+        reply: `${da}, hiện tại ${addressing} chưa có lịch nhắc nhở hay lịch hẹn nào sắp tới ạ. ${addressing.charAt(0).toUpperCase() + addressing.slice(1)} có muốn ${me} tạo nhắc nhở mới không ạ?`,
+        speech: `${da}, hiện tại ${addressing} chưa có lịch nhắc nhở nào ạ.`,
+        actions: [],
+        confidence: 0.95,
+        suggestedReplies: ['Tạo nhắc nhở uống thuốc', 'Tạo lịch hẹn khám bệnh'],
+      };
+    }
+
+    const itemsText = upcoming
+      .slice(0, 4)
+      .map((r) => {
+        const timeStr = reminderService.formatReminderDateTime(r.scheduledAt);
+        const icon = r.category === 'medication' ? '💊' : r.category === 'appointment' ? '🩺' : '🔔';
+        return `• ${icon} ${r.title}: ${timeStr}`;
+      })
+      .join('\n');
+
+    const reply = `${da}, đây là lịch nhắc nhở sắp tới của ${addressing} ạ:\n${itemsText}`;
+    const speech = `${da}, ${addressing} có ${upcoming.length} lịch nhắc sắp tới. Đầu tiên là "${upcoming[0].title}" lúc ${reminderService.formatReminderDateTime(upcoming[0].scheduledAt)} ạ.`;
+
+    return {
+      reply,
+      speech,
+      actions: [],
+      confidence: 0.95,
+      suggestedReplies: ['Tạo nhắc nhở mới', 'Xem tất cả lịch nhắc'],
+    };
+  }
+
+  if (!session) return null;
 
   // 1. Pause / Resume / Complete session
   if (tLower.includes('tạm dừng phiên') || tLower.includes('nghỉ tay') || tLower === 'tạm dừng') {

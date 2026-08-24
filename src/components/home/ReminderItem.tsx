@@ -121,7 +121,7 @@ export const ReminderItem: React.FC<ReminderItemProps> = ({
 
   return (
     <div
-      className={`group relative flex items-start gap-3.5 p-3.5 sm:p-4 rounded-[20px] bg-white dark:bg-[#182424] border border-gray-200 dark:border-gray-800 hover:border-[#287C78] transition-all shadow-2xs ${
+      className={`group relative flex items-start gap-2.5 sm:gap-3.5 p-3 sm:p-4 rounded-[18px] sm:rounded-[20px] bg-white dark:bg-[#182424] border border-gray-200 dark:border-gray-800 hover:border-[#287C78] transition-all shadow-2xs ${
         completed ? 'opacity-60 bg-gray-50 dark:bg-[#141C1C]' : ''
       }`}
     >
@@ -129,7 +129,7 @@ export const ReminderItem: React.FC<ReminderItemProps> = ({
       <button
         type="button"
         onClick={handleToggle}
-        className="mt-1 text-gray-400 hover:text-[#287C78] dark:hover:text-[#42A39E] transition-colors cursor-pointer shrink-0"
+        className="mt-0.5 text-gray-400 hover:text-[#287C78] dark:hover:text-[#42A39E] transition-colors cursor-pointer shrink-0"
         aria-label={completed ? 'Đánh dấu chưa xong' : 'Đánh dấu xong'}
       >
         {completed ? (
@@ -141,16 +141,16 @@ export const ReminderItem: React.FC<ReminderItemProps> = ({
 
       {/* Category Icon */}
       <div
-        className={`w-10 h-10 rounded-[14px] ${bg} ${text} ${border} border flex items-center justify-center shrink-0 shadow-2xs`}
+        className={`w-9 h-9 sm:w-10 sm:h-10 rounded-xl sm:rounded-[14px] ${bg} ${text} ${border} border flex items-center justify-center shrink-0 shadow-2xs`}
       >
-        <Icon className="w-5 h-5" />
+        <Icon className="w-4 h-4 sm:w-5 sm:h-5" />
       </div>
 
       {/* Info Body */}
       <div className="flex-1 min-w-0">
-        <div className="flex items-center gap-2 flex-wrap">
+        <div className="flex items-center gap-1.5 sm:gap-2 flex-wrap">
           <h4
-            className={`text-sm sm:text-base font-[800] ${
+            className={`text-[13px] sm:text-base font-[800] leading-snug line-clamp-2 ${
               completed
                 ? 'line-through text-gray-400 dark:text-gray-500'
                 : 'text-gray-900 dark:text-white'
@@ -160,15 +160,15 @@ export const ReminderItem: React.FC<ReminderItemProps> = ({
           </h4>
 
           {fullReminder?.priority === 'high' && !completed && (
-            <span className="px-1.5 py-0.5 text-[10px] font-black rounded-md bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/30">
+            <span className="px-1.5 py-0.5 text-[9px] sm:text-[10px] font-black rounded-md bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/30 shrink-0">
               Ưu tiên cao
             </span>
           )}
         </div>
 
-        <div className="flex items-center gap-2 mt-1 text-xs text-gray-500 dark:text-gray-400 flex-wrap">
+        <div className="flex items-center gap-1.5 sm:gap-2 mt-0.5 sm:mt-1 text-[11px] sm:text-xs text-gray-500 dark:text-gray-400 flex-wrap">
           <span className="flex items-center gap-1 font-semibold text-[#287C78] dark:text-[#42A39E]">
-            <Clock className="w-3.5 h-3.5" />
+            <Clock className="w-3 h-3 sm:w-3.5 sm:h-3.5" />
             {displayTime}
           </span>
 
@@ -195,10 +195,10 @@ export const ReminderItem: React.FC<ReminderItemProps> = ({
 
       {/* Actions Menu */}
       {showActions && (
-        <div className="relative shrink-0 flex items-center gap-1">
-          {/* Quick Snooze button for uncompleted reminders */}
+        <div className="relative shrink-0 flex items-center gap-0.5 sm:gap-1">
+          {/* Quick Snooze button for uncompleted reminders (desktop only shortcut) */}
           {!completed && (
-            <div className="relative">
+            <div className="relative hidden sm:block">
               <button
                 type="button"
                 onClick={() => setShowSnoozeOptions(!showSnoozeOptions)}
@@ -248,12 +248,12 @@ export const ReminderItem: React.FC<ReminderItemProps> = ({
             </div>
           )}
 
-          {/* Quick .ics export button */}
+          {/* Quick .ics export button (desktop only shortcut) */}
           {fullReminder && (
             <button
               type="button"
               onClick={handleExportICS}
-              className="p-1.5 rounded-xl hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-500 dark:text-gray-400 transition-colors cursor-pointer"
+              className="p-1.5 rounded-xl hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-500 dark:text-gray-400 transition-colors cursor-pointer hidden sm:block"
               title="Tải file lịch (.ics) vào điện thoại"
             >
               <Download className="w-4 h-4" />
@@ -271,7 +271,31 @@ export const ReminderItem: React.FC<ReminderItemProps> = ({
             </button>
 
             {showMenu && (
-              <div className="absolute right-0 top-8 z-30 w-36 bg-white dark:bg-[#1E2B2B] rounded-xl shadow-xl border border-gray-200 dark:border-gray-700 py-1 text-xs font-semibold text-gray-700 dark:text-gray-200 animate-in fade-in">
+              <div className="absolute right-0 top-8 z-30 w-40 bg-white dark:bg-[#1E2B2B] rounded-xl shadow-xl border border-gray-200 dark:border-gray-700 py-1 text-xs font-semibold text-gray-700 dark:text-gray-200 animate-in fade-in">
+                {!completed && (
+                  <button
+                    onClick={() => {
+                      setShowMenu(false);
+                      setShowSnoozeOptions(true);
+                    }}
+                    className="w-full text-left px-3 py-1.5 hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-2 cursor-pointer sm:hidden"
+                  >
+                    <AlarmClock className="w-3.5 h-3.5 text-amber-500" />
+                    <span>Hoãn báo 10 phút</span>
+                  </button>
+                )}
+                {fullReminder && (
+                  <button
+                    onClick={(e) => {
+                      setShowMenu(false);
+                      handleExportICS(e);
+                    }}
+                    className="w-full text-left px-3 py-1.5 hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-2 cursor-pointer sm:hidden"
+                  >
+                    <Download className="w-3.5 h-3.5 text-emerald-500" />
+                    <span>Tải lịch (.ics)</span>
+                  </button>
+                )}
                 {fullReminder && onEdit && (
                   <button
                     onClick={() => {
