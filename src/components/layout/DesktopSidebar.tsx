@@ -53,13 +53,13 @@ export const DesktopSidebar: React.FC<DesktopSidebarProps> = ({
 
   return (
     <aside
-      className={`hidden md:flex flex-col h-screen sticky top-0 bg-lovira-sidebar shrink-0 z-30 select-none transition-all duration-300 shadow-xs border-r border-[#F0EDE4] dark:border-[#202E2E] ${
+      className={`hidden md:flex flex-col h-screen sticky top-0 bg-lovira-sidebar shrink-0 z-30 select-none transition-all duration-300 ${
         isCollapsed ? 'w-[74px]' : 'w-[230px]'
       }`}
       aria-label="Sidebar điều hướng"
     >
       {/* 6.1 Logo & Collapse Button Area */}
-      <div className={`h-[70px] flex items-center shrink-0 border-b border-[#F0EDE4] dark:border-[#202E2E] ${
+      <div className={`h-[70px] flex items-center shrink-0 ${
         isCollapsed ? 'px-3 justify-center' : 'px-4 justify-between'
       }`}>
         <button
@@ -76,8 +76,8 @@ export const DesktopSidebar: React.FC<DesktopSidebarProps> = ({
             className={`p-2 rounded-xl text-lovira-muted hover:text-lovira-title hover:bg-lovira-card-hover transition-colors cursor-pointer shrink-0 ${
               isCollapsed ? 'hidden' : 'block'
             }`}
-            title={isCollapsed ? 'Mở rộng thanh điều hướng' : 'Thu gọn thanh điều hướng'}
-            aria-label={isCollapsed ? 'Mở rộng thanh điều hướng' : 'Thu gọn thanh điều hướng'}
+            title="Thu gọn thanh điều hướng"
+            aria-label="Thu gọn thanh điều hướng"
           >
             <PanelLeftClose className="w-[18px] h-[18px] text-[#287C78] dark:text-[#42A39E]" />
           </button>
@@ -130,7 +130,7 @@ export const DesktopSidebar: React.FC<DesktopSidebarProps> = ({
       </div>
 
       {/* 6.4 User Profile Mini Card & Expand Toggle */}
-      <div className="p-2.5 bg-lovira-sidebar shrink-0 border-t border-[#F0EDE4] dark:border-[#202E2E]">
+      <div className="p-2.5 bg-lovira-sidebar shrink-0">
         {isCollapsed ? (
           <div className="flex flex-col items-center gap-2">
             <button

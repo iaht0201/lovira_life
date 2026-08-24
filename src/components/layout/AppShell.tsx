@@ -94,8 +94,6 @@ export const AppShell: React.FC<AppShellProps> = ({
           onOpenMobileMenu={() => setIsMobileMenuOpen(true)}
           onOpenNotifications={onOpenNotifications}
           hasNotifications={hasNotifications}
-          isSidebarCollapsed={isSidebarCollapsed}
-          onToggleSidebarCollapse={toggleSidebar}
         />
 
         {/* Page Main Content */}

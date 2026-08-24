@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { APP_IMAGES } from '../../assets/images';
+import { BRAND_IMAGES } from '../../config/brandAssets';
 import { Heart } from 'lucide-react';
 
 interface BrandLogoProps {
@@ -13,19 +13,8 @@ export const BrandLogo: React.FC<BrandLogoProps> = ({
   className = '',
   size = 'md',
 }) => {
-  const primarySrc = variant === 'icon' ? APP_IMAGES.logo : APP_IMAGES.logoClient;
-  const fallbackSrc = variant === 'icon' ? '/images/logo.png' : '/images/logo_client.png';
-  
-  const [currentSrc, setCurrentSrc] = useState<string>(primarySrc || fallbackSrc);
-  const [hasError, setHasError] = useState<boolean>(false);
-
-  const handleError = () => {
-    if (currentSrc !== fallbackSrc) {
-      setCurrentSrc(fallbackSrc);
-    } else {
-      setHasError(true);
-    }
-  };
+  const src = variant === 'icon' ? BRAND_IMAGES.logoIcon : BRAND_IMAGES.logo;
+  const [hasError, setHasError] = useState(false);
 
   const getHeightClass = () => {
     if (variant === 'icon') {
@@ -60,10 +49,13 @@ export const BrandLogo: React.FC<BrandLogoProps> = ({
 
   return (
     <img
-      src={currentSrc}
+      src={src}
       alt="Lovira"
-      onError={handleError}
+      decoding="async"
+      onError={() => setHasError(true)}
       className={`${getHeightClass()} w-auto max-w-[160px] object-contain select-none transition-transform ${className}`}
     />
   );
 };
+
+export default BrandLogo;
