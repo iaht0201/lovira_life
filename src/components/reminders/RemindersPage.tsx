@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import {
   Bell,
   Plus,
@@ -55,6 +55,24 @@ export const RemindersPage: React.FC<RemindersPageProps> = ({
     if (typeof Notification !== 'undefined') return Notification.permission;
     return 'default';
   });
+
+  // Accessibility Ref for Modal Focus
+  const cancelBtnRef = useRef<HTMLButtonElement | null>(null);
+
+  useEffect(() => {
+    if (deletingReminder) {
+      cancelBtnRef.current?.focus();
+
+      const handleKeyDown = (e: KeyboardEvent) => {
+        if (e.key === 'Escape') {
+          setDeletingReminder(null);
+        }
+      };
+
+      window.addEventListener('keydown', handleKeyDown);
+      return () => window.removeEventListener('keydown', handleKeyDown);
+    }
+  }, [deletingReminder]);
 
   // Subscribe to updates
   useEffect(() => {
@@ -509,24 +527,36 @@ export const RemindersPage: React.FC<RemindersPageProps> = ({
 
       {/* Delete Confirmation Modal */}
       {deletingReminder && (
-        <div className="fixed inset-0 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4 z-50 animate-in fade-in duration-150">
+        <div
+          className="fixed inset-0 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4 z-50 animate-in fade-in duration-150"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="delete-reminder-title"
+          aria-describedby="delete-reminder-desc"
+          onClick={(e) => {
+            if (e.target === e.currentTarget) setDeletingReminder(null);
+          }}
+        >
           <div className="bg-white dark:bg-[#1A2626] rounded-3xl p-6 max-w-sm w-full space-y-4 border border-gray-200 dark:border-gray-800 shadow-2xl">
             <div className="flex items-center gap-3 text-rose-500">
               <div className="p-3 rounded-2xl bg-rose-500/10 shrink-0">
                 <Trash2 className="w-6 h-6" />
               </div>
               <div>
-                <h3 className="font-extrabold text-base text-gray-900 dark:text-white">Xóa nhắc nhở?</h3>
+                <h3 id="delete-reminder-title" className="font-extrabold text-base text-gray-900 dark:text-white">
+                  Xóa nhắc nhở?
+                </h3>
                 <p className="text-xs text-gray-500 dark:text-gray-400">Xác nhận thao tác xóa</p>
               </div>
             </div>
 
-            <p className="text-xs sm:text-sm text-gray-600 dark:text-gray-300">
+            <p id="delete-reminder-desc" className="text-xs sm:text-sm text-gray-600 dark:text-gray-300">
               Chú có chắc chắn muốn xóa nhắc nhở <strong className="text-gray-900 dark:text-white">"{deletingReminder.title}"</strong> không ạ? Thao tác này không thể hoàn tác.
             </p>
 
             <div className="flex items-center justify-end gap-2.5 pt-2">
               <button
+                ref={cancelBtnRef}
                 onClick={() => setDeletingReminder(null)}
                 className="px-4 py-2.5 rounded-xl border border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-300 font-bold text-xs hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors cursor-pointer"
               >

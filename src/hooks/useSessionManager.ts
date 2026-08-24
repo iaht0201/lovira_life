@@ -686,8 +686,21 @@ export function useSessionManager({
     }
 
     // A2. Fast Deterministic Vietnamese Reminder Parsing
-    const parsedReminder = parseVietnameseReminderText(trimmedText);
-    if (parsedReminder) {
+    const parseRes = parseVietnameseReminderText(trimmedText);
+    if (parseRes.status === 'needs_clarification') {
+      const askMsg = `Dạ, chú muốn con nhắc ${parseRes.title ? `"${parseRes.title}" ` : ''}vào lúc mấy giờ ạ?`;
+      showToast(askMsg);
+      if (inputMode === 'voice' || accessibilitySettings.speakResponse) {
+        speakWithVoiceStatus(askMsg);
+      } else {
+        setVoiceStatus('idle');
+      }
+      setIsLoading(false);
+      return;
+    }
+
+    if (parseRes.status === 'resolved') {
+      const parsedReminder = parseRes.reminder;
       const reminderAction: AppAction = {
         type: 'CREATE_REMINDER',
         payload: {
@@ -696,6 +709,7 @@ export function useSessionManager({
           category: parsedReminder.category,
           repeat: parsedReminder.repeat,
           priority: parsedReminder.priority,
+          sessionId: isSessionContext && activeSession ? activeSession.id : undefined,
         },
       };
       const execRes = await executeValidatedAppAction(reminderAction, appContext, runtimeContext);
@@ -707,6 +721,15 @@ export function useSessionManager({
         showToast(confirmMsg);
         if (inputMode === 'voice' || accessibilitySettings.speakResponse) {
           speakWithVoiceStatus(confirmMsg);
+        } else {
+          setVoiceStatus('idle');
+        }
+        setIsLoading(false);
+        return;
+      } else if (execRes.reason) {
+        showToast(`Dạ, ${execRes.reason}`);
+        if (inputMode === 'voice' || accessibilitySettings.speakResponse) {
+          speakWithVoiceStatus(`Dạ, ${execRes.reason}`);
         } else {
           setVoiceStatus('idle');
         }

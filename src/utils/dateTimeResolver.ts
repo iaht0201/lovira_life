@@ -9,6 +9,20 @@ export interface ParsedReminderIntent {
   priority: 'normal' | 'high';
 }
 
+export type ReminderParseResult =
+  | {
+      status: 'resolved';
+      reminder: ParsedReminderIntent;
+    }
+  | {
+      status: 'needs_clarification';
+      missing: ('date' | 'time')[];
+      title?: string;
+    }
+  | {
+      status: 'not_reminder';
+    };
+
 /**
  * Deterministic parser for Vietnamese datetime expressions in voice & text prompts.
  * Examples:
@@ -20,13 +34,33 @@ export interface ParsedReminderIntent {
 export function parseVietnameseReminderText(
   text: string,
   baseDate: Date = new Date()
-): ParsedReminderIntent | null {
-  if (!text || !text.trim()) return null;
+): ReminderParseResult {
+  if (!text || !text.trim()) return { status: 'not_reminder' };
 
   const raw = text.trim();
   const lower = raw.toLowerCase();
 
-  // Check if text is a reminder command
+  // 0. Exclude non-reminder conversational or inquiry phrases
+  const conversationalKeywords = [
+    'nhắc lại',
+    'vừa nhắc',
+    'có nhắc',
+    'không nhắc',
+    'chưa nhắc',
+    'chuyện gì',
+    'điều gì',
+    'bước số',
+    'bước tiếp',
+    'nhắc tới',
+    'nhắc đến',
+    'nhắc xem',
+    'nhắc coi',
+  ];
+  if (conversationalKeywords.some((kw) => lower.includes(kw))) {
+    return { status: 'not_reminder' };
+  }
+
+  // Check if text is a reminder command verb
   const isReminderCommand =
     lower.includes('nhắc') ||
     lower.includes('lên lịch') ||
@@ -35,22 +69,22 @@ export function parseVietnameseReminderText(
     lower.includes('báo thức') ||
     lower.includes('nhắc nhở');
 
-  if (!isReminderCommand) return null;
+  if (!isReminderCommand) return { status: 'not_reminder' };
 
   let targetDate = new Date(baseDate.getTime());
   let repeat: ReminderRepeat = 'once';
-  let isDateSpecified = false;
+  let hasTemporalExpression = false;
 
   // 1. Recurrence
   if (lower.includes('hàng ngày') || lower.includes('mỗi ngày') || lower.includes('hằng ngày')) {
     repeat = 'daily';
-    isDateSpecified = true;
+    hasTemporalExpression = true;
   } else if (lower.includes('hàng tuần') || lower.includes('mỗi tuần')) {
     repeat = 'weekly';
-    isDateSpecified = true;
+    hasTemporalExpression = true;
   } else if (lower.includes('hàng tháng') || lower.includes('mỗi tháng')) {
     repeat = 'monthly';
-    isDateSpecified = true;
+    hasTemporalExpression = true;
   }
 
   // 2. Relative offset (e.g. "30 phút nữa", "15 phút sau", "1 tiếng nữa", "2 giờ nữa")
@@ -60,25 +94,24 @@ export function parseVietnameseReminderText(
   if (minutesRelMatch) {
     const mins = parseInt(minutesRelMatch[1], 10);
     targetDate = new Date(baseDate.getTime() + mins * 60 * 1000);
-    isDateSpecified = true;
+    hasTemporalExpression = true;
   } else if (hoursRelMatch) {
     const hrs = parseInt(hoursRelMatch[1], 10);
     targetDate = new Date(baseDate.getTime() + hrs * 60 * 60 * 1000);
-    isDateSpecified = true;
+    hasTemporalExpression = true;
   } else {
     // 3. Day of recurrence / relative day
     if (lower.includes('ngày mai') || lower.includes('sáng mai') || lower.includes('chiều mai') || lower.includes('tối mai') || lower.includes('trưa mai')) {
       targetDate.setDate(targetDate.getDate() + 1);
-      isDateSpecified = true;
+      hasTemporalExpression = true;
     } else if (lower.includes('ngày mốt') || lower.includes('ngày kia')) {
       targetDate.setDate(targetDate.getDate() + 2);
-      isDateSpecified = true;
+      hasTemporalExpression = true;
     } else if (lower.includes('hôm kia')) {
       targetDate.setDate(targetDate.getDate() - 2);
-      isDateSpecified = true;
+      hasTemporalExpression = true;
     } else if (lower.includes('hôm nay') || lower.includes('tối nay') || lower.includes('chiều nay') || lower.includes('trưa nay') || lower.includes('sáng nay')) {
-      // today
-      isDateSpecified = true;
+      hasTemporalExpression = true;
     }
 
     // 4. Exact time parsing
@@ -93,12 +126,15 @@ export function parseVietnameseReminderText(
     if (timeColonMatch) {
       parsedHour = parseInt(timeColonMatch[1], 10);
       parsedMinute = parseInt(timeColonMatch[2], 10);
+      hasTemporalExpression = true;
     } else if (timeHMatch) {
       parsedHour = parseInt(timeHMatch[1], 10);
       parsedMinute = timeHMatch[2] ? parseInt(timeHMatch[2], 10) : 0;
+      hasTemporalExpression = true;
     } else if (timeGiolMatch) {
       parsedHour = parseInt(timeGiolMatch[1], 10);
       parsedMinute = timeGiolMatch[2] ? parseInt(timeGiolMatch[2], 10) : 0;
+      hasTemporalExpression = true;
     }
 
     // AM / PM / Noon adjustments
@@ -112,7 +148,7 @@ export function parseVietnameseReminderText(
       } else if (isAM && parsedHour === 12) {
         parsedHour = 0;
       } else if (isNoon && parsedHour < 12 && parsedHour !== 12) {
-        if (parsedHour < 11) parsedHour += 12; // e.g. "1 giờ trưa" -> 13
+        if (parsedHour < 11) parsedHour += 12;
       }
       targetDate.setHours(parsedHour, parsedMinute, 0, 0);
 
@@ -124,15 +160,16 @@ export function parseVietnameseReminderText(
       // Default times if only morning/afternoon/evening specified
       if (lower.includes('sáng')) {
         targetDate.setHours(8, 0, 0, 0);
+        hasTemporalExpression = true;
       } else if (lower.includes('trưa')) {
         targetDate.setHours(12, 0, 0, 0);
+        hasTemporalExpression = true;
       } else if (lower.includes('chiều')) {
         targetDate.setHours(15, 0, 0, 0);
+        hasTemporalExpression = true;
       } else if (lower.includes('tối')) {
         targetDate.setHours(20, 0, 0, 0);
-      } else {
-        // Default to next hour if no time specified
-        targetDate = new Date(baseDate.getTime() + 60 * 60 * 1000);
+        hasTemporalExpression = true;
       }
     }
   }
@@ -171,7 +208,6 @@ export function parseVietnameseReminderText(
   }
 
   // 6. Title extraction
-  // Clean temporal phrases, time phrases, and command prefixes from raw text
   let cleanedTitle = raw
     .replace(/hàng\s+ngày|mỗi\s+ngày|hằng\s+ngày|hàng\s+tuần|mỗi\s+tuần|hàng\s+tháng|mỗi\s+tháng/gi, '')
     .replace(/\d+\s*(phút|p)\s*(nữa|sau)/gi, '')
@@ -187,11 +223,11 @@ export function parseVietnameseReminderText(
     .trim();
 
   // If title was stripped down too much, fallback to sensible category defaults
-  if (!cleanedTitle || cleanedTitle.length < 3) {
+  if (!cleanedTitle || cleanedTitle.length < 2) {
     if (category === 'medication') cleanedTitle = 'Uống thuốc đúng giờ';
     else if (category === 'appointment') cleanedTitle = 'Cuộc hẹn quan trọng';
     else if (category === 'family') cleanedTitle = 'Việc gia đình';
-    else cleanedTitle = 'Nhắc nhở công việc';
+    else cleanedTitle = 'Nhắc nhở';
   }
 
   // Capitalize first letter
@@ -199,11 +235,23 @@ export function parseVietnameseReminderText(
 
   const priority = lower.includes('khẩn') || lower.includes('quan trọng') || category === 'medication' ? 'high' : 'normal';
 
+  // If no temporal expression was specified at all (e.g. "Nhắc chú uống thuốc nhé")
+  if (!hasTemporalExpression) {
+    return {
+      status: 'needs_clarification',
+      missing: ['time'],
+      title: cleanedTitle,
+    };
+  }
+
   return {
-    title: cleanedTitle,
-    scheduledAt: targetDate.toISOString(),
-    category,
-    repeat,
-    priority,
+    status: 'resolved',
+    reminder: {
+      title: cleanedTitle,
+      scheduledAt: targetDate.toISOString(),
+      category,
+      repeat,
+      priority,
+    },
   };
 }

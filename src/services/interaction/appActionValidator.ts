@@ -177,6 +177,7 @@ export function validateAppAction(
     case 'CREATE_REMINDER': {
       const title = action.payload?.title?.trim();
       let scheduledAt = action.payload?.scheduledAt?.trim();
+      const repeat = action.payload?.repeat || 'once';
 
       if (!title || title.length < 2) {
         return { valid: false, reason: 'Tiêu đề nhắc nhở không được để trống' };
@@ -189,8 +190,13 @@ export function validateAppAction(
         if (isNaN(d.getTime())) {
           return { valid: false, reason: 'Thời gian nhắc nhở không hợp lệ' };
         }
+        if (repeat === 'once' && d.getTime() <= Date.now()) {
+          return { valid: false, reason: 'Thời gian nhắc nhở đã qua. Chú vui lòng chọn thời gian ở tương lai ạ.' };
+        }
         scheduledAt = d.toISOString();
       }
+
+      const sessionId = action.payload?.sessionId || context.activeSessionId || undefined;
 
       return {
         valid: true,
@@ -201,8 +207,9 @@ export function validateAppAction(
             title,
             scheduledAt,
             category: action.payload?.category || 'general',
-            repeat: action.payload?.repeat || 'once',
+            repeat,
             priority: action.payload?.priority || 'normal',
+            sessionId,
           },
         },
       };
