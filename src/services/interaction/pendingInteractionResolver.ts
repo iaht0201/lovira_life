@@ -77,7 +77,7 @@ export function resolvePendingInteraction(
   }
 
   if (pending.type === 'clarification') {
-    if (NEGATIVE_REGEX.test(trimmed) || trimmed.toLowerCase().includes('không') || trimmed.toLowerCase().includes('thôi')) {
+    if (NEGATIVE_REGEX.test(trimmed)) {
       return {
         resolved: true,
         reply: 'Dạ vâng, con đã hủy việc tạo nhắc nhở rồi ạ.',
@@ -115,6 +115,13 @@ export function resolvePendingInteraction(
           },
           reply: `Dạ, con đã lên lịch nhắc nhở "${title}" vào lúc ${timeFormatted} (${dateFormatted}) rồi ạ.`,
           clearPending: true,
+        };
+      } else {
+        // If user gave an unclear time response, retain pending clarification and ask again nicely
+        return {
+          resolved: true,
+          reply: "Dạ, con chưa nghe rõ giờ. Chú có thể nói ví dụ '7 giờ 30 sáng' giúp con nhé.",
+          clearPending: false,
         };
       }
     }

@@ -190,8 +190,18 @@ export function validateAppAction(
         if (isNaN(d.getTime())) {
           return { valid: false, reason: 'Thời gian nhắc nhở không hợp lệ' };
         }
-        if (repeat === 'once' && d.getTime() <= Date.now()) {
-          return { valid: false, reason: 'Thời gian nhắc nhở đã qua. Chú vui lòng chọn thời gian ở tương lai ạ.' };
+        if (d.getTime() <= Date.now()) {
+          if (repeat === 'once') {
+            return { valid: false, reason: 'Thời gian nhắc nhở đã qua. Chú vui lòng chọn thời gian ở tương lai ạ.' };
+          } else {
+            // Auto roll past recurring reminder forward to next valid occurrence
+            while (d.getTime() <= Date.now()) {
+              if (repeat === 'daily') d.setDate(d.getDate() + 1);
+              else if (repeat === 'weekly') d.setDate(d.getDate() + 7);
+              else if (repeat === 'monthly') d.setMonth(d.getMonth() + 1);
+              else d.setDate(d.getDate() + 1);
+            }
+          }
         }
         scheduledAt = d.toISOString();
       }

@@ -692,7 +692,12 @@ export function useSessionManager({
       let dayInfo = '';
       if (hasDateStr) {
         const d = new Date(hasDateStr);
-        const isTomorrow = d.getDate() === new Date().getDate() + 1;
+        const tomorrow = new Date();
+        tomorrow.setDate(tomorrow.getDate() + 1);
+        const isTomorrow =
+          d.getFullYear() === tomorrow.getFullYear() &&
+          d.getMonth() === tomorrow.getMonth() &&
+          d.getDate() === tomorrow.getDate();
         if (isTomorrow) dayInfo = 'ngày mai ';
       }
 

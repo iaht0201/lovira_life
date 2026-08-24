@@ -77,20 +77,17 @@ export function parseVietnameseReminderText(
 
   let targetDate = new Date(baseDate.getTime());
   let repeat: ReminderRepeat = 'once';
-  let hasDate = false;
+  let hasExplicitDate = false;
   let hasTime = false;
   let hasRelativeOffset = false;
 
   // 1. Recurrence
   if (lower.includes('hàng ngày') || lower.includes('mỗi ngày') || lower.includes('hằng ngày')) {
     repeat = 'daily';
-    hasDate = true;
   } else if (lower.includes('hàng tuần') || lower.includes('mỗi tuần')) {
     repeat = 'weekly';
-    hasDate = true;
   } else if (lower.includes('hàng tháng') || lower.includes('mỗi tháng')) {
     repeat = 'monthly';
-    hasDate = true;
   }
 
   // 2. Relative offset (e.g. "30 phút nữa", "15 phút sau", "1 tiếng nữa", "2 giờ nữa")
@@ -109,15 +106,15 @@ export function parseVietnameseReminderText(
     // 3. Day of recurrence / relative day
     if (lower.includes('ngày mai') || lower.includes('sáng mai') || lower.includes('chiều mai') || lower.includes('tối mai') || lower.includes('trưa mai')) {
       targetDate.setDate(targetDate.getDate() + 1);
-      hasDate = true;
+      hasExplicitDate = true;
     } else if (lower.includes('ngày mốt') || lower.includes('ngày kia')) {
       targetDate.setDate(targetDate.getDate() + 2);
-      hasDate = true;
+      hasExplicitDate = true;
     } else if (lower.includes('hôm kia')) {
       targetDate.setDate(targetDate.getDate() - 2);
-      hasDate = true;
+      hasExplicitDate = true;
     } else if (lower.includes('hôm nay') || lower.includes('tối nay') || lower.includes('chiều nay') || lower.includes('trưa nay') || lower.includes('sáng nay')) {
-      hasDate = true;
+      hasExplicitDate = true;
     }
 
     // 4. Exact time parsing
@@ -174,7 +171,11 @@ export function parseVietnameseReminderText(
     lower.includes('tái khám') ||
     lower.includes('đi khám') ||
     lower.includes('phòng khám') ||
-    lower.includes('hẹn') ||
+    lower.includes('cuộc hẹn') ||
+    lower.includes('lịch hẹn') ||
+    lower.includes('hẹn bác sĩ') ||
+    lower.includes('hẹn khám') ||
+    lower.includes('hẹn gặp') ||
     lower.includes('phỏng vấn') ||
     lower.includes('họp') ||
     lower.includes('làm cccd') ||
@@ -240,7 +241,7 @@ export function parseVietnameseReminderText(
       category,
       repeat,
       priority,
-      targetDateStr: hasDate ? targetDate.toISOString() : undefined,
+      targetDateStr: hasExplicitDate ? targetDate.toISOString() : undefined,
     };
   }
 
@@ -284,26 +285,55 @@ export function parseClarifiedTime(
   }
 
   // 2. Exact time parsing
-  const timeColonMatch = lower.match(/(\d{1,2}):(\d{2})/);
-  const timeHMatch = lower.match(/(\d{1,2})\s*h\s*(\d{1,2})?/);
-  const timeGiolMatch = lower.match(/(\d{1,2})\s*giờ\s*(\d{1,2})?/);
-  const aloneNumMatch = lower.match(/^(\d{1,2})$/);
+  // Word number map for common spoken numbers
+  const wordToNum: Record<string, number> = {
+    'một': 1, 'hai': 2, 'ba': 3, 'bốn': 4, 'năm': 5,
+    'sáu': 6, 'bảy': 7, 'tám': 8, 'chín': 9, 'mười': 10,
+    'mười một': 11, 'mười hai': 12,
+  };
 
   let parsedHour: number | null = null;
   let parsedMinute = 0;
 
-  if (timeColonMatch) {
-    parsedHour = parseInt(timeColonMatch[1], 10);
-    parsedMinute = parseInt(timeColonMatch[2], 10);
-  } else if (timeHMatch) {
-    parsedHour = parseInt(timeHMatch[1], 10);
-    parsedMinute = timeHMatch[2] ? parseInt(timeHMatch[2], 10) : 0;
-  } else if (timeGiolMatch) {
-    parsedHour = parseInt(timeGiolMatch[1], 10);
-    parsedMinute = timeGiolMatch[2] ? parseInt(timeGiolMatch[2], 10) : 0;
-  } else if (aloneNumMatch) {
-    parsedHour = parseInt(aloneNumMatch[1], 10);
-    parsedMinute = 0;
+  // "7 rưỡi", "7h rưỡi", "7 giờ rưỡi", "bảy rưỡi"
+  const ruoiMatch = lower.match(/(\d{1,2}|một|hai|ba|bốn|năm|sáu|bảy|tám|chín|mười|mười\s+một|mười\s+hai)\s*(giờ|h)?\s*rưỡi/);
+  // "6 giờ kém 15", "6h kém 15", "6h kém 10"
+  const kemMatch = lower.match(/(\d{1,2}|một|hai|ba|bốn|năm|sáu|bảy|tám|chín|mười|mười\s+một|mười\s+hai)\s*(giờ|h)?\s*kém\s*(\d{1,2})/);
+
+  if (ruoiMatch) {
+    const hStr = ruoiMatch[1];
+    parsedHour = wordToNum[hStr] !== undefined ? wordToNum[hStr] : parseInt(hStr, 10);
+    parsedMinute = 30;
+  } else if (kemMatch) {
+    const hStr = kemMatch[1];
+    const rawH = wordToNum[hStr] !== undefined ? wordToNum[hStr] : parseInt(hStr, 10);
+    const minsSub = parseInt(kemMatch[3], 10);
+    parsedHour = rawH - 1;
+    if (parsedHour < 0) parsedHour += 12;
+    parsedMinute = 60 - minsSub;
+  } else {
+    const timeColonMatch = lower.match(/(\d{1,2}):(\d{2})/);
+    const timeHMatch = lower.match(/(\d{1,2})\s*h\s*(\d{1,2})?/);
+    const timeGiolMatch = lower.match(/(\d{1,2})\s*giờ\s*(\d{1,2})?/);
+    const aloneNumMatch = lower.match(/^(\d{1,2})$/);
+    const wordNumMatch = lower.match(/^(một|hai|ba|bốn|năm|sáu|bảy|tám|chín|mười|mười\s+một|mười\s+hai)$/);
+
+    if (timeColonMatch) {
+      parsedHour = parseInt(timeColonMatch[1], 10);
+      parsedMinute = parseInt(timeColonMatch[2], 10);
+    } else if (timeHMatch) {
+      parsedHour = parseInt(timeHMatch[1], 10);
+      parsedMinute = timeHMatch[2] ? parseInt(timeHMatch[2], 10) : 0;
+    } else if (timeGiolMatch) {
+      parsedHour = parseInt(timeGiolMatch[1], 10);
+      parsedMinute = timeGiolMatch[2] ? parseInt(timeGiolMatch[2], 10) : 0;
+    } else if (aloneNumMatch) {
+      parsedHour = parseInt(aloneNumMatch[1], 10);
+      parsedMinute = 0;
+    } else if (wordNumMatch && wordToNum[wordNumMatch[1]]) {
+      parsedHour = wordToNum[wordNumMatch[1]];
+      parsedMinute = 0;
+    }
   }
 
   if (parsedHour === null) {
@@ -330,7 +360,8 @@ export function parseClarifiedTime(
   const resultDate = new Date(baseDate.getTime());
   resultDate.setHours(parsedHour, parsedMinute, 0, 0);
 
-  if (!baseTargetDateStr && resultDate.getTime() <= Date.now()) {
+  // If result date is in the past, roll forward to tomorrow
+  if (resultDate.getTime() <= Date.now()) {
     resultDate.setDate(resultDate.getDate() + 1);
   }
 
