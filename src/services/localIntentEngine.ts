@@ -294,7 +294,7 @@ export function parseLocalIntent(
   }
 
   // 4. Universal Arrival / Movement ("Tôi tới rồi", "Đã đến nơi", "Bác đến rồi", "Đến quầy rồi", "Tới quán rồi")
-  if (
+  const isArrivalStatement =
     tLower.includes('tới rồi') ||
     tLower.includes('đến rồi') ||
     tLower.includes('đến nơi') ||
@@ -313,8 +313,13 @@ export function parseLocalIntent(
     tLower.includes('tới quán') ||
     tLower.includes('đến quán') ||
     tLower.includes('đến bệnh viện') ||
-    tLower.includes('tới bệnh viện')
-  ) {
+    tLower.includes('tới bệnh viện') ||
+    tLower.includes('tới nhà thuốc') ||
+    tLower.includes('đến nhà thuốc') ||
+    tLower.includes('tới siêu thị') ||
+    tLower.includes('đến siêu thị');
+
+  if (isArrivalStatement) {
     const isMovementTitle = (title: string) => {
       const tl = title.toLowerCase();
       return (
@@ -331,41 +336,92 @@ export function parseLocalIntent(
         tl.includes('quán') ||
         tl.includes('cửa hàng') ||
         tl.includes('ngân hàng') ||
-        tl.includes('bệnh viện')
+        tl.includes('bệnh viện') ||
+        tl.includes('nhà thuốc') ||
+        tl.includes('siêu thị')
       );
     };
 
-    // First scan all tasks/subtasks across session for a matching movement task
+    const isGenericArrival = (input: string): boolean => {
+      const clean = input
+        .toLowerCase()
+        .trim()
+        .replace(/[.!?,;~^]+$/g, '')
+        .replace(/^(dạ|vâng|ừ|ok|ừm)\s*/i, '')
+        .trim();
+
+      const genericArrivalPhrases = [
+        'tới rồi',
+        'tới rồi nhé',
+        'tới rồi nha',
+        'tới rồi ạ',
+        'đến rồi',
+        'đến rồi nhé',
+        'đến rồi nha',
+        'đến rồi ạ',
+        'đến nơi rồi',
+        'đến nơi',
+        'tới nơi rồi',
+        'tới nơi',
+        'đã tới nơi',
+        'đã đến nơi',
+        'đã tới rồi',
+        'đã đến rồi',
+        'đã tới',
+        'đã đến',
+        'bác tới rồi',
+        'chú tới rồi',
+        'cô tới rồi',
+        'ông tới rồi',
+        'bà tới rồi',
+        'anh tới rồi',
+        'chị tới rồi',
+        'tôi tới rồi',
+        'mình tới rồi',
+        'con tới rồi',
+        'bác đến rồi',
+        'chú đến rồi',
+        'cô đến rồi',
+        'ông đến rồi',
+        'bà đến rồi',
+        'anh đến rồi',
+        'chị đến rồi',
+        'tôi đến rồi',
+        'mình đến rồi',
+        'con đến rồi',
+      ];
+      return genericArrivalPhrases.includes(clean);
+    };
+
     let matchedMovementTarget: { task?: any; subtask?: any; parentTask?: any } | null = null;
-    const semanticMatches = resolveSemanticTaskMatches(session, text);
+    const generic = isGenericArrival(text);
 
-    for (const m of semanticMatches) {
-      const cand = m.subtask || m.task;
-      if (cand && cand.status !== 'completed' && isMovementTitle(cand.title)) {
-        matchedMovementTarget = m;
-        break;
-      }
-    }
-
-    // If semantic match didn't find one, search any pending movement task in session
-    if (!matchedMovementTarget) {
-      for (const t of session.tasks) {
-        if (t.subtasks) {
-          const st = t.subtasks.find((s) => s.status !== 'completed' && isMovementTitle(s.title));
-          if (st) {
-            matchedMovementTarget = { subtask: st, parentTask: t };
-            break;
-          }
-        }
-        if (t.status !== 'completed' && isMovementTitle(t.title)) {
-          matchedMovementTarget = { task: t };
+    if (!generic) {
+      // 1. Specific destination utterance (e.g. "Tôi tới nhà thuốc rồi", "Tới quầy số 2 rồi")
+      // Search ALL movement tasks across the entire session semantically
+      const semanticMatches = resolveSemanticTaskMatches(session, text);
+      for (const m of semanticMatches) {
+        const cand = m.subtask || m.task;
+        if (cand && cand.status !== 'completed' && isMovementTitle(cand.title)) {
+          matchedMovementTarget = m;
           break;
         }
       }
-    }
 
-    // Fallback to current step if it is a movement task
-    if (!matchedMovementTarget) {
+      // CRITICAL: If specific destination was NOT found in any movement task,
+      // DO NOT fallback to any arbitrary pending task! Return clarification without mutation.
+      if (!matchedMovementTarget) {
+        return {
+          reply: `Dạ ${addressing}, ${addressing} đã đến nơi an toàn rồi ạ! ${me.charAt(0).toUpperCase() + me.slice(1)} chưa tìm thấy mục di chuyển tương ứng trong danh sách để đánh dấu, ${addressing} xem lại danh sách hoặc cho ${me} biết bước tiếp theo nhé!`,
+          speech: `Dạ ${addressing}, ${addressing} đã đến nơi an toàn rồi ạ!`,
+          actions: [],
+          confidence: 0.85,
+          suggestedReplies: ['Kiểm tra danh sách công việc', 'Giờ tôi cần làm gì tiếp?'],
+        };
+      }
+    } else {
+      // 2. Purely generic deictic arrival ("Tôi tới rồi", "Đến nơi rồi")
+      // ONLY check if current step (or its subtask) is a movement task
       const resolvedStep = resolveCurrentStep(session);
       const currentTaskOrSub = resolvedStep?.subtask || resolvedStep?.task;
       if (currentTaskOrSub && currentTaskOrSub.status !== 'completed' && isMovementTitle(currentTaskOrSub.title)) {

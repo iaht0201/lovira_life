@@ -1,5 +1,5 @@
 import React from 'react';
-import { ArrowLeft, Sliders, CheckCircle2, PauseCircle, PlayCircle, MoreVertical, Menu } from 'lucide-react';
+import { ArrowLeft, Sliders, CheckCircle2, PauseCircle, PlayCircle, Menu, ChevronRight } from 'lucide-react';
 import { LifeSession, SessionStatus } from '../../types';
 
 interface SessionConversationHeaderProps {
@@ -7,6 +7,7 @@ interface SessionConversationHeaderProps {
   onBack?: () => void;
   onToggleDetailDrawer: () => void;
   onToggleMobileSessionsList?: () => void;
+  isDetailOpen?: boolean;
 }
 
 export const SessionConversationHeader: React.FC<SessionConversationHeaderProps> = ({
@@ -14,6 +15,7 @@ export const SessionConversationHeader: React.FC<SessionConversationHeaderProps>
   onBack,
   onToggleDetailDrawer,
   onToggleMobileSessionsList,
+  isDetailOpen = false,
 }) => {
   const completedCount = session.tasks.filter((t) => t.isCompleted).length;
   const totalCount = session.tasks.length;
@@ -85,16 +87,33 @@ export const SessionConversationHeader: React.FC<SessionConversationHeaderProps>
         </div>
       </div>
 
-      {/* Right: Toggle Session Details Drawer */}
-      <div className="flex items-center gap-1.5 shrink-0">
+      {/* Right: Toggle Session Details & Plan Panel */}
+      <div className="flex items-center gap-2 shrink-0">
         <button
           onClick={onToggleDetailDrawer}
-          className="px-3 py-2 rounded-xl bg-[#F6F4EF] hover:bg-[#EAF4F3] dark:bg-[#202E2E] dark:hover:bg-[#283C3B] text-[#1C2226] dark:text-[#F2F7F7] transition-all flex items-center gap-2 cursor-pointer border border-[#EDEAE1] dark:border-transparent"
-          title="Xem Chi tiết Phiên & Công việc"
-          aria-label="Mở chi tiết phiên"
+          className={`px-3 py-2 rounded-xl transition-all flex items-center gap-2 cursor-pointer border ${
+            isDetailOpen
+              ? 'bg-[#287C78] text-white border-[#287C78] shadow-xs'
+              : 'bg-[#F6F4EF] hover:bg-[#EAF4F3] dark:bg-[#202E2E] dark:hover:bg-[#283C3B] text-[#1C2226] dark:text-[#F2F7F7] border-[#EDEAE1] dark:border-transparent'
+          }`}
+          title={isDetailOpen ? 'Thu gọn chi tiết kế hoạch' : 'Xem chi tiết kế hoạch & công việc'}
+          aria-label={isDetailOpen ? 'Thu gọn kế hoạch' : 'Xem kế hoạch'}
         >
-          <Sliders className="w-4 h-4 text-[#287C78] dark:text-[#42A39E]" />
-          <span className="hidden sm:inline text-xs font-bold">Chi tiết phiên</span>
+          <Sliders className={`w-4 h-4 ${isDetailOpen ? 'text-white' : 'text-[#287C78] dark:text-[#42A39E]'}`} />
+          <span className="hidden sm:inline text-xs font-bold">
+            {isDetailOpen ? 'Đóng kế hoạch' : 'Chi tiết kế hoạch'}
+          </span>
+          {totalCount > 0 && (
+            <span
+              className={`text-[10px] px-1.5 py-0.5 rounded-md font-bold transition-colors ${
+                isDetailOpen
+                  ? 'bg-white/20 text-white'
+                  : 'bg-[#E4F0EF] dark:bg-[#1B2928] text-[#287C78] dark:text-[#42A39E]'
+              }`}
+            >
+              {completedCount}/{totalCount}
+            </span>
+          )}
         </button>
       </div>
     </div>

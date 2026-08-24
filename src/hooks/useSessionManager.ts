@@ -29,6 +29,7 @@ import { createLifeSessionFromPlan } from '../services/sessionFactory';
 import { validateAppAction } from '../services/interaction/appActionValidator';
 import { applyAppAction } from '../services/interaction/appActionEngine';
 import { resolvePendingInteraction } from '../services/interaction/pendingInteractionResolver';
+import { validateAndGroundAIResponse } from '../services/interaction/CapabilityResponseValidator';
 
 interface UseSessionManagerProps {
   userProfile: UserProfile | null;
@@ -489,13 +490,13 @@ export function useSessionManager({
     rawAction: AppAction,
     appCtx: AppInteractionContext,
     rtCtx: any
-  ): Promise<boolean> => {
+  ): Promise<{ executed: boolean; action: AppAction; reason?: string }> => {
     const val = validateAppAction(rawAction, appCtx);
     if (!val.valid || !val.action) {
       if (val.reason) {
         showToast(`⚠️ ${val.reason}`);
       }
-      return false;
+      return { executed: false, action: rawAction, reason: val.reason || 'Hành động không hợp lệ' };
     }
 
     const actionToApply = { ...val.action };
@@ -506,7 +507,8 @@ export function useSessionManager({
       };
     }
 
-    return await applyAppAction(actionToApply, rtCtx);
+    const executed = await applyAppAction(actionToApply, rtCtx);
+    return { executed, action: actionToApply, reason: executed ? undefined : 'Lỗi khi thực thi thao tác' };
   }, [showToast]);
 
   const sendInteraction = useCallback(async (
@@ -617,82 +619,77 @@ export function useSessionManager({
         }
 
         const data = await res.json();
-        const replyText = data.reply || 'Lovira đã nhận thông tin của bạn.';
-        const speechText = data.speech || replyText;
+        const rawReply = data.reply || '';
+        const rawSpeech = data.speech;
         const actions: AgentAction[] = data.actions || [];
         const appActions: AppAction[] = data.appActions || [];
         const suggestedReplies: string[] | undefined = data.suggestedReplies;
 
+        // Step 1: Session Actions (AgentAction[]) Validation & Application
         const batchTrigger = inputMode === 'voice' ? 'voice' : 'chat';
         const batchRes = applyAgentActionBatch(sessionWithUserMsg, actions, batchTrigger);
+        const sessionAfterActions = batchRes.newState;
+        const appliedSessionActions = batchRes.appliedActions;
+        const rejectedSessionActions = batchRes.rejectedActions;
 
-        if (batchRes.status === 'full' || batchRes.status === 'partial') {
-          const finalSession = batchRes.newState;
-          let consistentReply = replyText;
-          let finalSuggestedReplies = suggestedReplies;
+        // Step 2: App Actions (AppAction[]) Validation & Execution
+        const executedAppActions: AppAction[] = [];
+        const rejectedAppActions: { action: AppAction; reason: string }[] = [];
 
-          if (batchRes.status === 'partial' && batchRes.rejectedActions.length > 0) {
-            const honorifics = deduceHonorifics(userProfile, trimmedText);
-            consistentReply = buildPartialSuccessReply(
-              batchRes.appliedActions,
-              batchRes.rejectedActions,
-              replyText,
-              honorifics
-            );
-            finalSuggestedReplies = ['Kiểm tra lại bước hiện tại', 'Giờ tôi cần làm gì?'];
-          }
-
-          const loviraMsg = {
-            id: `msg-${Date.now()}`,
-            sender: 'lovira' as const,
-            text: consistentReply,
-            timestamp: new Date().toISOString(),
-            actionsApplied: batchRes.appliedActions,
-            suggestedReplies: finalSuggestedReplies,
-          };
-
-          finalSession.messages.push(loviraMsg);
-          saveUpdatedSession(finalSession);
-
-          if (appActions.length > 0) {
-            for (const appAct of appActions) {
-              await executeValidatedAppAction(appAct, appContext, runtimeContext);
+        if (appActions.length > 0) {
+          for (const appAct of appActions) {
+            const execRes = await executeValidatedAppAction(appAct, appContext, runtimeContext);
+            if (execRes.executed) {
+              executedAppActions.push(execRes.action);
+            } else {
+              rejectedAppActions.push({ action: appAct, reason: execRes.reason || 'Thao tác bị từ chối' });
             }
           }
+        }
 
-          if (inputMode === 'voice' || accessibilitySettings.speakResponse) {
-            speakWithVoiceStatus(speechText || consistentReply);
-          } else {
-            setVoiceStatus('idle');
-          }
+        // Step 3: CAPABILITY / RESPONSE GROUNDING (Strictly ground reply against execution reality & registry)
+        const groundingResult = validateAndGroundAIResponse({
+          rawReply,
+          rawSpeech,
+          suggestedReplies,
+          appliedSessionActions,
+          rejectedSessionActions,
+          executedAppActions,
+          rejectedAppActions,
+          session: sessionAfterActions,
+          userProfile,
+          userInput: trimmedText,
+        });
 
-          if (actions.some((a) => a.type === 'OPEN_CAMERA')) {
-            setCameraModalOpen(true);
-          }
+        const finalReplyText = groundingResult.finalReply;
+        const finalSpeechText = groundingResult.finalSpeech;
+        const finalSuggestedReplies = groundingResult.finalSuggestedReplies;
+
+        // Step 4: Save Lovira message with grounded text
+        const loviraMsg = {
+          id: `msg-${Date.now()}`,
+          sender: 'lovira' as const,
+          text: finalReplyText,
+          timestamp: new Date().toISOString(),
+          actionsApplied: appliedSessionActions,
+          suggestedReplies: finalSuggestedReplies,
+        };
+
+        sessionAfterActions.messages.push(loviraMsg);
+        saveUpdatedSession(sessionAfterActions);
+
+        // Step 5: Visual Side Effects & State-Consistent TTS
+        if (
+          appliedSessionActions.some((a) => a.type === 'OPEN_CAMERA') ||
+          executedAppActions.some((a) => a.type === 'OPEN_CAMERA')
+        ) {
+          setCameraModalOpen(true);
+        }
+
+        if (inputMode === 'voice' || accessibilitySettings.speakResponse) {
+          speakWithVoiceStatus(finalSpeechText);
         } else {
-          const loviraMsg = {
-            id: `msg-${Date.now()}`,
-            sender: 'lovira' as const,
-            text: replyText,
-            timestamp: new Date().toISOString(),
-            suggestedReplies: suggestedReplies || ['Tiếp tục trò chuyện', 'Giờ tôi cần làm gì?'],
-          };
-
-          const fallbackSession = { ...sessionWithUserMsg };
-          fallbackSession.messages = [...fallbackSession.messages, loviraMsg];
-          saveUpdatedSession(fallbackSession);
-
-          if (appActions.length > 0) {
-            for (const appAct of appActions) {
-              await executeValidatedAppAction(appAct, appContext, runtimeContext);
-            }
-          }
-
-          if (inputMode === 'voice' || accessibilitySettings.speakResponse) {
-            speakWithVoiceStatus(speechText || replyText);
-          } else {
-            setVoiceStatus('idle');
-          }
+          setVoiceStatus('idle');
         }
       } catch (e: any) {
         if (e.name === 'AbortError') return;
@@ -702,22 +699,35 @@ export function useSessionManager({
         if (localResult) {
           const batchTrigger = inputMode === 'voice' ? 'voice' : 'chat';
           const batchRes = applyAgentActionBatch(sessionWithUserMsg, localResult.actions, batchTrigger);
-          const finalSession = batchRes.newState;
+          const sessionAfterActions = batchRes.newState;
+
+          const groundingResult = validateAndGroundAIResponse({
+            rawReply: localResult.reply,
+            rawSpeech: localResult.speech,
+            suggestedReplies: localResult.suggestedReplies,
+            appliedSessionActions: batchRes.appliedActions,
+            rejectedSessionActions: batchRes.rejectedActions,
+            executedAppActions: [],
+            rejectedAppActions: [],
+            session: sessionAfterActions,
+            userProfile,
+            userInput: trimmedText,
+          });
 
           const loviraMsg = {
             id: `msg-${Date.now() + 1}`,
             sender: 'lovira' as const,
-            text: localResult.reply,
+            text: groundingResult.finalReply,
             timestamp: new Date().toISOString(),
-            actionsApplied: localResult.actions,
-            suggestedReplies: localResult.suggestedReplies,
+            actionsApplied: batchRes.appliedActions,
+            suggestedReplies: groundingResult.finalSuggestedReplies,
           };
 
-          finalSession.messages.push(loviraMsg);
-          saveUpdatedSession(finalSession);
+          sessionAfterActions.messages.push(loviraMsg);
+          saveUpdatedSession(sessionAfterActions);
 
           if (inputMode === 'voice' || accessibilitySettings.speakResponse) {
-            speakWithVoiceStatus(localResult.speech || localResult.reply);
+            speakWithVoiceStatus(groundingResult.finalSpeech);
           } else {
             setVoiceStatus('idle');
           }
@@ -753,22 +763,29 @@ export function useSessionManager({
       }
 
       const data = await res.json();
-      const replyText = data.reply || 'Lovira đang lắng nghe bạn.';
-      const speechText = data.speech || replyText;
+      const rawReply = data.reply || 'Lovira đang lắng nghe bạn.';
+      const rawSpeech = data.speech;
       const appActions: AppAction[] = data.appActions || [];
+      const executedAppActions: AppAction[] = [];
+      const rejectedAppActions: { action: AppAction; reason: string }[] = [];
 
       if (appActions.length > 0) {
         for (const appAct of appActions) {
-          await executeValidatedAppAction(appAct, appContext, runtimeContext);
+          const execRes = await executeValidatedAppAction(appAct, appContext, runtimeContext);
+          if (execRes.executed) {
+            executedAppActions.push(execRes.action);
+          } else {
+            rejectedAppActions.push({ action: appAct, reason: execRes.reason || 'Thao tác bị từ chối' });
+          }
         }
       } else if (data.pendingInteraction) {
         setPendingInteraction(data.pendingInteraction);
       } else {
         const hasCreateProposal =
-          replyText.toLowerCase().includes('mở một phiên') ||
-          replyText.toLowerCase().includes('tạo một phiên') ||
-          replyText.toLowerCase().includes('có muốn tạo') ||
-          replyText.toLowerCase().includes('hướng dẫn từng bước');
+          rawReply.toLowerCase().includes('mở một phiên') ||
+          rawReply.toLowerCase().includes('tạo một phiên') ||
+          rawReply.toLowerCase().includes('có muốn tạo') ||
+          rawReply.toLowerCase().includes('hướng dẫn từng bước');
 
         if (hasCreateProposal) {
           setPendingInteraction({
@@ -780,10 +797,23 @@ export function useSessionManager({
         }
       }
 
-      showToast(replyText);
+      const groundingResult = validateAndGroundAIResponse({
+        rawReply,
+        rawSpeech,
+        suggestedReplies: data.suggestedReplies,
+        appliedSessionActions: [],
+        rejectedSessionActions: [],
+        executedAppActions,
+        rejectedAppActions,
+        session: null,
+        userProfile,
+        userInput: trimmedText,
+      });
+
+      showToast(groundingResult.finalReply);
 
       if (inputMode === 'voice' || accessibilitySettings.speakResponse) {
-        speakWithVoiceStatus(speechText);
+        speakWithVoiceStatus(groundingResult.finalSpeech);
       } else {
         setVoiceStatus('idle');
       }

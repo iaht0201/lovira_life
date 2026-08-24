@@ -58,7 +58,11 @@ export const AppShell: React.FC<AppShellProps> = ({
   const isChatTab = activeTab === 'chat' || activeTab === 'session';
 
   return (
-    <div className="min-h-screen bg-lovira-base text-lovira-title flex flex-col md:flex-row antialiased">
+    <div
+      className={`bg-lovira-base text-lovira-title flex flex-col md:flex-row antialiased ${
+        isChatTab ? 'h-[100dvh] max-h-[100dvh] overflow-hidden' : 'min-h-screen'
+      }`}
+    >
       {/* Desktop Sidebar */}
       <DesktopSidebar
         activeTab={activeTab}
@@ -84,7 +88,13 @@ export const AppShell: React.FC<AppShellProps> = ({
       />
 
       {/* Main Content Area */}
-      <div className="flex-1 flex flex-col min-w-0 min-h-screen pb-[calc(86px+env(safe-area-inset-bottom,0px))] md:pb-0">
+      <div
+        className={`flex-1 flex flex-col min-w-0 ${
+          isChatTab
+            ? 'h-full max-h-[100dvh] overflow-hidden pb-[calc(86px+env(safe-area-inset-bottom,0px))] md:pb-0'
+            : 'min-h-screen pb-[calc(86px+env(safe-area-inset-bottom,0px))] md:pb-0'
+        }`}
+      >
         {/* Topbar Header */}
         <Topbar
           accessibility={accessibility}
@@ -98,10 +108,10 @@ export const AppShell: React.FC<AppShellProps> = ({
 
         {/* Page Main Content */}
         <main
-          className={`flex-1 flex flex-col min-h-0 w-full mx-auto ${
+          className={`flex-1 flex flex-col min-h-0 w-full ${
             isChatTab
-              ? 'p-0 sm:px-6 md:px-8 md:py-6 max-w-[1440px]'
-              : 'px-3.5 sm:px-6 md:px-8 pt-4 pb-6 md:py-6 max-w-[1440px]'
+              ? 'p-0 overflow-hidden h-full'
+              : 'px-3.5 sm:px-6 md:px-8 pt-4 pb-6 md:py-6 max-w-[1440px] mx-auto'
           }`}
         >
           {children}

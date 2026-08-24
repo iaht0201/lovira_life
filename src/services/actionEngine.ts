@@ -270,36 +270,179 @@ export interface CompletionTargetResult {
 /**
  * Checks if user input is purely generic (referring to currently active/next step without specific content)
  */
-export function isGenericCompletionQuery(input: string): boolean {
+export function isGenericCompletionQuery(input?: string): boolean {
+  if (!input || !input.trim()) return true;
   const clean = input
     .toLowerCase()
     .trim()
-    .replace(/[.!?,;]+$/g, '')
-    .replace(/^(dạ|vâng|ừ|ok|ừm)\s*/i, '')
+    .replace(/[.!?,;~^]+$/g, '')
+    .replace(/^(dạ|vâng|ừ|ok|ừm|a|ơi|này)\s*/i, '')
     .trim();
+
+  // If the input has specific content words (nouns/actions like tiền, ví, thuốc, quán, v.v.), it is NEVER generic
+  const specificContentKeywords = [
+    'tiền',
+    'ví',
+    'thuốc',
+    'quán',
+    'chợ',
+    'bệnh viện',
+    'phòng',
+    'quầy',
+    'xe',
+    'vé',
+    'giấy',
+    'hồ sơ',
+    'bác sĩ',
+    'khám',
+    'mua',
+    'ăn',
+    'uống',
+    'gọi',
+    'tìm',
+    'chụp',
+    'ảnh',
+    'thẻ',
+    'căn cước',
+    'cccd',
+    'bảo hiểm',
+    'đồ',
+    'áo',
+    'quần',
+    'mũ',
+    'nón',
+    'chìa khóa',
+    'khóa',
+    'điện thoại',
+  ];
+
+  for (const word of specificContentKeywords) {
+    if (new RegExp(`\\b${word}\\b`, 'i').test(clean)) {
+      return false;
+    }
+  }
 
   const genericPatterns = [
     'xong',
     'xong rồi',
     'xong rồi nhé',
     'xong rồi nha',
+    'xong rồi ạ',
     'đã xong',
+    'đã xong rồi',
     'hoàn thành',
     'hoàn thành rồi',
+    'hoàn thành rồi ạ',
     'làm xong rồi',
     'làm xong',
+    'làm xong rồi ạ',
     'bước này xong rồi',
     'xong bước này',
     'xong bước này rồi',
     'xong việc này rồi',
     'xong việc rồi',
     'xong cái này rồi',
-    'chuẩn bị rồi',
-    'chuẩn bị xong rồi',
-    'sẵn sàng rồi',
+    'xong nha',
+    'xong nhé',
+    'xong ạ',
+    'tiếp tục',
+    'tiếp theo',
+    'bước tiếp theo',
+    'qua bước tiếp',
   ];
 
   return genericPatterns.includes(clean);
+}
+
+/**
+ * Resolves target task/subtask for purely generic completion utterances
+ * (e.g. "xong rồi", "xong bước này") based on active focus and hierarchy
+ */
+export function resolveGenericCurrentTarget(session: LifeSession): CompletionTargetResult {
+  if (!session || !session.tasks || session.tasks.length === 0) {
+    return {};
+  }
+
+  // 1. Try session.currentStepId if not completed
+  if (session.currentStepId) {
+    const match = findBestMatchingTask(session, session.currentStepId);
+    const target = match.subtask || match.task;
+    if (target && target.status !== 'completed' && target.status !== 'skipped') {
+      return match;
+    }
+  }
+
+  // 2. Try session.nextRecommendedAction.taskId if not completed
+  if (session.nextRecommendedAction?.taskId) {
+    const match = findBestMatchingTask(session, session.nextRecommendedAction.taskId);
+    const target = match.subtask || match.task;
+    if (target && target.status !== 'completed' && target.status !== 'skipped') {
+      return match;
+    }
+  }
+
+  // 3. Check active/in_progress tasks
+  const activeTasks: { task?: LifeTask; subtask?: LifeTask; parentTask?: LifeTask }[] = [];
+  for (const t of session.tasks) {
+    if (t.subtasks) {
+      for (const st of t.subtasks) {
+        if (st.status === 'active') {
+          activeTasks.push({ subtask: st, parentTask: t });
+        }
+      }
+    }
+    if (t.status === 'active') {
+      activeTasks.push({ task: t });
+    }
+  }
+
+  if (activeTasks.length === 1) {
+    return activeTasks[0];
+  } else if (activeTasks.length > 1) {
+    return {
+      isAmbiguous: true,
+      candidateTasks: activeTasks.map((at) => at.subtask || at.task!),
+    };
+  }
+
+  // 4. Check pending tasks
+  const pendingTasks = session.tasks.filter(
+    (t) => t.status !== 'completed' && t.status !== 'skipped'
+  );
+
+  if (pendingTasks.length === 0) {
+    return {};
+  }
+
+  if (pendingTasks.length === 1) {
+    const single = pendingTasks[0];
+    if (single.subtasks && single.subtasks.length > 0) {
+      const pendingSub = single.subtasks.filter((st) => st.status !== 'completed');
+      if (pendingSub.length === 1) {
+        return { subtask: pendingSub[0], parentTask: single };
+      } else if (pendingSub.length > 1) {
+        return {
+          isAmbiguous: true,
+          candidateTasks: pendingSub,
+        };
+      }
+    }
+    return { task: single };
+  }
+
+  // 5. Fallback to first pending task for generic utterance
+  const firstPending = pendingTasks.sort((a, b) => a.order - b.order)[0];
+  if (firstPending) {
+    if (firstPending.subtasks && firstPending.subtasks.length > 0) {
+      const firstSub = firstPending.subtasks
+        .filter((st) => st.status !== 'completed' && st.status !== 'skipped')
+        .sort((a, b) => a.order - b.order)[0];
+      if (firstSub) return { subtask: firstSub, parentTask: firstPending };
+    }
+    return { task: firstPending };
+  }
+
+  return {};
 }
 
 /**
@@ -344,8 +487,10 @@ export function resolveMultiTaskCompletionTargets(
  * Non-sequential semantic resolution:
  * 1. If userInput has specific semantic content ("chuẩn bị tiền rồi", "in giấy rồi", "tới quán rồi"):
  *    - Scans ALL tasks and subtasks regardless of order or currentStepId.
- * 2. ONLY if userInput is a purely generic marker ("xong rồi", "xong bước này"):
- *    - Falls back to currentStepId / nextRecommendedAction / active task.
+ *    - IF MATCH FOUND: returns the matched task/subtask.
+ *    - IF NO MATCH: returns {} (NO MUTATION). CRITICAL: Never falls back to currentStepId!
+ * 2. ONLY if userInput is a purely generic marker ("xong rồi", "xong bước này") or empty:
+ *    - Falls back to resolveGenericCurrentTarget (currentStepId / active task / first pending).
  */
 export function resolveCompletionTarget(
   session: LifeSession,
@@ -372,12 +517,12 @@ export function resolveCompletionTarget(
       if (matches.length > 0) {
         // High confidence top match
         const top = matches[0];
-        if (top.confidence >= 0.45) {
+        if (top.confidence >= 0.40) {
           // If top two matches are equally strong and distinct pending tasks, mark ambiguous
           if (
             matches.length > 1 &&
             Math.abs(matches[0].confidence - matches[1].confidence) < 0.05 &&
-            matches[1].confidence >= 0.6
+            matches[1].confidence >= 0.55
           ) {
             const t0 = matches[0].subtask || matches[0].task;
             const t1 = matches[1].subtask || matches[1].task;
@@ -396,89 +541,15 @@ export function resolveCompletionTarget(
           };
         }
       }
+
+      // CRITICAL: Specific utterance that did NOT match any task semantically
+      // MUST NOT fall back to current step or arbitrary pending tasks!
+      return {};
     }
   }
 
-  // 2. Generic fallback: Try session.currentStepId if not completed
-  if (session.currentStepId) {
-    const match = findBestMatchingTask(session, session.currentStepId);
-    const target = match.subtask || match.task;
-    if (target && target.status !== 'completed' && target.status !== 'skipped') {
-      return match;
-    }
-  }
-
-  // 3. Try session.nextRecommendedAction.taskId if not completed
-  if (session.nextRecommendedAction?.taskId) {
-    const match = findBestMatchingTask(session, session.nextRecommendedAction.taskId);
-    const target = match.subtask || match.task;
-    if (target && target.status !== 'completed' && target.status !== 'skipped') {
-      return match;
-    }
-  }
-
-  // 4. Check active/in_progress tasks
-  const activeTasks: { task?: LifeTask; subtask?: LifeTask; parentTask?: LifeTask }[] = [];
-  for (const t of session.tasks) {
-    if (t.subtasks) {
-      for (const st of t.subtasks) {
-        if (st.status === 'active') {
-          activeTasks.push({ subtask: st, parentTask: t });
-        }
-      }
-    }
-    if (t.status === 'active') {
-      activeTasks.push({ task: t });
-    }
-  }
-
-  if (activeTasks.length === 1) {
-    return activeTasks[0];
-  } else if (activeTasks.length > 1) {
-    return {
-      isAmbiguous: true,
-      candidateTasks: activeTasks.map((at) => at.subtask || at.task!),
-    };
-  }
-
-  // 5. Check pending tasks
-  const pendingTasks = session.tasks.filter(
-    (t) => t.status !== 'completed' && t.status !== 'skipped'
-  );
-
-  if (pendingTasks.length === 0) {
-    return {};
-  }
-
-  if (pendingTasks.length === 1) {
-    const single = pendingTasks[0];
-    if (single.subtasks && single.subtasks.length > 0) {
-      const pendingSub = single.subtasks.filter((st) => st.status !== 'completed');
-      if (pendingSub.length === 1) {
-        return { subtask: pendingSub[0], parentTask: single };
-      } else if (pendingSub.length > 1) {
-        return {
-          isAmbiguous: true,
-          candidateTasks: pendingSub,
-        };
-      }
-    }
-    return { task: single };
-  }
-
-  // Fallback to first pending task
-  const firstPending = pendingTasks.sort((a, b) => a.order - b.order)[0];
-  if (firstPending) {
-    if (firstPending.subtasks && firstPending.subtasks.length > 0) {
-      const firstSub = firstPending.subtasks
-        .filter((st) => st.status !== 'completed' && st.status !== 'skipped')
-        .sort((a, b) => a.order - b.order)[0];
-      if (firstSub) return { subtask: firstSub, parentTask: firstPending };
-    }
-    return { task: firstPending };
-  }
-
-  return {};
+  // 2. Purely generic query -> resolve current focus
+  return resolveGenericCurrentTarget(session);
 }
 
 /**
