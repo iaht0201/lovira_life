@@ -1,5 +1,6 @@
 import { PendingInteraction } from './interactionTypes';
 import { AppAction } from './appActionTypes';
+import { parseClarifiedTime } from '../../utils/dateTimeResolver';
 
 const AFFIRMATIVE_REGEX =
   /^(có|ừ|uh|u|ok|oke|okie|được|tạo đi|tạo giúp|tạo luôn|đồng ý|nhất trí|tạo giúp chú|tạo giúp bác|tạo giúp tôi|tạo giúp cô|làm đi|tiến hành đi|mở đi|mở giúp|xóa|xóa đi|xóa giúp|xóa luôn|chắc chắn|đồng ý xóa|ừ xóa đi|ok xóa)$/i;
@@ -75,5 +76,50 @@ export function resolvePendingInteraction(
     }
   }
 
+  if (pending.type === 'clarification') {
+    if (NEGATIVE_REGEX.test(trimmed) || trimmed.toLowerCase().includes('không') || trimmed.toLowerCase().includes('thôi')) {
+      return {
+        resolved: true,
+        reply: 'Dạ vâng, con đã hủy việc tạo nhắc nhở rồi ạ.',
+        clearPending: true,
+      };
+    }
+
+    if (pending.data.actionType === 'CREATE_REMINDER') {
+      const targetDateStr = pending.data.payload?.targetDateStr;
+      const resolvedDate = parseClarifiedTime(trimmed, targetDateStr);
+
+      if (resolvedDate && !isNaN(resolvedDate.getTime())) {
+        const title = pending.data.payload?.title || 'Nhắc nhở';
+        const scheduledAt = resolvedDate.toISOString();
+        const category = pending.data.payload?.category || 'general';
+        const repeat = pending.data.payload?.repeat || 'once';
+        const priority = pending.data.payload?.priority || 'normal';
+        const sessionId = pending.data.payload?.sessionId;
+
+        const timeFormatted = resolvedDate.toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' });
+        const dateFormatted = resolvedDate.toLocaleDateString('vi-VN');
+
+        return {
+          resolved: true,
+          appAction: {
+            type: 'CREATE_REMINDER',
+            payload: {
+              title,
+              scheduledAt,
+              category,
+              repeat,
+              priority,
+              sessionId,
+            },
+          },
+          reply: `Dạ, con đã lên lịch nhắc nhở "${title}" vào lúc ${timeFormatted} (${dateFormatted}) rồi ạ.`,
+          clearPending: true,
+        };
+      }
+    }
+  }
+
   return { resolved: false, clearPending: false };
 }
+

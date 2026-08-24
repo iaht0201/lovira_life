@@ -688,7 +688,34 @@ export function useSessionManager({
     // A2. Fast Deterministic Vietnamese Reminder Parsing
     const parseRes = parseVietnameseReminderText(trimmedText);
     if (parseRes.status === 'needs_clarification') {
-      const askMsg = `Dạ, chú muốn con nhắc ${parseRes.title ? `"${parseRes.title}" ` : ''}vào lúc mấy giờ ạ?`;
+      const hasDateStr = parseRes.targetDateStr;
+      let dayInfo = '';
+      if (hasDateStr) {
+        const d = new Date(hasDateStr);
+        const isTomorrow = d.getDate() === new Date().getDate() + 1;
+        if (isTomorrow) dayInfo = 'ngày mai ';
+      }
+
+      const askMsg = `Dạ, ${dayInfo}chú muốn con nhắc ${parseRes.title ? `"${parseRes.title}" ` : ''}vào lúc mấy giờ ạ?`;
+
+      setPendingInteraction({
+        type: 'clarification',
+        data: {
+          actionType: 'CREATE_REMINDER',
+          payload: {
+            title: parseRes.title,
+            category: parseRes.category,
+            repeat: parseRes.repeat,
+            priority: parseRes.priority,
+            targetDateStr: parseRes.targetDateStr,
+            sessionId: isSessionContext && activeSession ? activeSession.id : undefined,
+          },
+          question: askMsg,
+        },
+        createdAt: new Date().toISOString(),
+        expiresAt: Date.now() + 180000,
+      });
+
       showToast(askMsg);
       if (inputMode === 'voice' || accessibilitySettings.speakResponse) {
         speakWithVoiceStatus(askMsg);

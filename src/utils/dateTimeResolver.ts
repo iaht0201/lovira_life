@@ -17,7 +17,11 @@ export type ReminderParseResult =
   | {
       status: 'needs_clarification';
       missing: ('date' | 'time')[];
-      title?: string;
+      title: string;
+      category: ReminderCategory;
+      repeat: ReminderRepeat;
+      priority: 'normal' | 'high';
+      targetDateStr?: string;
     }
   | {
       status: 'not_reminder';
@@ -73,18 +77,20 @@ export function parseVietnameseReminderText(
 
   let targetDate = new Date(baseDate.getTime());
   let repeat: ReminderRepeat = 'once';
-  let hasTemporalExpression = false;
+  let hasDate = false;
+  let hasTime = false;
+  let hasRelativeOffset = false;
 
   // 1. Recurrence
   if (lower.includes('hàng ngày') || lower.includes('mỗi ngày') || lower.includes('hằng ngày')) {
     repeat = 'daily';
-    hasTemporalExpression = true;
+    hasDate = true;
   } else if (lower.includes('hàng tuần') || lower.includes('mỗi tuần')) {
     repeat = 'weekly';
-    hasTemporalExpression = true;
+    hasDate = true;
   } else if (lower.includes('hàng tháng') || lower.includes('mỗi tháng')) {
     repeat = 'monthly';
-    hasTemporalExpression = true;
+    hasDate = true;
   }
 
   // 2. Relative offset (e.g. "30 phút nữa", "15 phút sau", "1 tiếng nữa", "2 giờ nữa")
@@ -94,24 +100,24 @@ export function parseVietnameseReminderText(
   if (minutesRelMatch) {
     const mins = parseInt(minutesRelMatch[1], 10);
     targetDate = new Date(baseDate.getTime() + mins * 60 * 1000);
-    hasTemporalExpression = true;
+    hasRelativeOffset = true;
   } else if (hoursRelMatch) {
     const hrs = parseInt(hoursRelMatch[1], 10);
     targetDate = new Date(baseDate.getTime() + hrs * 60 * 60 * 1000);
-    hasTemporalExpression = true;
+    hasRelativeOffset = true;
   } else {
     // 3. Day of recurrence / relative day
     if (lower.includes('ngày mai') || lower.includes('sáng mai') || lower.includes('chiều mai') || lower.includes('tối mai') || lower.includes('trưa mai')) {
       targetDate.setDate(targetDate.getDate() + 1);
-      hasTemporalExpression = true;
+      hasDate = true;
     } else if (lower.includes('ngày mốt') || lower.includes('ngày kia')) {
       targetDate.setDate(targetDate.getDate() + 2);
-      hasTemporalExpression = true;
+      hasDate = true;
     } else if (lower.includes('hôm kia')) {
       targetDate.setDate(targetDate.getDate() - 2);
-      hasTemporalExpression = true;
+      hasDate = true;
     } else if (lower.includes('hôm nay') || lower.includes('tối nay') || lower.includes('chiều nay') || lower.includes('trưa nay') || lower.includes('sáng nay')) {
-      hasTemporalExpression = true;
+      hasDate = true;
     }
 
     // 4. Exact time parsing
@@ -126,15 +132,15 @@ export function parseVietnameseReminderText(
     if (timeColonMatch) {
       parsedHour = parseInt(timeColonMatch[1], 10);
       parsedMinute = parseInt(timeColonMatch[2], 10);
-      hasTemporalExpression = true;
+      hasTime = true;
     } else if (timeHMatch) {
       parsedHour = parseInt(timeHMatch[1], 10);
       parsedMinute = timeHMatch[2] ? parseInt(timeHMatch[2], 10) : 0;
-      hasTemporalExpression = true;
+      hasTime = true;
     } else if (timeGiolMatch) {
       parsedHour = parseInt(timeGiolMatch[1], 10);
       parsedMinute = timeGiolMatch[2] ? parseInt(timeGiolMatch[2], 10) : 0;
-      hasTemporalExpression = true;
+      hasTime = true;
     }
 
     // AM / PM / Noon adjustments
@@ -152,43 +158,23 @@ export function parseVietnameseReminderText(
       }
       targetDate.setHours(parsedHour, parsedMinute, 0, 0);
 
-      // If scheduled today and time already passed, roll to next day for daily/general
+      // If scheduled today and time already passed, roll to next day
       if (targetDate.getTime() < baseDate.getTime() && !lower.includes('hôm nay')) {
         targetDate.setDate(targetDate.getDate() + 1);
-      }
-    } else {
-      // Default times if only morning/afternoon/evening specified
-      if (lower.includes('sáng')) {
-        targetDate.setHours(8, 0, 0, 0);
-        hasTemporalExpression = true;
-      } else if (lower.includes('trưa')) {
-        targetDate.setHours(12, 0, 0, 0);
-        hasTemporalExpression = true;
-      } else if (lower.includes('chiều')) {
-        targetDate.setHours(15, 0, 0, 0);
-        hasTemporalExpression = true;
-      } else if (lower.includes('tối')) {
-        targetDate.setHours(20, 0, 0, 0);
-        hasTemporalExpression = true;
       }
     }
   }
 
-  // 5. Category detection
+  // 5. Category detection (Appointment HAS PRECEDENCE for doctor/clinic visits)
   let category: ReminderCategory = 'general';
   if (
-    lower.includes('thuốc') ||
-    lower.includes('uống thuốc') ||
-    lower.includes('đo huyết áp') ||
-    lower.includes('đo đường huyết') ||
-    lower.includes('khám bệnh') ||
-    lower.includes('nhỏ mắt')
-  ) {
-    category = 'medication';
-  } else if (
     lower.includes('khám') ||
-    lower.includes('hẹn') ||
     lower.includes('bác sĩ') ||
+    lower.includes('bệnh viện') ||
+    lower.includes('tái khám') ||
+    lower.includes('đi khám') ||
+    lower.includes('phòng khám') ||
+    lower.includes('hẹn') ||
     lower.includes('phỏng vấn') ||
     lower.includes('họp') ||
     lower.includes('làm cccd') ||
@@ -197,6 +183,16 @@ export function parseVietnameseReminderText(
     lower.includes('công chứng')
   ) {
     category = 'appointment';
+  } else if (
+    lower.includes('thuốc') ||
+    lower.includes('uống thuốc') ||
+    lower.includes('đo huyết áp') ||
+    lower.includes('đo đường huyết') ||
+    lower.includes('nhỏ mắt') ||
+    lower.includes('tiêm') ||
+    lower.includes('uống viên')
+  ) {
+    category = 'medication';
   } else if (
     lower.includes('gọi điện cho con') ||
     lower.includes('thăm cháu') ||
@@ -235,12 +231,16 @@ export function parseVietnameseReminderText(
 
   const priority = lower.includes('khẩn') || lower.includes('quan trọng') || category === 'medication' ? 'high' : 'normal';
 
-  // If no temporal expression was specified at all (e.g. "Nhắc chú uống thuốc nhé")
-  if (!hasTemporalExpression) {
+  // If no relative offset AND no exact time specified -> Needs clarification
+  if (!hasRelativeOffset && !hasTime) {
     return {
       status: 'needs_clarification',
       missing: ['time'],
       title: cleanedTitle,
+      category,
+      repeat,
+      priority,
+      targetDateStr: hasDate ? targetDate.toISOString() : undefined,
     };
   }
 
@@ -254,4 +254,85 @@ export function parseVietnameseReminderText(
       priority,
     },
   };
+}
+
+/**
+ * Resolves clarified time answer from user when responding to a time prompt
+ * (e.g. "7 giờ sáng", "8h30", "15 phút nữa", "tối 8h")
+ */
+export function parseClarifiedTime(
+  userText: string,
+  baseTargetDateStr?: string
+): Date | null {
+  if (!userText || !userText.trim()) return null;
+
+  const lower = userText.trim().toLowerCase();
+  let baseDate = baseTargetDateStr ? new Date(baseTargetDateStr) : new Date();
+  if (isNaN(baseDate.getTime())) baseDate = new Date();
+
+  // 1. Relative offset ("30 phút nữa", "15 phút sau", "1 tiếng nữa")
+  const minutesRelMatch = lower.match(/(\d+)\s*(phút|p)\s*(nữa|sau)?/);
+  const hoursRelMatch = lower.match(/(\d+)\s*(tiếng|giờ|h)\s*(nữa|sau)/);
+
+  if (minutesRelMatch && (lower.includes('nữa') || lower.includes('sau'))) {
+    const mins = parseInt(minutesRelMatch[1], 10);
+    return new Date(Date.now() + mins * 60 * 1000);
+  }
+  if (hoursRelMatch && (lower.includes('nữa') || lower.includes('sau'))) {
+    const hrs = parseInt(hoursRelMatch[1], 10);
+    return new Date(Date.now() + hrs * 60 * 60 * 1000);
+  }
+
+  // 2. Exact time parsing
+  const timeColonMatch = lower.match(/(\d{1,2}):(\d{2})/);
+  const timeHMatch = lower.match(/(\d{1,2})\s*h\s*(\d{1,2})?/);
+  const timeGiolMatch = lower.match(/(\d{1,2})\s*giờ\s*(\d{1,2})?/);
+  const aloneNumMatch = lower.match(/^(\d{1,2})$/);
+
+  let parsedHour: number | null = null;
+  let parsedMinute = 0;
+
+  if (timeColonMatch) {
+    parsedHour = parseInt(timeColonMatch[1], 10);
+    parsedMinute = parseInt(timeColonMatch[2], 10);
+  } else if (timeHMatch) {
+    parsedHour = parseInt(timeHMatch[1], 10);
+    parsedMinute = timeHMatch[2] ? parseInt(timeHMatch[2], 10) : 0;
+  } else if (timeGiolMatch) {
+    parsedHour = parseInt(timeGiolMatch[1], 10);
+    parsedMinute = timeGiolMatch[2] ? parseInt(timeGiolMatch[2], 10) : 0;
+  } else if (aloneNumMatch) {
+    parsedHour = parseInt(aloneNumMatch[1], 10);
+    parsedMinute = 0;
+  }
+
+  if (parsedHour === null) {
+    if (lower.includes('sáng')) parsedHour = 8;
+    else if (lower.includes('trưa')) parsedHour = 12;
+    else if (lower.includes('chiều')) parsedHour = 15;
+    else if (lower.includes('tối')) parsedHour = 20;
+  }
+
+  if (parsedHour === null) return null;
+
+  const isPM = lower.includes('chiều') || lower.includes('tối') || lower.includes('đêm');
+  const isAM = lower.includes('sáng');
+  const isNoon = lower.includes('trưa');
+
+  if (isPM && parsedHour < 12) {
+    parsedHour += 12;
+  } else if (isAM && parsedHour === 12) {
+    parsedHour = 0;
+  } else if (isNoon && parsedHour < 12 && parsedHour !== 12) {
+    if (parsedHour < 11) parsedHour += 12;
+  }
+
+  const resultDate = new Date(baseDate.getTime());
+  resultDate.setHours(parsedHour, parsedMinute, 0, 0);
+
+  if (!baseTargetDateStr && resultDate.getTime() <= Date.now()) {
+    resultDate.setDate(resultDate.getDate() + 1);
+  }
+
+  return resultDate;
 }

@@ -56,8 +56,10 @@ export const RemindersPage: React.FC<RemindersPageProps> = ({
     return 'default';
   });
 
-  // Accessibility Ref for Modal Focus
+  // Accessibility Refs for Modal Focus
   const cancelBtnRef = useRef<HTMLButtonElement | null>(null);
+  const modalContainerRef = useRef<HTMLDivElement | null>(null);
+  const lastFocusedElementRef = useRef<HTMLElement | null>(null);
 
   useEffect(() => {
     if (deletingReminder) {
@@ -67,10 +69,33 @@ export const RemindersPage: React.FC<RemindersPageProps> = ({
         if (e.key === 'Escape') {
           setDeletingReminder(null);
         }
+
+        // Focus Trap inside Modal
+        if (e.key === 'Tab' && modalContainerRef.current) {
+          const focusables = modalContainerRef.current.querySelectorAll<HTMLElement>(
+            'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])'
+          );
+          if (focusables.length > 0) {
+            const first = focusables[0];
+            const last = focusables[focusables.length - 1];
+            if (e.shiftKey && document.activeElement === first) {
+              e.preventDefault();
+              last.focus();
+            } else if (!e.shiftKey && document.activeElement === last) {
+              e.preventDefault();
+              first.focus();
+            }
+          }
+        }
       };
 
       window.addEventListener('keydown', handleKeyDown);
-      return () => window.removeEventListener('keydown', handleKeyDown);
+      return () => {
+        window.removeEventListener('keydown', handleKeyDown);
+        if (lastFocusedElementRef.current) {
+          lastFocusedElementRef.current.focus();
+        }
+      };
     }
   }, [deletingReminder]);
 
@@ -118,6 +143,7 @@ export const RemindersPage: React.FC<RemindersPageProps> = ({
   };
 
   const handleDeleteReminder = (id: string) => {
+    lastFocusedElementRef.current = document.activeElement as HTMLElement;
     const rem = reminders.find((r) => r.id === id);
     if (rem) {
       setDeletingReminder(rem);
@@ -537,7 +563,7 @@ export const RemindersPage: React.FC<RemindersPageProps> = ({
             if (e.target === e.currentTarget) setDeletingReminder(null);
           }}
         >
-          <div className="bg-white dark:bg-[#1A2626] rounded-3xl p-6 max-w-sm w-full space-y-4 border border-gray-200 dark:border-gray-800 shadow-2xl">
+          <div ref={modalContainerRef} className="bg-white dark:bg-[#1A2626] rounded-3xl p-6 max-w-sm w-full space-y-4 border border-gray-200 dark:border-gray-800 shadow-2xl">
             <div className="flex items-center gap-3 text-rose-500">
               <div className="p-3 rounded-2xl bg-rose-500/10 shrink-0">
                 <Trash2 className="w-6 h-6" />
