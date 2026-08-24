@@ -36,7 +36,7 @@ export const ImportantFactsPanel: React.FC<ImportantFactsPanelProps> = ({
       case 'time':
         return { label: 'Thời gian & Lịch hẹn', icon: Clock, color: 'text-blue-600 dark:text-blue-400 bg-blue-500/10 border-blue-500/30' };
       case 'location':
-        return { label: 'Địa điểm / Số phòng', icon: MapPin, color: 'text-purple-600 dark:text-purple-400 bg-purple-500/10 border-purple-500/30' };
+        return { label: 'Địa điểm / Số phòng', icon: MapPin, color: 'text-teal-600 dark:text-teal-400 bg-[#287C78]/10 border-[#287C78]/30' };
       case 'person':
         return { label: 'Người liên quan', icon: User, color: 'text-indigo-600 dark:text-indigo-400 bg-indigo-500/10 border-indigo-500/30' };
       case 'requirement':

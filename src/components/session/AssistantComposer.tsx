@@ -81,8 +81,8 @@ export const AssistantComposer: React.FC<AssistantComposerProps> = ({
     <div className="p-3.5 sm:p-5 rounded-2xl bg-lovira-card border border-lovira shadow-xs space-y-3 sm:space-y-4">
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2.5">
-          <div className="p-2 rounded-xl bg-[#7C4DFF] text-white shadow-2xs">
-            <Bot className="w-5 h-5" aria-hidden="true" />
+          <div className="w-9 h-9 rounded-xl overflow-hidden shadow-2xs shrink-0 border border-[#287C78]/20 bg-[#287C78]">
+            <img src="/images/avatar.png" alt="Lovira" className="w-full h-full object-cover" referrerPolicy="no-referrer" />
           </div>
           <div>
             <h3 className="text-sm sm:text-base font-bold text-lovira-title">
@@ -115,7 +115,7 @@ export const AssistantComposer: React.FC<AssistantComposerProps> = ({
 
         {isLoading && (
           <div className="flex items-center gap-2.5 p-3 rounded-xl bg-lovira-card border border-lovira text-xs text-lovira-muted animate-pulse">
-            <Loader2 className="w-4 h-4 animate-spin text-[#7C4DFF] shrink-0" />
+            <Loader2 className="w-4 h-4 animate-spin text-[#287C78] shrink-0" />
             <span>Lovira đang lắng nghe và chuẩn bị câu trả lời phù hợp...</span>
           </div>
         )}
@@ -135,7 +135,7 @@ export const AssistantComposer: React.FC<AssistantComposerProps> = ({
             type="button"
             disabled={isLoading}
             onClick={() => handleQuickPrompt(prompt)}
-            className="px-2.5 py-1 sm:px-3 sm:py-1.5 rounded-full text-[11px] sm:text-xs font-medium bg-lovira-input border border-lovira hover:border-[#7C4DFF] hover:text-[#7C4DFF] hover:bg-lovira-badge-purple transition-all text-lovira-title active:scale-95 disabled:opacity-50 cursor-pointer"
+            className="px-2.5 py-1 sm:px-3 sm:py-1.5 rounded-full text-[11px] sm:text-xs font-medium bg-lovira-input border border-lovira hover:border-[#287C78] hover:text-[#287C78] hover:bg-lovira-badge-purple transition-all text-lovira-title active:scale-95 disabled:opacity-50 cursor-pointer"
           >
             {prompt}
           </button>
@@ -144,7 +144,7 @@ export const AssistantComposer: React.FC<AssistantComposerProps> = ({
 
       {/* Speech feedback in Composer (synchronized with Global Voice) */}
       {isListening && (
-        <div className="p-2.5 sm:p-3 rounded-xl bg-purple-500/10 border border-purple-500/25 text-xs font-medium text-lovira-title flex items-center justify-between animate-in fade-in">
+        <div className="p-2.5 sm:p-3 rounded-xl bg-[#287C78]/10 border border-[#287C78]/25 text-xs font-medium text-lovira-title flex items-center justify-between animate-in fade-in">
           <div className="flex items-center gap-2 min-w-0 pr-2">
             <span className="relative flex h-2 w-2 shrink-0">
               <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-rose-500 opacity-75"></span>
@@ -159,7 +159,7 @@ export const AssistantComposer: React.FC<AssistantComposerProps> = ({
             <button
               type="button"
               onClick={onStopVoice}
-              className="px-2.5 py-1 rounded-lg bg-[#7C4DFF] text-white text-[10px] sm:text-[11px] font-bold hover:bg-[#6D3CF0] shadow-2xs cursor-pointer"
+              className="px-2.5 py-1 rounded-lg bg-[#287C78] text-white text-[10px] sm:text-[11px] font-bold hover:bg-[#1F625F] shadow-2xs cursor-pointer"
             >
               Gửi ngay
             </button>
@@ -185,7 +185,7 @@ export const AssistantComposer: React.FC<AssistantComposerProps> = ({
           className={`p-2.5 sm:p-3 rounded-xl border transition-all cursor-pointer ${
             isListening
               ? 'bg-rose-500 text-white border-rose-600 animate-pulse shadow-2xs'
-              : 'bg-lovira-input text-lovira-muted border-lovira hover:text-[#7C4DFF] hover:border-[#7C4DFF]'
+              : 'bg-lovira-input text-lovira-muted border-lovira hover:text-[#287C78] hover:border-[#287C78]'
           }`}
           title={isListening ? 'Bấm để hoàn tất và gửi câu nói' : 'Nói chuyện bằng giọng nói'}
           aria-label={isListening ? 'Dừng và gửi giọng nói' : 'Bật micro'}
@@ -209,13 +209,13 @@ export const AssistantComposer: React.FC<AssistantComposerProps> = ({
           onChange={(e) => setInput(e.target.value)}
           placeholder="Nhắn hoặc hỏi Lovira..."
           disabled={isLoading}
-          className="flex-1 min-w-0 px-3 sm:px-4 py-2.5 sm:py-3 rounded-xl bg-lovira-input border border-lovira text-lovira-title text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-[#7C4DFF] focus:border-transparent transition-all"
+          className="flex-1 min-w-0 px-3 sm:px-4 py-2.5 sm:py-3 rounded-xl bg-lovira-input border border-lovira text-lovira-title text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-[#287C78] focus:border-transparent transition-all"
         />
 
         <button
           type="submit"
           disabled={!input.trim() || isLoading}
-          className="p-2.5 sm:p-3 rounded-xl bg-[#7C4DFF] text-white font-bold disabled:opacity-40 hover:bg-[#6D3CF0] transition-colors shadow-xs cursor-pointer"
+          className="p-2.5 sm:p-3 rounded-xl bg-[#287C78] text-white font-bold disabled:opacity-40 hover:bg-[#1F625F] transition-colors shadow-xs cursor-pointer"
           aria-label="Gửi tin nhắn"
         >
           <Send className="w-4 h-4 sm:w-5 sm:h-5" />

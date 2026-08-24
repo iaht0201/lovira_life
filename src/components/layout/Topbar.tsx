@@ -102,9 +102,13 @@ export const Topbar: React.FC<TopbarProps> = ({
         >
           <Menu className="w-[18px] h-[18px] sm:w-[20px] sm:h-[20px] text-lovira-purple" />
         </button>
-        <div className="flex items-center gap-1">
-          <span className="text-[17px] sm:text-[20px] font-[900] text-lovira-purple tracking-tight">Lovira</span>
-          <span className="text-[14px] sm:text-[16px] text-[#FF5CA8] font-black">♥</span>
+        <div className="flex items-center gap-1.5">
+          <img
+            src="/images/logo_client.png"
+            alt="Lovira"
+            className="h-[28px] sm:h-[32px] w-auto max-w-[130px] object-contain select-none"
+            referrerPolicy="no-referrer"
+          />
         </div>
       </div>
 
@@ -280,7 +284,7 @@ export const Topbar: React.FC<TopbarProps> = ({
         >
           <Bell className="w-[16px] h-[16px] sm:w-[20px] sm:h-[20px]" />
           {hasNotifications && (
-            <span className="absolute top-1.5 right-1.5 w-[7px] h-[7px] sm:w-[8px] sm:h-[8px] rounded-full bg-[#FF5CA8] ring-2 ring-white dark:ring-[#1E1830]" />
+            <span className="absolute top-1.5 right-1.5 w-[7px] h-[7px] sm:w-[8px] sm:h-[8px] rounded-full bg-[#E76F91] ring-2 ring-white dark:ring-[#121818]" />
           )}
         </button>
 

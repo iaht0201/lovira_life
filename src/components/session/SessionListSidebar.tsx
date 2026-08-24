@@ -29,9 +29,9 @@ export const SessionListSidebar: React.FC<SessionListSidebarProps> = ({
       case 'interview':
         return <Briefcase className="w-4 h-4 text-blue-500" />;
       case 'shopping':
-        return <ShoppingBag className="w-4 h-4 text-purple-500" />;
+        return <ShoppingBag className="w-4 h-4 text-emerald-500" />;
       default:
-        return <Sparkles className="w-4 h-4 text-[#7C4DFF]" />;
+        return <Sparkles className="w-4 h-4 text-[#287C78] dark:text-[#42A39E]" />;
     }
   };
 
@@ -112,7 +112,7 @@ export const SessionListSidebar: React.FC<SessionListSidebarProps> = ({
               >
                 {/* Active Accent Bar */}
                 {isActive && (
-                  <div className="absolute left-0 top-3 bottom-3 w-1.5 rounded-r-full bg-[#7C4DFF]" />
+                  <div className="absolute left-0 top-3 bottom-3 w-1.5 rounded-r-full bg-[#287C78]" />
                 )}
 
                 {/* Scenario Icon Badge */}

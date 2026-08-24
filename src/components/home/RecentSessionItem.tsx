@@ -111,7 +111,7 @@ export const RecentSessionItem: React.FC<RecentSessionItemProps> = ({
         <span className="text-[12px] font-[700] text-lovira-muted whitespace-nowrap">
           {completedCount} / {totalCount} bước
         </span>
-        <div className="w-[56px] h-[6px] rounded-full bg-[#EFEAF6] dark:bg-[#2D2442] overflow-hidden">
+        <div className="w-[56px] h-[6px] rounded-full bg-[#E5EBEA] dark:bg-[#213331] overflow-hidden">
           <div
             className="h-full rounded-full bg-lovira-purple transition-all duration-300"
             style={{ width: `${Math.min(100, Math.round((completedCount / totalCount) * 100))}%` }}

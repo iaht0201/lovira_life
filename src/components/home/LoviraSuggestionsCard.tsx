@@ -13,14 +13,14 @@ export const LoviraSuggestionsCard: React.FC = () => {
     {
       id: 'sug-2',
       icon: CalendarCheck,
-      iconBg: 'bg-[#F1E9FF] dark:bg-[#2F2154] text-[#7C4DFF] dark:text-[#C49BFF]',
+      iconBg: 'bg-[#E4F0EF] dark:bg-[#203A39] text-[#287C78] dark:text-[#42A39E]',
       text: 'Thứ 6 tuần này có lịch tái khám định kỳ tại Bệnh viện Chợ Rẫy.',
       actionText: 'Xem lịch',
     },
     {
       id: 'sug-3',
       icon: CheckSquare,
-      iconBg: 'bg-[#FFEBF5] dark:bg-[#3D1A2B] text-[#E63988] dark:text-[#FF70B5]',
+      iconBg: 'bg-[#FDF2F4] dark:bg-[#2A181C] text-[#E76F91] dark:text-[#F296B0]',
       text: 'Bạn có muốn Lovira chuẩn bị danh sách ghi chú trước khi đi khám không?',
       actionText: 'Tạo ngay',
     },

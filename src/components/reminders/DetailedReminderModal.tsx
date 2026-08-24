@@ -118,12 +118,12 @@ export const DetailedReminderModal: React.FC<DetailedReminderModalProps> = ({
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/90 backdrop-blur-md p-3 sm:p-4 overflow-y-auto animate-in fade-in duration-200">
       {/* Modal Container - Solid 100% opacity background (no transparency) */}
-      <div className="bg-white dark:bg-[#1C162E] opacity-100 border-2 border-purple-500/40 rounded-3xl max-w-lg w-full p-5 sm:p-6 shadow-2xl space-y-5 relative z-10 text-gray-900 dark:text-white my-auto">
+      <div className="bg-white dark:bg-[#182222] opacity-100 border-2 border-[#287C78]/40 rounded-3xl max-w-lg w-full p-5 sm:p-6 shadow-2xl space-y-5 relative z-10 text-gray-900 dark:text-white my-auto">
         
         {/* Header */}
         <div className="flex items-start justify-between border-b border-gray-200 dark:border-gray-800 pb-4">
           <div className="flex items-center gap-3">
-            <div className="w-11 h-11 rounded-2xl bg-gradient-to-br from-[#FF8C42] to-[#FF5CA8] text-white flex items-center justify-center shadow-md shrink-0">
+            <div className="w-11 h-11 rounded-2xl bg-gradient-to-br from-[#FF8C42] to-[#E76F91] text-white flex items-center justify-center shadow-md shrink-0">
               <Bell className="w-6 h-6" />
             </div>
             <div>
@@ -160,7 +160,7 @@ export const DetailedReminderModal: React.FC<DetailedReminderModalProps> = ({
                   key={p.label}
                   type="button"
                   onClick={() => handleApplyPreset(p)}
-                  className="px-2.5 py-1.5 text-xs font-bold rounded-xl bg-purple-500/10 hover:bg-purple-500/20 text-purple-700 dark:text-purple-300 border border-purple-500/20 transition-all cursor-pointer"
+                  className="px-2.5 py-1.5 text-xs font-bold rounded-xl bg-[#287C78]/10 hover:bg-[#287C78]/20 text-[#287C78] dark:text-[#42A39E] border border-[#287C78]/20 transition-all cursor-pointer"
                 >
                   {p.label}
                 </button>
@@ -179,7 +179,7 @@ export const DetailedReminderModal: React.FC<DetailedReminderModalProps> = ({
               placeholder="Ví dụ: Uống thuốc huyết áp Amlodipine..."
               value={title}
               onChange={(e) => setTitle(e.target.value)}
-              className="w-full h-11 px-3.5 text-sm font-bold bg-gray-50 dark:bg-[#251D3A] border-2 border-gray-300 dark:border-gray-700 rounded-xl focus:border-purple-500 outline-none text-gray-900 dark:text-white transition-all"
+              className="w-full h-11 px-3.5 text-sm font-bold bg-gray-50 dark:bg-[#202C2C] border-2 border-gray-300 dark:border-gray-700 rounded-xl focus:border-[#287C78] outline-none text-gray-900 dark:text-white transition-all"
             />
           </div>
 
@@ -191,7 +191,7 @@ export const DetailedReminderModal: React.FC<DetailedReminderModalProps> = ({
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
               {[
                 { id: 'medication', label: 'Uống thuốc', icon: Pill, color: 'text-amber-500 border-amber-500/40 bg-amber-500/10' },
-                { id: 'appointment', label: 'Tái khám', icon: Calendar, color: 'text-purple-500 border-purple-500/40 bg-purple-500/10' },
+                { id: 'appointment', label: 'Tái khám', icon: Calendar, color: 'text-[#287C78] border-[#287C78]/40 bg-[#287C78]/10' },
                 { id: 'family', label: 'Gia đình', icon: Users, color: 'text-pink-500 border-pink-500/40 bg-pink-500/10' },
                 { id: 'general', label: 'Công việc', icon: BellRing, color: 'text-blue-500 border-blue-500/40 bg-blue-500/10' },
               ].map((item) => {
@@ -207,8 +207,8 @@ export const DetailedReminderModal: React.FC<DetailedReminderModalProps> = ({
                     }}
                     className={`p-2.5 rounded-xl border-2 flex items-center justify-center gap-2 font-bold text-xs transition-all cursor-pointer ${
                       isSel
-                        ? `${item.color} shadow-xs ring-1 ring-purple-500`
-                        : 'bg-gray-50 dark:bg-[#251D3A] border-gray-200 dark:border-gray-800 text-gray-600 dark:text-gray-300'
+                        ? `${item.color} shadow-xs ring-1 ring-[#287C78]`
+                        : 'bg-gray-50 dark:bg-[#202C2C] border-gray-200 dark:border-gray-800 text-gray-600 dark:text-gray-300'
                     }`}
                   >
                     <Icon className="w-4 h-4" />
@@ -232,8 +232,8 @@ export const DetailedReminderModal: React.FC<DetailedReminderModalProps> = ({
                 onClick={() => setDateType('today')}
                 className={`flex-1 py-2 px-3 text-xs font-bold rounded-xl border-2 transition-all cursor-pointer ${
                   dateType === 'today'
-                    ? 'bg-purple-600 text-white border-purple-600'
-                    : 'bg-gray-50 dark:bg-[#251D3A] border-gray-200 dark:border-gray-800 text-gray-700 dark:text-gray-300'
+                    ? 'bg-[#287C78] text-white border-[#287C78]'
+                    : 'bg-gray-50 dark:bg-[#202C2C] border-gray-200 dark:border-gray-800 text-gray-700 dark:text-gray-300'
                 }`}
               >
                 Hôm nay
@@ -243,8 +243,8 @@ export const DetailedReminderModal: React.FC<DetailedReminderModalProps> = ({
                 onClick={() => setDateType('tomorrow')}
                 className={`flex-1 py-2 px-3 text-xs font-bold rounded-xl border-2 transition-all cursor-pointer ${
                   dateType === 'tomorrow'
-                    ? 'bg-purple-600 text-white border-purple-600'
-                    : 'bg-gray-50 dark:bg-[#251D3A] border-gray-200 dark:border-gray-800 text-gray-700 dark:text-gray-300'
+                    ? 'bg-[#287C78] text-white border-[#287C78]'
+                    : 'bg-gray-50 dark:bg-[#202C2C] border-gray-200 dark:border-gray-800 text-gray-700 dark:text-gray-300'
                 }`}
               >
                 Ngày mai
@@ -254,8 +254,8 @@ export const DetailedReminderModal: React.FC<DetailedReminderModalProps> = ({
                 onClick={() => setDateType('custom')}
                 className={`flex-1 py-2 px-3 text-xs font-bold rounded-xl border-2 transition-all cursor-pointer ${
                   dateType === 'custom'
-                    ? 'bg-purple-600 text-white border-purple-600'
-                    : 'bg-gray-50 dark:bg-[#251D3A] border-gray-200 dark:border-gray-800 text-gray-700 dark:text-gray-300'
+                    ? 'bg-[#287C78] text-white border-[#287C78]'
+                    : 'bg-gray-50 dark:bg-[#202C2C] border-gray-200 dark:border-gray-800 text-gray-700 dark:text-gray-300'
                 }`}
               >
                 Chọn ngày
@@ -267,7 +267,7 @@ export const DetailedReminderModal: React.FC<DetailedReminderModalProps> = ({
                 type="date"
                 value={customDate}
                 onChange={(e) => setCustomDate(e.target.value)}
-                className="w-full px-3 py-2 text-xs font-bold bg-gray-50 dark:bg-[#251D3A] border border-gray-300 dark:border-gray-700 rounded-xl outline-none"
+                className="w-full px-3 py-2 text-xs font-bold bg-gray-50 dark:bg-[#202C2C] border border-gray-300 dark:border-gray-700 rounded-xl outline-none"
               />
             )}
 
@@ -284,7 +284,7 @@ export const DetailedReminderModal: React.FC<DetailedReminderModalProps> = ({
                     required
                     value={timeStr}
                     onChange={(e) => setTimeStr(e.target.value)}
-                    className="w-full pl-9 pr-3 py-2 text-sm font-bold bg-gray-50 dark:bg-[#251D3A] border border-gray-300 dark:border-gray-700 rounded-xl outline-none text-gray-900 dark:text-white"
+                    className="w-full pl-9 pr-3 py-2 text-sm font-bold bg-gray-50 dark:bg-[#202C2C] border border-gray-300 dark:border-gray-700 rounded-xl outline-none text-gray-900 dark:text-white"
                   />
                 </div>
               </div>
@@ -296,7 +296,7 @@ export const DetailedReminderModal: React.FC<DetailedReminderModalProps> = ({
                 <select
                   value={repeat}
                   onChange={(e) => setRepeat(e.target.value as any)}
-                  className="w-full px-3 py-2 text-xs font-bold bg-gray-50 dark:bg-[#251D3A] border border-gray-300 dark:border-gray-700 rounded-xl outline-none text-gray-900 dark:text-white"
+                  className="w-full px-3 py-2 text-xs font-bold bg-gray-50 dark:bg-[#202C2C] border border-gray-300 dark:border-gray-700 rounded-xl outline-none text-gray-900 dark:text-white"
                 >
                   <option value="daily">🔄 Hàng ngày</option>
                   <option value="once">1️⃣ Chỉ 1 lần</option>
@@ -310,7 +310,7 @@ export const DetailedReminderModal: React.FC<DetailedReminderModalProps> = ({
           {/* 4. Notes / Instructions */}
           <div className="space-y-1">
             <label className="block text-xs font-black uppercase tracking-wider text-gray-700 dark:text-gray-300 flex items-center gap-1">
-              <FileText className="w-3.5 h-3.5 text-purple-500" />
+              <FileText className="w-3.5 h-3.5 text-[#287C78]" />
               <span>4. Ghi chú & Lời dặn chi tiết</span>
             </label>
             <textarea
@@ -318,7 +318,7 @@ export const DetailedReminderModal: React.FC<DetailedReminderModalProps> = ({
               placeholder="Ví dụ: Uống 1 viên sau khi ăn sáng, nhớ uống với nhiều nước ấm..."
               value={notes}
               onChange={(e) => setNotes(e.target.value)}
-              className="w-full p-3 text-xs font-medium bg-gray-50 dark:bg-[#251D3A] border-2 border-gray-300 dark:border-gray-700 rounded-xl focus:border-purple-500 outline-none text-gray-900 dark:text-white transition-all"
+              className="w-full p-3 text-xs font-medium bg-gray-50 dark:bg-[#202C2C] border-2 border-gray-300 dark:border-gray-700 rounded-xl focus:border-[#287C78] outline-none text-gray-900 dark:text-white transition-all"
             />
           </div>
 
@@ -360,7 +360,7 @@ export const DetailedReminderModal: React.FC<DetailedReminderModalProps> = ({
             </button>
             <button
               type="submit"
-              className="flex-1 py-3 text-xs font-black bg-gradient-to-r from-[#7C4DFF] to-[#A45CFF] text-white rounded-xl shadow-lg hover:opacity-90 transition-all cursor-pointer flex items-center justify-center gap-1.5"
+              className="flex-1 py-3 text-xs font-black bg-gradient-to-r from-[#287C78] to-[#1F625F] text-white rounded-xl shadow-lg hover:opacity-90 transition-all cursor-pointer flex items-center justify-center gap-1.5"
             >
               <CheckCircle2 className="w-4 h-4" />
               <span>Lưu Nhắc Nhở Chi Tiết</span>

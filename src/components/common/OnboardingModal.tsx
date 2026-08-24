@@ -38,7 +38,11 @@ export const OnboardingModal: React.FC<OnboardingModalProps> = ({
 
   const slidesData = [
     {
-      icon: <Heart className="w-10 h-10 text-[#FF5CA8] fill-[#FF5CA8]" />,
+      icon: (
+        <div className="w-16 h-16 rounded-full overflow-hidden shadow-xs border border-[#287C78]/20 bg-[#287C78]">
+          <img src="/images/avatar.png" alt="Lovira" className="w-full h-full object-cover" referrerPolicy="no-referrer" />
+        </div>
+      ),
       title: 'Chào mừng ông/bà đến với Lovira ♥',
       subtitle: 'Trợ lý cuộc sống thông minh & chu đáo',
       description:
@@ -46,7 +50,7 @@ export const OnboardingModal: React.FC<OnboardingModalProps> = ({
       highlight: '🌸 Được thiết kế đặc biệt ấm áp, dễ dùng cho gia đình Việt.',
     },
     {
-      icon: <Mic className="w-10 h-10 text-[#7C4DFF]" />,
+      icon: <Mic className="w-10 h-10 text-[#287C78] dark:text-[#42A39E]" />,
       title: 'Nói chuyện & Thao tác cực dễ dàng',
       subtitle: 'Giọng nói Tiếng Việt & Chữ to rõ ràng',
       description:
@@ -124,11 +128,11 @@ export const OnboardingModal: React.FC<OnboardingModalProps> = ({
 
   return (
     <div className="fixed inset-0 z-50 bg-black/90 backdrop-blur-md flex items-center justify-center p-4 overflow-y-auto animate-in fade-in duration-200">
-      <div className="bg-white dark:bg-[#1C162E] opacity-100 border-2 border-purple-500/40 rounded-3xl max-w-lg w-full p-6 shadow-2xl space-y-6 relative z-10">
+      <div className="bg-white dark:bg-[#182222] opacity-100 border-2 border-[#287C78]/40 rounded-3xl max-w-lg w-full p-6 shadow-2xl space-y-6 relative z-10">
         {/* Top Header / Progress Dots */}
         <div className="flex items-center justify-between border-b border-default pb-4">
           <div className="flex items-center gap-2">
-            <div className="w-8 h-8 rounded-xl bg-purple-500/10 text-[#7C4DFF] flex items-center justify-center font-bold">
+            <div className="w-8 h-8 rounded-xl bg-[#287C78]/10 text-[#287C78] dark:text-[#42A39E] flex items-center justify-center font-bold">
               <Sparkles className="w-4 h-4" />
             </div>
             <span className="text-xs font-bold text-text-primary">
@@ -150,7 +154,7 @@ export const OnboardingModal: React.FC<OnboardingModalProps> = ({
             <div
               key={idx}
               className={`h-2 rounded-full transition-all duration-300 ${
-                slide === idx ? 'w-8 bg-[#7C4DFF]' : 'w-2 bg-purple-500/20'
+                slide === idx ? 'w-8 bg-[#287C78]' : 'w-2 bg-[#287C78]/20'
               }`}
             />
           ))}
@@ -159,7 +163,7 @@ export const OnboardingModal: React.FC<OnboardingModalProps> = ({
         {/* SLIDE CONTENT (0, 1, 2) */}
         {slide < totalSlides && (
           <div className="space-y-4 py-2 text-center animate-in zoom-in-95 duration-200">
-            <div className="w-20 h-20 rounded-2xl bg-surface-raised border border-purple-500/20 flex items-center justify-center mx-auto shadow-xs">
+            <div className="w-20 h-20 rounded-2xl bg-surface-raised border border-[#287C78]/20 flex items-center justify-center mx-auto shadow-xs">
               {slidesData[slide].icon}
             </div>
 
@@ -167,7 +171,7 @@ export const OnboardingModal: React.FC<OnboardingModalProps> = ({
               <h3 className="text-lg sm:text-xl font-extrabold text-text-primary">
                 {slidesData[slide].title}
               </h3>
-              <p className="text-xs font-bold text-[#7C4DFF]">
+              <p className="text-xs font-bold text-[#287C78] dark:text-[#42A39E]">
                 {slidesData[slide].subtitle}
               </p>
             </div>
@@ -176,7 +180,7 @@ export const OnboardingModal: React.FC<OnboardingModalProps> = ({
               {slidesData[slide].description}
             </p>
 
-            <div className="p-3 rounded-2xl bg-purple-500/5 border border-purple-500/20 text-xs font-semibold text-text-primary leading-snug">
+            <div className="p-3 rounded-2xl bg-[#287C78]/5 border border-[#287C78]/20 text-xs font-semibold text-text-primary leading-snug">
               {slidesData[slide].highlight}
             </div>
           </div>
@@ -185,7 +189,7 @@ export const OnboardingModal: React.FC<OnboardingModalProps> = ({
         {/* SLIDE 3: INITIAL USER PROFILE SETUP */}
         {slide === totalSlides && (
           <div className="space-y-4 py-1 animate-in zoom-in-95 duration-200">
-            <div className="flex items-center gap-2 text-[#7C4DFF] font-bold text-sm">
+            <div className="flex items-center gap-2 text-[#287C78] dark:text-[#42A39E] font-bold text-sm">
               <User className="w-5 h-5" />
               <span>Cách Lovira xưng hô với bạn</span>
             </div>
@@ -204,7 +208,7 @@ export const OnboardingModal: React.FC<OnboardingModalProps> = ({
                   value={preferredName}
                   onChange={(e) => setPreferredName(e.target.value)}
                   placeholder="Ví dụ: Thái, Ba, Hoa... (Hoặc để trống)"
-                  className="w-full p-3 rounded-xl border border-default bg-surface-raised text-text-primary text-xs font-medium focus:outline-none focus:border-[#7C4DFF]"
+                  className="w-full p-3 rounded-xl border border-default bg-surface-raised text-text-primary text-xs font-medium focus:outline-none focus:border-[#287C78]"
                 />
               </div>
 
@@ -223,8 +227,8 @@ export const OnboardingModal: React.FC<OnboardingModalProps> = ({
                       }}
                       className={`p-2.5 rounded-xl border text-xs font-bold transition-all text-left flex items-center justify-between cursor-pointer ${
                         pronounStyle === p.id
-                          ? 'bg-[#7C4DFF] text-white border-[#7C4DFF] shadow-2xs'
-                          : 'bg-surface-raised border-default hover:border-[#7C4DFF]/50 text-text-primary'
+                          ? 'bg-[#287C78] text-white border-[#287C78] shadow-2xs'
+                          : 'bg-surface-raised border-default hover:border-[#287C78]/50 text-text-primary'
                       }`}
                     >
                       <span>{p.label}</span>
@@ -275,7 +279,7 @@ export const OnboardingModal: React.FC<OnboardingModalProps> = ({
               <button
                 type="button"
                 onClick={handleNextSlide}
-                className="px-5 py-2.5 rounded-xl bg-[#7C4DFF] hover:bg-[#6D3CF0] text-white text-xs font-bold shadow-xs transition-all flex items-center gap-1.5 cursor-pointer"
+                className="px-5 py-2.5 rounded-xl bg-[#287C78] hover:bg-[#1F625F] text-white text-xs font-bold shadow-xs transition-all flex items-center gap-1.5 cursor-pointer"
               >
                 <span>Tiếp tục</span>
                 <ChevronRight className="w-4 h-4" />
@@ -284,7 +288,7 @@ export const OnboardingModal: React.FC<OnboardingModalProps> = ({
               <button
                 type="button"
                 onClick={handleSaveCustomProfile}
-                className="px-5 py-2.5 rounded-xl bg-[#7C4DFF] hover:bg-[#6D3CF0] text-white text-xs font-bold shadow-xs transition-all flex items-center gap-1.5 cursor-pointer"
+                className="px-5 py-2.5 rounded-xl bg-[#287C78] hover:bg-[#1F625F] text-white text-xs font-bold shadow-xs transition-all flex items-center gap-1.5 cursor-pointer"
               >
                 <span>Hoàn tất & Bắt đầu</span>
                 <CheckCircle2 className="w-4 h-4" />

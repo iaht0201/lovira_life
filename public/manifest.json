@@ -4,17 +4,24 @@
   "description": "Trợ lý Đời sống thông minh dành cho người khuyết tật, người cao tuổi và người cần hỗ trợ trong các hoạt động đời sống",
   "start_url": "/",
   "display": "standalone",
-  "background_color": "#0F1417",
-  "theme_color": "#00695C",
+  "background_color": "#F6F4EF",
+  "theme_color": "#287C78",
   "icons": [
     {
-      "src": "pwa-192.png",
+      "src": "/pwa-192.png",
       "sizes": "192x192",
-      "type": "image/png"
+      "type": "image/png",
+      "purpose": "any maskable"
     },
     {
-      "src": "pwa-512.png",
+      "src": "/pwa-512.png",
       "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/images/logo.png",
+      "sizes": "2000x2000",
       "type": "image/png"
     }
   ]

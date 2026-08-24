@@ -97,8 +97,8 @@ export const PWAInstallPrompt: React.FC = () => {
         <div className="bg-lovira-card border-2 border-lovira-purple rounded-2xl p-4 shadow-2xl flex flex-col space-y-3">
           <div className="flex items-start justify-between gap-3">
             <div className="flex items-center gap-3">
-              <div className="w-11 h-11 rounded-xl bg-gradient-to-br from-[#7C4DFF] to-[#A45CFF] text-white flex items-center justify-center shrink-0 shadow-xs">
-                <Smartphone className="w-6 h-6 text-white" />
+              <div className="w-11 h-11 rounded-xl overflow-hidden shadow-xs shrink-0 border border-[#287C78]/20 bg-[#287C78]">
+                <img src="/images/avatar.png" alt="Lovira" className="w-full h-full object-cover" referrerPolicy="no-referrer" />
               </div>
               <div>
                 <h4 className="text-xs sm:text-sm font-bold text-lovira-title flex items-center gap-1.5">

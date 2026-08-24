@@ -93,8 +93,8 @@ export const MobileBottomNav: React.FC<MobileBottomNavProps> = ({
         <button
           onClick={onVoiceClick}
           aria-label="Nói chuyện bằng giọng nói với Lovira"
-          className={`w-[60px] h-[60px] rounded-full bg-gradient-to-tr from-[#7C4DFF] to-[#A45CFF] text-white flex flex-col items-center justify-center shadow-lovira-lg ring-[5px] ring-lovira-base transition-transform active:scale-95 cursor-pointer ${
-            isVoiceActive ? 'animate-pulse ring-[#FF5CA8]/40' : 'hover:scale-105'
+          className={`w-[60px] h-[60px] rounded-full bg-gradient-to-tr from-[#287C78] to-[#1F625F] text-white flex flex-col items-center justify-center shadow-lovira-lg ring-[5px] ring-lovira-base transition-transform active:scale-95 cursor-pointer ${
+            isVoiceActive ? 'animate-pulse ring-[#E76F91]/40' : 'hover:scale-105'
           }`}
         >
           {getVoiceButtonContent()}

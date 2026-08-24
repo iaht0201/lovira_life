@@ -54,12 +54,14 @@ export const DesktopSidebar: React.FC<DesktopSidebarProps> = ({
       <div className="h-[76px] px-6 flex items-center shrink-0 border-b border-lovira-subtle">
         <button
           onClick={() => onTabChange('dashboard')}
-          className="flex items-center gap-1 group text-left cursor-pointer focus:outline-none"
+          className="flex items-center gap-2 group text-left cursor-pointer focus:outline-none"
         >
-          <span className="text-[28px] font-[900] text-lovira-purple tracking-tight group-hover:opacity-90 transition-opacity">
-            Lovira
-          </span>
-          <span className="text-[24px] text-[#FF5CA8] font-black -mt-1">♥</span>
+          <img
+            src="/images/logo_client.png"
+            alt="Lovira"
+            className="h-[38px] w-auto max-w-[160px] object-contain group-hover:scale-[1.02] transition-transform select-none"
+            referrerPolicy="no-referrer"
+          />
         </button>
       </div>
 

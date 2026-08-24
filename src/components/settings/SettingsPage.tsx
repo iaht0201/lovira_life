@@ -112,7 +112,7 @@ export const SettingsPage: React.FC<SettingsPageProps> = ({
             </p>
           </div>
 
-          <div className="w-[48px] h-[48px] rounded-[16px] bg-[#7C4DFF] text-white flex items-center justify-center shrink-0 shadow-xs">
+          <div className="w-[48px] h-[48px] rounded-[16px] bg-[#287C78] text-white flex items-center justify-center shrink-0 shadow-xs">
             <SlidersHorizontal className="w-[24px] h-[24px]" />
           </div>
         </div>
@@ -335,7 +335,7 @@ export const SettingsPage: React.FC<SettingsPageProps> = ({
 
           <button
             onClick={handleTestTTS}
-            className="flex items-center gap-2 min-h-[42px] px-5 py-2.5 rounded-[12px] bg-[#7C4DFF] hover:bg-[#6D3CF0] text-white font-[700] text-[13px] shadow-xs transition-colors cursor-pointer"
+            className="flex items-center gap-2 min-h-[42px] px-5 py-2.5 rounded-[12px] bg-[#287C78] hover:bg-[#1F625F] text-white font-[700] text-[13px] shadow-xs transition-colors cursor-pointer"
           >
             <Volume2 className="w-[18px] h-[18px]" />
             <span>Thử nghe giọng đọc tiếng Việt</span>

@@ -139,11 +139,15 @@ export const ChatMessageRenderer: React.FC<ChatMessageRendererProps> = ({
     >
       {/* Avatar (rendered only when showAvatar is true) */}
       {!isUser ? (
-        <div className="w-8 h-8 rounded-full bg-gradient-to-br from-[#7C4DFF] to-indigo-600 text-white flex items-center justify-center shrink-0 shadow-2xs text-xs font-bold mt-1">
-          {showAvatar ? <Bot className="w-4 h-4" /> : <div className="w-8 h-8" />}
+        <div className="w-8 h-8 rounded-full overflow-hidden shrink-0 shadow-2xs mt-1 border border-[#287C78]/20 bg-[#287C78]">
+          {showAvatar ? (
+            <img src="/images/avatar.png" alt="Lovira" className="w-full h-full object-cover" referrerPolicy="no-referrer" />
+          ) : (
+            <div className="w-8 h-8" />
+          )}
         </div>
       ) : (
-        <div className="w-8 h-8 rounded-full bg-[#7C4DFF] text-white flex items-center justify-center shrink-0 shadow-2xs text-xs font-bold mt-1">
+        <div className="w-8 h-8 rounded-full bg-[#287C78] text-white flex items-center justify-center shrink-0 shadow-2xs text-xs font-bold mt-1">
           {showAvatar ? <User className="w-4 h-4" /> : <div className="w-8 h-8" />}
         </div>
       )}
@@ -160,8 +164,8 @@ export const ChatMessageRenderer: React.FC<ChatMessageRendererProps> = ({
         <div
           className={`p-3.5 sm:p-4 rounded-2xl text-xs sm:text-sm leading-relaxed transition-all relative ${
             isUser
-              ? 'bg-[#7C4DFF] text-white rounded-tr-xs shadow-2xs font-medium'
-              : 'bg-[#F4EEFF] dark:bg-[#28203E] text-[#1E1830] dark:text-[#E8E2FA] rounded-tl-xs border border-lovira-subtle shadow-2xs'
+              ? 'bg-[#287C78] text-white rounded-tr-xs shadow-2xs font-medium'
+              : 'bg-[#EBF5F4] dark:bg-[#1B2928] text-[#20252A] dark:text-[#E2ECEB] rounded-tl-xs border border-lovira-subtle shadow-2xs'
           }`}
         >
           <div className="space-y-2">
@@ -172,15 +176,15 @@ export const ChatMessageRenderer: React.FC<ChatMessageRendererProps> = ({
                     key={idx}
                     className={`flex items-start gap-2 p-1.5 rounded-xl ${
                       isUser
-                        ? 'bg-purple-700 text-white'
-                        : 'bg-white dark:bg-[#1E1830] text-lovira-title border border-lovira-subtle'
+                        ? 'bg-[#1F625F] text-white'
+                        : 'bg-white dark:bg-[#142221] text-lovira-title border border-lovira-subtle'
                     }`}
                   >
                     <span
                       className={`inline-flex items-center justify-center w-5 h-5 rounded-full text-[10px] font-extrabold shrink-0 mt-0.5 ${
                         isUser
-                          ? 'bg-white text-[#7C4DFF]'
-                          : 'bg-purple-100 text-[#7C4DFF] dark:bg-purple-900 dark:text-purple-300'
+                          ? 'bg-white text-[#287C78]'
+                          : 'bg-[#D2E7E5] text-[#287C78] dark:bg-[#203D3B] dark:text-[#42A39E]'
                       }`}
                     >
                       {block.number}
@@ -197,7 +201,7 @@ export const ChatMessageRenderer: React.FC<ChatMessageRendererProps> = ({
                   <div key={idx} className="flex items-start gap-2 pl-1">
                     <span
                       className={`w-1.5 h-1.5 rounded-full shrink-0 mt-2 ${
-                        isUser ? 'bg-white' : 'bg-[#7C4DFF]'
+                        isUser ? 'bg-white' : 'bg-[#287C78]'
                       }`}
                     />
                     <div className="flex-1 leading-snug">
@@ -219,7 +223,7 @@ export const ChatMessageRenderer: React.FC<ChatMessageRendererProps> = ({
           <div
             className={`flex items-center gap-2 pt-2 mt-1 text-[10px] ${
               isUser
-                ? 'text-purple-100 justify-end'
+                ? 'text-teal-100 justify-end'
                 : 'text-lovira-muted justify-between border-t border-lovira-subtle'
             }`}
           >
@@ -229,7 +233,7 @@ export const ChatMessageRenderer: React.FC<ChatMessageRendererProps> = ({
                   <button
                     type="button"
                     onClick={() => onSpeak(cleanSpeechText)}
-                    className="inline-flex items-center gap-1 font-bold text-[#7C4DFF] dark:text-purple-300 hover:underline transition-colors cursor-pointer"
+                    className="inline-flex items-center gap-1 font-bold text-[#287C78] dark:text-[#42A39E] hover:underline transition-colors cursor-pointer"
                   >
                     <Volume2 className={`w-3 h-3 ${isSpeaking ? 'animate-pulse text-amber-500' : ''}`} />
                     <span>Đọc to</span>

@@ -91,13 +91,13 @@ export const ConversationPane: React.FC<ConversationPaneProps> = ({
   };
 
   return (
-    <div className="flex-1 flex flex-col h-full bg-white dark:bg-[#13101E] relative overflow-hidden">
+    <div className="flex-1 flex flex-col h-full bg-white dark:bg-[#121818] relative overflow-hidden">
       {/* Messages Stream Area */}
       <div className="flex-1 overflow-y-auto p-3.5 sm:p-6 space-y-3 custom-scrollbar">
         {messages.length === 0 ? (
           <div className="flex flex-col items-center justify-center min-h-[300px] text-center p-6 space-y-4 my-auto">
-            <div className="w-16 h-16 rounded-3xl bg-gradient-to-tr from-[#7C4DFF] to-indigo-500 text-white flex items-center justify-center shadow-md animate-bounce">
-              <Bot className="w-8 h-8" />
+            <div className="w-16 h-16 rounded-full overflow-hidden shadow-md border-2 border-[#287C78]/30 animate-bounce bg-[#287C78]">
+              <img src="/images/avatar.png" alt="Lovira" className="w-full h-full object-cover" referrerPolicy="no-referrer" />
             </div>
             <div className="space-y-1.5 max-w-sm">
               <h3 className="text-base font-bold text-text-primary">Chào chú 👋</h3>
@@ -107,7 +107,7 @@ export const ConversationPane: React.FC<ConversationPaneProps> = ({
             </div>
             <button
               onClick={handleMicClick}
-              className="px-5 py-2.5 rounded-full bg-[#7C4DFF] hover:bg-[#6D3CF0] text-white text-xs font-bold shadow-xs flex items-center gap-2 cursor-pointer"
+              className="px-5 py-2.5 rounded-full bg-[#287C78] hover:bg-[#1F625F] text-white text-xs font-bold shadow-xs flex items-center gap-2 cursor-pointer"
             >
               <Mic className="w-4 h-4" />
               <span>Nói trực tiếp với Lovira</span>
@@ -134,8 +134,8 @@ export const ConversationPane: React.FC<ConversationPaneProps> = ({
 
         {/* Loading Indicator */}
         {isLoading && (
-          <div className="flex items-center gap-3 p-3 sm:p-4 rounded-2xl bg-[#F4EEFF] dark:bg-[#28203E] text-xs text-[#7C4DFF] dark:text-purple-300 max-w-[85%] animate-pulse border border-lovira-subtle my-2">
-            <Loader2 className="w-4 h-4 animate-spin shrink-0 text-[#7C4DFF]" />
+          <div className="flex items-center gap-3 p-3 sm:p-4 rounded-2xl bg-[#EBF5F4] dark:bg-[#1B2928] text-xs text-[#287C78] dark:text-[#42A39E] max-w-[85%] animate-pulse border border-lovira-subtle my-2">
+            <Loader2 className="w-4 h-4 animate-spin shrink-0 text-[#287C78]" />
             <span className="font-semibold">Lovira đang suy nghĩ và sắp xếp thông tin cho chú...</span>
           </div>
         )}
@@ -154,7 +154,7 @@ export const ConversationPane: React.FC<ConversationPaneProps> = ({
                 type="button"
                 disabled={isLoading}
                 onClick={() => handleQuickPrompt(promptText)}
-                className="h-[36px] px-4 rounded-full text-xs font-semibold bg-surface-raised text-[#7C4DFF] dark:text-purple-300 border border-lovira-subtle hover:bg-[#F5F0FF] dark:hover:bg-[#28203E] hover:border-lovira-purple transition-all shadow-2xs shrink-0 cursor-pointer disabled:opacity-50"
+                className="h-[36px] px-4 rounded-full text-xs font-semibold bg-surface-raised text-[#287C78] dark:text-[#42A39E] border border-lovira-subtle hover:bg-[#EBF5F4] dark:hover:bg-[#1B2928] hover:border-lovira-purple transition-all shadow-2xs shrink-0 cursor-pointer disabled:opacity-50"
               >
                 {promptText}
               </button>
@@ -165,7 +165,7 @@ export const ConversationPane: React.FC<ConversationPaneProps> = ({
 
       {/* Listening / Processing Overlay Status in Chat */}
       {isListening && (
-        <div className="mx-3.5 sm:mx-6 mb-2 p-3 rounded-2xl bg-purple-100 dark:bg-purple-950/60 border border-purple-500/20 text-xs font-semibold text-[#7C4DFF] dark:text-purple-300 flex items-center justify-between animate-in fade-in shadow-2xs">
+        <div className="mx-3.5 sm:mx-6 mb-2 p-3 rounded-2xl bg-[#EBF5F4] dark:bg-[#1B2928] border border-[#287C78]/20 text-xs font-semibold text-[#287C78] dark:text-[#42A39E] flex items-center justify-between animate-in fade-in shadow-2xs">
           <div className="flex items-center gap-2.5 min-w-0 pr-2">
             <span className="relative flex h-3 w-3 shrink-0">
               <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-rose-500"></span>
@@ -180,7 +180,7 @@ export const ConversationPane: React.FC<ConversationPaneProps> = ({
             <button
               type="button"
               onClick={onStopVoice}
-              className="px-3 py-1.5 rounded-xl bg-[#7C4DFF] text-white text-xs font-bold hover:bg-[#6D3CF0] shadow-2xs cursor-pointer"
+              className="px-3 py-1.5 rounded-xl bg-[#287C78] text-white text-xs font-bold hover:bg-[#1F625F] shadow-2xs cursor-pointer"
             >
               Gửi ngay
             </button>
@@ -207,7 +207,7 @@ export const ConversationPane: React.FC<ConversationPaneProps> = ({
             className={`w-11 h-11 sm:w-12 sm:h-12 rounded-2xl flex items-center justify-center shrink-0 border transition-all cursor-pointer ${
               isListening
                 ? 'bg-rose-500 text-white border-rose-600 animate-pulse shadow-xs'
-                : 'bg-surface-raised text-text-secondary border-lovira-subtle hover:text-[#7C4DFF] hover:border-[#7C4DFF]/50'
+                : 'bg-surface-raised text-text-secondary border-lovira-subtle hover:text-[#287C78] hover:border-[#287C78]/50'
             }`}
             title={isListening ? 'Bấm để hoàn tất' : 'Nói bằng giọng nói'}
             aria-label="Micro"
@@ -231,13 +231,13 @@ export const ConversationPane: React.FC<ConversationPaneProps> = ({
             onChange={(e) => setInput(e.target.value)}
             placeholder="Nhắn cho Lovira..."
             disabled={isLoading}
-            className="flex-1 min-w-0 h-11 sm:h-12 px-4 rounded-2xl bg-surface-raised border border-lovira-subtle text-text-primary text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-[#7C4DFF] focus:border-transparent transition-all"
+            className="flex-1 min-w-0 h-11 sm:h-12 px-4 rounded-2xl bg-surface-raised border border-lovira-subtle text-text-primary text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-[#287C78] focus:border-transparent transition-all"
           />
 
           <button
             type="submit"
             disabled={!input.trim() || isLoading}
-            className="w-11 h-11 sm:w-12 sm:h-12 rounded-2xl bg-[#7C4DFF] text-white font-bold disabled:opacity-40 hover:bg-[#6D3CF0] transition-colors flex items-center justify-center shrink-0 shadow-xs cursor-pointer"
+            className="w-11 h-11 sm:w-12 sm:h-12 rounded-2xl bg-[#287C78] text-white font-bold disabled:opacity-40 hover:bg-[#1F625F] transition-colors flex items-center justify-center shrink-0 shadow-xs cursor-pointer"
             aria-label="Gửi tin nhắn"
           >
             <Send className="w-5 h-5" />

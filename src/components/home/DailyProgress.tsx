@@ -17,7 +17,7 @@ export const DailyProgress: React.FC<DailyProgressProps> = ({
       <div className="relative w-[64px] h-[64px] shrink-0 flex items-center justify-center">
         <svg className="w-full h-full transform -rotate-90" viewBox="0 0 36 36">
           <path
-            className="text-lovira-border"
+            className="text-[#E4E2DC] dark:text-[#273836]"
             strokeWidth="3.5"
             stroke="currentColor"
             fill="none"

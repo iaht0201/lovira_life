@@ -1,32 +1,33 @@
-/* Lovira Dark Theme Palette - Soft, Warm, High-Contrast Care Assistant Palette */
+/* Lovira Dark Theme Palette - Soft Teal Slate & Care Assistant Palette */
 html.dark {
-  --bg-base: #120E20;
-  --bg-surface: #1B152B;
-  --bg-surface-raised: #251D3A;
-  --bg-card: #1F1833;
-  --bg-card-hover: #2B2147;
-  --bg-sidebar: #171126;
-  --bg-sidebar-active: #32235B;
-  --bg-topbar: rgba(27, 21, 43, 0.92);
-  --bg-input: #271E40;
-  --bg-hero: linear-gradient(135deg, #1D1635 0%, #291D4A 50%, #351C42 100%);
-  --bg-badge-purple: #2F2154;
+  --bg-base: #101818;
+  --bg-surface: #182222;
+  --bg-surface-raised: #202C2C;
+  --bg-card: #1B2626;
+  --bg-card-hover: #243232;
+  --bg-sidebar: #141E1E;
+  --bg-sidebar-active: #223B3A;
+  --bg-topbar: rgba(24, 34, 34, 0.92);
+  --bg-input: #202E2E;
+  --bg-hero: linear-gradient(135deg, #182A29 0%, #223D3C 50%, #2A2F3D 100%);
+  --bg-badge-purple: #203A39;
 
-  --text-primary: #F7F4FF;
-  --text-secondary: #DBCFEE;
-  --text-muted: #B8A8D6;
-  --text-brand: #C49BFF;
+  --text-primary: #F0F4F4;
+  --text-secondary: #C2CECE;
+  --text-muted: #9AA8A8;
+  --text-brand: #42A39E;
   --text-on-hero: #FFFFFF;
 
   --border-default: rgba(255, 255, 255, 0.12);
   --border-subtle: rgba(255, 255, 255, 0.07);
-  --border-brand: rgba(196, 155, 255, 0.35);
+  --border-brand: rgba(66, 163, 158, 0.35);
 
-  --color-primary: #9D75FF;
-  --color-primary-hover: #B594FF;
-  --color-accent: #FF70B5;
-  --color-success: #34D399;
-  --color-warning: #FFA066;
+  --color-primary: #287C78;
+  --color-primary-hover: #42A39E;
+  --color-accent: #E76F91;
+  --color-success: #3E7C59;
+  --color-warning: #C66A27;
   --color-danger: #FF6666;
-  --color-focus-ring: #C49BFF;
+  --color-focus-ring: #42A39E;
 }
+

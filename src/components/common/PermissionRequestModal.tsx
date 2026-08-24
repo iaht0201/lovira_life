@@ -104,11 +104,11 @@ export const PermissionRequestModal: React.FC<PermissionRequestModalProps> = ({
 
   return (
     <div className="fixed inset-0 z-50 bg-black/90 backdrop-blur-md flex items-center justify-center p-4 overflow-y-auto animate-in fade-in duration-200">
-      <div className="bg-white dark:bg-[#1C162E] opacity-100 border-2 border-purple-500/40 rounded-2xl max-w-lg w-full p-5 sm:p-6 shadow-2xl space-y-5 relative z-10">
+      <div className="bg-white dark:bg-[#182222] opacity-100 border-2 border-[#287C78]/40 rounded-2xl max-w-lg w-full p-5 sm:p-6 shadow-2xl space-y-5 relative z-10">
         {/* Header */}
         <div className="flex items-center justify-between border-b border-default pb-4">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-purple-500/10 text-[#7C4DFF] flex items-center justify-center font-bold shrink-0">
+            <div className="w-10 h-10 rounded-xl bg-[#287C78]/10 text-[#287C78] dark:text-[#42A39E] flex items-center justify-center font-bold shrink-0">
               <ShieldCheck className="w-6 h-6" />
             </div>
             <div>
@@ -138,13 +138,13 @@ export const PermissionRequestModal: React.FC<PermissionRequestModalProps> = ({
           {/* Micro */}
           <div className="p-3.5 rounded-xl bg-surface-raised border border-default flex items-center justify-between gap-3">
             <div className="flex items-center gap-3 min-w-0">
-              <div className="w-9 h-9 rounded-xl bg-purple-500/10 text-[#7C4DFF] flex items-center justify-center shrink-0">
+              <div className="w-9 h-9 rounded-xl bg-[#287C78]/10 text-[#287C78] dark:text-[#42A39E] flex items-center justify-center shrink-0">
                 <Mic className="w-5 h-5" />
               </div>
               <div className="min-w-0">
                 <div className="flex items-center gap-2">
                   <p className="text-xs sm:text-sm font-bold text-text-primary">Micro / Giọng nói</p>
-                  <span className="text-[10px] px-2 py-0.5 rounded-full bg-purple-500/10 text-[#7C4DFF] font-bold">Quan trọng</span>
+                  <span className="text-[10px] px-2 py-0.5 rounded-full bg-[#287C78]/10 text-[#287C78] dark:text-[#42A39E] font-bold">Quan trọng</span>
                 </div>
                 <p className="text-[11px] text-text-secondary truncate">Trò chuyện và nhập liệu bằng giọng nói Tiếng Việt</p>
               </div>
@@ -157,7 +157,7 @@ export const PermissionRequestModal: React.FC<PermissionRequestModalProps> = ({
             ) : (
               <button
                 onClick={requestMicrophone}
-                className="px-3 py-1.5 bg-[#7C4DFF] hover:bg-[#6D3CF0] text-white text-xs font-bold rounded-lg shrink-0 cursor-pointer"
+                className="px-3 py-1.5 bg-[#287C78] hover:bg-[#1F625F] text-white text-xs font-bold rounded-lg shrink-0 cursor-pointer"
               >
                 Cấp quyền
               </button>
@@ -183,7 +183,7 @@ export const PermissionRequestModal: React.FC<PermissionRequestModalProps> = ({
             ) : (
               <button
                 onClick={requestCamera}
-                className="px-3 py-1.5 bg-[#7C4DFF] hover:bg-[#6D3CF0] text-white text-xs font-bold rounded-lg shrink-0 cursor-pointer"
+                className="px-3 py-1.5 bg-[#287C78] hover:bg-[#1F625F] text-white text-xs font-bold rounded-lg shrink-0 cursor-pointer"
               >
                 Cấp quyền
               </button>
@@ -209,7 +209,7 @@ export const PermissionRequestModal: React.FC<PermissionRequestModalProps> = ({
             ) : (
               <button
                 onClick={requestNotification}
-                className="px-3 py-1.5 bg-[#7C4DFF] hover:bg-[#6D3CF0] text-white text-xs font-bold rounded-lg shrink-0 cursor-pointer"
+                className="px-3 py-1.5 bg-[#287C78] hover:bg-[#1F625F] text-white text-xs font-bold rounded-lg shrink-0 cursor-pointer"
               >
                 Cấp quyền
               </button>
@@ -235,7 +235,7 @@ export const PermissionRequestModal: React.FC<PermissionRequestModalProps> = ({
             ) : (
               <button
                 onClick={requestLocation}
-                className="px-3 py-1.5 bg-[#7C4DFF] hover:bg-[#6D3CF0] text-white text-xs font-bold rounded-lg shrink-0 cursor-pointer"
+                className="px-3 py-1.5 bg-[#287C78] hover:bg-[#1F625F] text-white text-xs font-bold rounded-lg shrink-0 cursor-pointer"
               >
                 Cấp quyền
               </button>
@@ -244,8 +244,8 @@ export const PermissionRequestModal: React.FC<PermissionRequestModalProps> = ({
         </div>
 
         {/* Security Assurance */}
-        <div className="p-3 rounded-xl bg-purple-500/5 border border-purple-500/20 flex items-center gap-2 text-xs text-text-secondary">
-          <AlertCircle className="w-4 h-4 text-[#7C4DFF] shrink-0" />
+        <div className="p-3 rounded-xl bg-[#287C78]/5 border border-[#287C78]/20 flex items-center gap-2 text-xs text-text-secondary">
+          <AlertCircle className="w-4 h-4 text-[#287C78] shrink-0" />
           <span>Thông tin của bạn được bảo mật tuyệt đối trên thiết bị cá nhân.</span>
         </div>
 
@@ -256,7 +256,7 @@ export const PermissionRequestModal: React.FC<PermissionRequestModalProps> = ({
               sfx.playTap();
               requestAllPermissions();
             }}
-            className="px-4 py-2.5 bg-purple-500/10 text-[#7C4DFF] hover:bg-purple-500/20 font-bold text-xs rounded-xl transition-all cursor-pointer"
+            className="px-4 py-2.5 bg-[#287C78]/10 text-[#287C78] dark:text-[#42A39E] hover:bg-[#287C78]/20 font-bold text-xs rounded-xl transition-all cursor-pointer"
           >
             ⚡ Cấp tất cả quyền cùng lúc
           </button>
@@ -266,7 +266,7 @@ export const PermissionRequestModal: React.FC<PermissionRequestModalProps> = ({
               sfx.playTap();
               onClose();
             }}
-            className="px-5 py-2.5 bg-[#7C4DFF] text-white hover:bg-[#6D3CF0] font-bold text-xs rounded-xl shadow-xs transition-all cursor-pointer"
+            className="px-5 py-2.5 bg-[#287C78] text-white hover:bg-[#1F625F] font-bold text-xs rounded-xl shadow-xs transition-all cursor-pointer"
           >
             Hoàn tất
           </button>

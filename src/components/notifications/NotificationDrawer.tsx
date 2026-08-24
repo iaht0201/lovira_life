@@ -89,7 +89,7 @@ export const NotificationDrawer: React.FC<NotificationDrawerProps> = ({
         return <CheckSquare className="w-5 h-5 text-indigo-600 dark:text-indigo-400" />;
       case 'system':
       default:
-        return <Sparkles className="w-5 h-5 text-purple-600 dark:text-purple-400" />;
+        return <Sparkles className="w-5 h-5 text-[#287C78] dark:text-[#42A39E]" />;
     }
   };
 
@@ -102,10 +102,10 @@ export const NotificationDrawer: React.FC<NotificationDrawerProps> = ({
       case 'warning':
         return 'bg-rose-500/15 border-rose-500/30';
       case 'task':
-        return 'bg-indigo-500/15 border-indigo-500/30';
+        return 'bg-teal-500/15 border-teal-500/30';
       case 'system':
       default:
-        return 'bg-purple-500/15 border-purple-500/30';
+        return 'bg-[#287C78]/15 border-[#287C78]/30';
     }
   };
 
@@ -129,12 +129,12 @@ export const NotificationDrawer: React.FC<NotificationDrawerProps> = ({
       />
 
       {/* Drawer Container - Solid 100% opacity background (no transparency) */}
-      <div className="relative z-10 w-full sm:w-[440px] md:w-[480px] h-full max-h-[100dvh] bg-white dark:bg-[#1C162E] opacity-100 border-l-2 border-purple-500/30 shadow-2xl flex flex-col overflow-hidden animate-in slide-in-from-right duration-250 text-gray-900 dark:text-white">
+      <div className="relative z-10 w-full sm:w-[440px] md:w-[480px] h-full max-h-[100dvh] bg-white dark:bg-[#182222] opacity-100 border-l-2 border-[#287C78]/30 shadow-2xl flex flex-col overflow-hidden animate-in slide-in-from-right duration-250 text-gray-900 dark:text-white">
         
         {/* Drawer Header */}
-        <div className="p-4 sm:p-5 border-b border-gray-200 dark:border-gray-800 bg-gray-50 dark:bg-[#231B38] flex items-center justify-between shrink-0">
+        <div className="p-4 sm:p-5 border-b border-gray-200 dark:border-gray-800 bg-gray-50 dark:bg-[#202C2C] flex items-center justify-between shrink-0">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-2xl bg-gradient-to-br from-[#7C4DFF] to-[#A45CFF] text-white flex items-center justify-center shadow-md shrink-0">
+            <div className="w-10 h-10 rounded-2xl bg-gradient-to-br from-[#287C78] to-[#1F625F] text-white flex items-center justify-center shadow-md shrink-0">
               <Bell className="w-5 h-5" />
             </div>
             <div>
@@ -143,12 +143,12 @@ export const NotificationDrawer: React.FC<NotificationDrawerProps> = ({
                   Thông báo
                 </h2>
                 {unreadCount > 0 && (
-                  <span className="px-2 py-0.5 text-xs font-black rounded-full bg-[#FF5CA8] text-white">
+                  <span className="px-2 py-0.5 text-xs font-black rounded-full bg-[#E76F91] text-white">
                     {unreadCount} mới
                   </span>
                 )}
               </div>
-              <p className="text-xs text-gray-5-00 dark:text-gray-400 font-medium">
+              <p className="text-xs text-gray-500 dark:text-gray-400 font-medium">
                 Nhắc nhở y tế, công việc và cập nhật hệ thống
               </p>
             </div>
@@ -165,7 +165,7 @@ export const NotificationDrawer: React.FC<NotificationDrawerProps> = ({
         </div>
 
         {/* Filter Bar & Quick Actions */}
-        <div className="p-3 sm:p-4 border-b border-gray-100 dark:border-gray-800 bg-white dark:bg-[#1C162E] space-y-3 shrink-0">
+        <div className="p-3 sm:p-4 border-b border-gray-100 dark:border-gray-800 bg-white dark:bg-[#182222] space-y-3 shrink-0">
           {/* Action Buttons Row */}
           <div className="flex items-center justify-between text-xs font-bold gap-2">
             <div className="flex items-center gap-1.5 overflow-x-auto pb-1 no-scrollbar">
@@ -173,7 +173,7 @@ export const NotificationDrawer: React.FC<NotificationDrawerProps> = ({
                 onClick={() => setFilter('all')}
                 className={`px-3 py-1.5 rounded-xl font-bold transition-all cursor-pointer whitespace-nowrap ${
                   filter === 'all'
-                    ? 'bg-[#7C4DFF] text-white shadow-xs'
+                    ? 'bg-[#287C78] text-white shadow-xs'
                     : 'bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700'
                 }`}
               >
@@ -183,7 +183,7 @@ export const NotificationDrawer: React.FC<NotificationDrawerProps> = ({
                 onClick={() => setFilter('unread')}
                 className={`px-3 py-1.5 rounded-xl font-bold transition-all cursor-pointer whitespace-nowrap ${
                   filter === 'unread'
-                    ? 'bg-[#FF5CA8] text-white shadow-xs'
+                    ? 'bg-[#E76F91] text-white shadow-xs'
                     : 'bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700'
                 }`}
               >
@@ -203,7 +203,7 @@ export const NotificationDrawer: React.FC<NotificationDrawerProps> = ({
 
             <button
               onClick={() => setShowAddForm(!showAddForm)}
-              className="px-2.5 py-1.5 rounded-xl bg-purple-500/15 text-purple-600 dark:text-purple-300 font-extrabold flex items-center gap-1 hover:bg-purple-500/25 transition-colors cursor-pointer shrink-0"
+              className="px-2.5 py-1.5 rounded-xl bg-[#287C78]/15 text-[#287C78] dark:text-[#42A39E] font-extrabold flex items-center gap-1 hover:bg-[#287C78]/25 transition-colors cursor-pointer shrink-0"
               title="Thêm thông báo mới"
             >
               <Plus className="w-4 h-4" />
@@ -236,7 +236,7 @@ export const NotificationDrawer: React.FC<NotificationDrawerProps> = ({
             ) : (
               <button
                 onClick={onResetDefaults}
-                className="flex items-center gap-1 text-purple-600 dark:text-purple-400 font-bold hover:underline cursor-pointer"
+                className="flex items-center gap-1 text-[#287C78] dark:text-[#42A39E] font-bold hover:underline cursor-pointer"
               >
                 <RotateCcw className="w-3.5 h-3.5" />
                 <span>Khôi phục thông báo mẫu</span>
@@ -249,10 +249,10 @@ export const NotificationDrawer: React.FC<NotificationDrawerProps> = ({
         {showAddForm && (
           <form
             onSubmit={handleCreateNotif}
-            className="p-4 bg-purple-50 dark:bg-[#251D3A] border-b border-purple-200 dark:border-purple-900/50 space-y-3 animate-in slide-in-from-top duration-200"
+            className="p-4 bg-[#EBF5F4] dark:bg-[#202C2C] border-b border-[#287C78]/20 space-y-3 animate-in slide-in-from-top duration-200"
           >
             <div className="flex items-center justify-between">
-              <h3 className="text-xs font-black uppercase tracking-wider text-purple-700 dark:text-purple-300 flex items-center gap-1.5">
+              <h3 className="text-xs font-black uppercase tracking-wider text-[#287C78] dark:text-[#42A39E] flex items-center gap-1.5">
                 <Plus className="w-4 h-4" />
                 Thêm nhắc nhở / thông báo mới
               </h3>
@@ -272,20 +272,20 @@ export const NotificationDrawer: React.FC<NotificationDrawerProps> = ({
                 value={newTitle}
                 onChange={(e) => setNewTitle(e.target.value)}
                 required
-                className="w-full px-3 py-2 text-sm font-bold bg-white dark:bg-[#1C162E] border border-gray-300 dark:border-gray-700 rounded-xl focus:ring-2 focus:ring-purple-500 outline-none text-gray-900 dark:text-white"
+                className="w-full px-3 py-2 text-sm font-bold bg-white dark:bg-[#182222] border border-gray-300 dark:border-gray-700 rounded-xl focus:ring-2 focus:ring-[#287C78] outline-none text-gray-900 dark:text-white"
               />
               <textarea
                 placeholder="Nội dung chi tiết (ví dụ: Uống 1 viên sau khi ăn sáng)..."
                 value={newMessage}
                 onChange={(e) => setNewMessage(e.target.value)}
                 rows={2}
-                className="w-full px-3 py-2 text-xs font-medium bg-white dark:bg-[#1C162E] border border-gray-300 dark:border-gray-700 rounded-xl focus:ring-2 focus:ring-purple-500 outline-none text-gray-900 dark:text-white"
+                className="w-full px-3 py-2 text-xs font-medium bg-white dark:bg-[#182222] border border-gray-300 dark:border-gray-700 rounded-xl focus:ring-2 focus:ring-[#287C78] outline-none text-gray-900 dark:text-white"
               />
               <div className="flex items-center justify-between gap-2">
                 <select
                   value={newType}
                   onChange={(e) => setNewType(e.target.value as NotificationType)}
-                  className="px-2.5 py-1.5 text-xs font-bold bg-white dark:bg-[#1C162E] border border-gray-300 dark:border-gray-700 rounded-xl text-gray-800 dark:text-gray-200 outline-none"
+                  className="px-2.5 py-1.5 text-xs font-bold bg-white dark:bg-[#182222] border border-gray-300 dark:border-gray-700 rounded-xl text-gray-800 dark:text-gray-200 outline-none"
                 >
                   <option value="reminder">🔔 Nhắc nhở</option>
                   <option value="medical">💊 Y tế / Thuốc</option>
@@ -296,7 +296,7 @@ export const NotificationDrawer: React.FC<NotificationDrawerProps> = ({
 
                 <button
                   type="submit"
-                  className="px-4 py-1.5 text-xs font-extrabold bg-[#7C4DFF] hover:bg-[#6C3DF0] text-white rounded-xl shadow-md transition-colors cursor-pointer"
+                  className="px-4 py-1.5 text-xs font-extrabold bg-[#287C78] hover:bg-[#1F625F] text-white rounded-xl shadow-md transition-colors cursor-pointer"
                 >
                   Lưu thông báo
                 </button>
@@ -320,7 +320,7 @@ export const NotificationDrawer: React.FC<NotificationDrawerProps> = ({
               </p>
               <button
                 onClick={onResetDefaults}
-                className="mt-2 inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-purple-500/10 text-purple-600 dark:text-purple-400 text-xs font-bold hover:bg-purple-500/20 transition-colors cursor-pointer"
+                className="mt-2 inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-[#287C78]/10 text-[#287C78] dark:text-[#42A39E] text-xs font-bold hover:bg-[#287C78]/20 transition-colors cursor-pointer"
               >
                 <RotateCcw className="w-4 h-4" />
                 Khôi phục danh sách mặc định
@@ -333,8 +333,8 @@ export const NotificationDrawer: React.FC<NotificationDrawerProps> = ({
                 onClick={() => handleNotificationClick(item)}
                 className={`group relative p-3.5 sm:p-4 rounded-2xl border-2 transition-all cursor-pointer flex items-start gap-3.5 ${
                   item.read
-                    ? 'bg-gray-50/80 dark:bg-[#231B38]/50 border-gray-200 dark:border-gray-800 opacity-80 hover:opacity-100 hover:border-purple-500/40'
-                    : 'bg-white dark:bg-[#281E40] border-purple-500/50 dark:border-purple-400/60 shadow-md hover:shadow-lg hover:border-purple-500'
+                    ? 'bg-gray-50/80 dark:bg-[#202C2C]/50 border-gray-200 dark:border-gray-800 opacity-80 hover:opacity-100 hover:border-[#287C78]/40'
+                    : 'bg-white dark:bg-[#243232] border-[#287C78]/50 dark:border-[#42A39E]/60 shadow-md hover:shadow-lg hover:border-[#287C78]'
                 }`}
               >
                 {/* Type Icon Badge */}
@@ -371,7 +371,7 @@ export const NotificationDrawer: React.FC<NotificationDrawerProps> = ({
                     </span>
 
                     {item.actionTab && (
-                      <span className="text-purple-600 dark:text-purple-400 flex items-center gap-0.5 group-hover:translate-x-0.5 transition-transform">
+                      <span className="text-[#287C78] dark:text-[#42A39E] flex items-center gap-0.5 group-hover:translate-x-0.5 transition-transform">
                         <span>Xem chi tiết</span>
                         <ChevronRight className="w-3 h-3" />
                       </span>
@@ -382,7 +382,7 @@ export const NotificationDrawer: React.FC<NotificationDrawerProps> = ({
                 {/* Unread indicator dot */}
                 {!item.read && (
                   <span
-                    className="absolute top-4 right-4 w-2.5 h-2.5 rounded-full bg-[#FF5CA8] ring-2 ring-white dark:ring-[#281E40]"
+                    className="absolute top-4 right-4 w-2.5 h-2.5 rounded-full bg-[#E76F91] ring-2 ring-white dark:ring-[#243232]"
                     title="Chưa đọc"
                   />
                 )}
@@ -405,7 +405,7 @@ export const NotificationDrawer: React.FC<NotificationDrawerProps> = ({
         </div>
 
         {/* Drawer Footer */}
-        <div className="p-3 sm:p-4 border-t border-gray-200 dark:border-gray-800 bg-gray-50 dark:bg-[#231B38] flex items-center justify-between text-xs font-bold text-gray-500 dark:text-gray-400 shrink-0">
+        <div className="p-3 sm:p-4 border-t border-gray-200 dark:border-gray-800 bg-gray-50 dark:bg-[#162222] flex items-center justify-between text-xs font-bold text-gray-500 dark:text-gray-400 shrink-0">
           <span>{notifications.length} thông báo trong hệ thống</span>
           <button
             onClick={onClose}

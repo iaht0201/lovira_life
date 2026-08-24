@@ -100,8 +100,12 @@ export const MobileSidebarDrawer: React.FC<MobileSidebarDrawerProps> = ({
         {/* Drawer Header */}
         <div className="h-[64px] px-4 flex items-center justify-between border-b border-lovira-subtle bg-lovira-topbar shrink-0">
           <div className="flex items-center gap-1.5">
-            <span className="text-[22px] font-[900] text-lovira-purple">Lovira</span>
-            <span className="text-[18px] text-[#FF5CA8] font-black">♥</span>
+            <img
+              src="/images/logo_client.png"
+              alt="Lovira"
+              className="h-[34px] w-auto max-w-[140px] object-contain select-none"
+              referrerPolicy="no-referrer"
+            />
           </div>
           <button
             onClick={onClose}

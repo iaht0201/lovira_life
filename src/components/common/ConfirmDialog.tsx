@@ -25,7 +25,7 @@ export const ConfirmDialog: React.FC<ConfirmDialogProps> = ({
       aria-modal="true"
       aria-labelledby="confirm-dialog-title"
     >
-      <div className="w-full max-w-md p-6 bg-white dark:bg-[#1B152B] border-2 border-amber-500 rounded-2xl shadow-2xl text-text-primary opacity-100 relative z-10">
+      <div className="w-full max-w-md p-6 bg-white dark:bg-[#182222] border-2 border-amber-500 rounded-2xl shadow-2xl text-text-primary opacity-100 relative z-10">
         <div className="flex items-start gap-3 mb-4">
           <div className="p-3 bg-amber-500/20 text-amber-600 rounded-xl">
             <AlertTriangle className="w-6 h-6" aria-hidden="true" />

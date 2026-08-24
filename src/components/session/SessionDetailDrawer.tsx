@@ -56,11 +56,11 @@ export const SessionDetailDrawer: React.FC<SessionDetailDrawerProps> = ({
       />
 
       {/* Drawer Container (Desktop slide-over / Mobile bottom sheet) */}
-      <div className="relative z-10 w-full sm:w-[420px] md:w-[460px] h-full max-h-[100dvh] bg-white dark:bg-[#1C162E] opacity-100 border-l-2 border-default shadow-lovira-lg flex flex-col overflow-hidden animate-in slide-in-from-right duration-200">
+      <div className="relative z-10 w-full sm:w-[420px] md:w-[460px] h-full max-h-[100dvh] bg-white dark:bg-[#182222] opacity-100 border-l-2 border-default shadow-lovira-lg flex flex-col overflow-hidden animate-in slide-in-from-right duration-200">
         {/* Drawer Header */}
         <div className="p-4 border-b border-default flex items-center justify-between shrink-0 bg-surface-raised">
           <div className="flex items-center gap-2">
-            <div className="p-2 rounded-xl bg-purple-100 dark:bg-purple-900 text-[#7C4DFF] dark:text-purple-300">
+            <div className="p-2 rounded-xl bg-[#287C78]/10 text-[#287C78] dark:text-[#42A39E]">
               <Sliders className="w-4 h-4" />
             </div>
             <div>
@@ -87,7 +87,7 @@ export const SessionDetailDrawer: React.FC<SessionDetailDrawerProps> = ({
             </div>
             <div className="w-full h-2.5 rounded-full bg-surface border border-default overflow-hidden">
               <div
-                className="h-full rounded-full bg-gradient-to-r from-purple-500 to-indigo-600 transition-all duration-300"
+                className="h-full rounded-full bg-gradient-to-r from-[#287C78] to-[#1F625F] transition-all duration-300"
                 style={{ width: `${progressPercent}%` }}
               />
             </div>
@@ -141,7 +141,7 @@ export const SessionDetailDrawer: React.FC<SessionDetailDrawerProps> = ({
             ) : (
               <button
                 onClick={() => onUpdateStatus('active')}
-                className="py-2.5 px-3 rounded-xl bg-purple-100 dark:bg-purple-950/60 text-[#7C4DFF] dark:text-purple-300 font-bold text-xs flex items-center justify-center gap-1.5 border border-purple-500/20 transition-all cursor-pointer hover:bg-purple-200"
+                className="py-2.5 px-3 rounded-xl bg-[#287C78]/10 text-[#287C78] dark:text-[#42A39E] font-bold text-xs flex items-center justify-center gap-1.5 border border-[#287C78]/20 transition-all cursor-pointer hover:bg-[#287C78]/20"
               >
                 <PlayCircle className="w-4 h-4" />
                 <span>Tiếp tục phiên</span>

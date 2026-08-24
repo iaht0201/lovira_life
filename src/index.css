@@ -95,20 +95,22 @@
 .bg-lovira-topbar, .bg-topbar { background-color: var(--bg-topbar); }
 .bg-lovira-input, .bg-input { background-color: var(--bg-input); }
 .bg-lovira-hero, .bg-hero { background: var(--bg-hero); }
-.bg-lovira-badge-purple { background-color: var(--bg-badge-purple); }
-.bg-lovira-purple { background-color: #7C4DFF; color: #ffffff; }
-.bg-lovira-purple-hover:hover { background-color: #6D3CF0; }
+.bg-lovira-badge-purple, .bg-lovira-badge-teal { background-color: var(--bg-badge-purple); }
+.bg-lovira-purple, .bg-lovira-teal { background-color: #287C78; color: #ffffff; }
+.bg-lovira-purple-hover:hover, .bg-lovira-teal-hover:hover { background-color: #1F625F; }
+.bg-lovira-pink { background-color: #E76F91; color: #ffffff; }
 
 .text-lovira-title, .text-primary, .text-text-primary { color: var(--text-primary); }
 .text-lovira-main { color: var(--text-primary); }
 .text-lovira-muted, .text-secondary { color: var(--text-secondary); }
 .text-lovira-sub, .text-muted { color: var(--text-muted); }
-.text-lovira-purple, .text-brand { color: var(--text-brand); }
+.text-lovira-purple, .text-lovira-teal, .text-brand { color: var(--text-brand); }
+.text-lovira-pink { color: #E76F91; }
 .text-lovira-on-hero { color: var(--text-on-hero); }
 
 .border-lovira, .border-default { border-color: var(--border-default); }
 .border-lovira-subtle, .border-subtle { border-color: var(--border-subtle); }
-.border-lovira-purple, .border-brand { border-color: var(--border-brand); }
+.border-lovira-purple, .border-lovira-teal, .border-brand { border-color: var(--border-brand); }
 
 .line-clamp-2 {
   display: -webkit-box;
@@ -119,7 +121,7 @@
 
 /* Custom Lovira Shadows */
 .shadow-lovira {
-  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.05);
+  box-shadow: 0 6px 20px rgba(40, 124, 120, 0.06);
 }
 
 .dark .shadow-lovira {
@@ -127,7 +129,7 @@
 }
 
 .shadow-lovira-lg {
-  box-shadow: 0 12px 32px rgba(124, 77, 255, 0.15);
+  box-shadow: 0 12px 32px rgba(40, 124, 120, 0.2);
 }
 
 .dark .shadow-lovira-lg {

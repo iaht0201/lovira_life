@@ -23,9 +23,9 @@ export const ReminderItem: React.FC<ReminderItemProps> = ({
       case 'medication':
         return { Icon: Pill, bg: 'bg-[#FFF3E8] dark:bg-[#3D2518]', text: 'text-[#FF701A] dark:text-[#FFA066]' };
       case 'appointment':
-        return { Icon: Calendar, bg: 'bg-[#F1E9FF] dark:bg-[#2F2154]', text: 'text-[#7C4DFF] dark:text-[#A45CFF]' };
+        return { Icon: Calendar, bg: 'bg-[#EBF5F4] dark:bg-[#1B2928]', text: 'text-[#287C78] dark:text-[#42A39E]' };
       case 'family':
-        return { Icon: Users, bg: 'bg-[#FFEBF5] dark:bg-[#3D1A2B]', text: 'text-[#E63988] dark:text-[#FF70B5]' };
+        return { Icon: Users, bg: 'bg-[#FDF2F4] dark:bg-[#2A181C]', text: 'text-[#E76F91] dark:text-[#F296B0]' };
       default:
         return { Icon: BellRing, bg: 'bg-[#E8F2FF] dark:bg-[#1A2A44]', text: 'text-[#2B70E4] dark:text-[#70A5FF]' };
     }

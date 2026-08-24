@@ -102,12 +102,12 @@ export const CreateSessionModal: React.FC<CreateSessionModalProps> = ({
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/90 backdrop-blur-md p-3 sm:p-4 overflow-y-auto animate-in fade-in duration-200">
       {/* Modal Container - Solid 100% opacity background (no transparency) */}
-      <div className="bg-white dark:bg-[#1C162E] opacity-100 border-2 border-purple-500/40 rounded-3xl max-w-lg w-full p-5 sm:p-6 shadow-2xl space-y-5 relative z-10 text-gray-900 dark:text-white my-auto">
+      <div className="bg-white dark:bg-[#182222] opacity-100 border-2 border-[#287C78]/40 rounded-3xl max-w-lg w-full p-5 sm:p-6 shadow-2xl space-y-5 relative z-10 text-gray-900 dark:text-white my-auto">
         
         {/* Header */}
         <div className="flex items-start justify-between border-b border-gray-200 dark:border-gray-800 pb-4">
           <div className="flex items-center gap-3">
-            <div className="w-11 h-11 rounded-2xl bg-gradient-to-br from-[#7C4DFF] to-[#A45CFF] text-white flex items-center justify-center shadow-md shrink-0">
+            <div className="w-11 h-11 rounded-2xl bg-gradient-to-br from-[#287C78] to-[#1F625F] text-white flex items-center justify-center shadow-md shrink-0">
               <Plus className="w-6 h-6" />
             </div>
             <div>
@@ -134,8 +134,8 @@ export const CreateSessionModal: React.FC<CreateSessionModalProps> = ({
           
           {/* Custom Topic Input */}
           <div className="space-y-1.5">
-            <label className="block text-xs font-black uppercase tracking-wider text-purple-700 dark:text-purple-300 flex items-center gap-1.5">
-              <Sparkles className="w-4 h-4 text-purple-500" />
+            <label className="block text-xs font-black uppercase tracking-wider text-[#287C78] dark:text-[#42A39E] flex items-center gap-1.5">
+              <Sparkles className="w-4 h-4 text-[#287C78]" />
               <span>Chủ đề / Mục tiêu công việc của chú:</span>
             </label>
 
@@ -146,7 +146,7 @@ export const CreateSessionModal: React.FC<CreateSessionModalProps> = ({
                 placeholder="Ví dụ: Đăng ký BHYT, Hỏi đường đi Chợ Rẫy, Học dùng Zalo..."
                 value={topicInput}
                 onChange={(e) => setTopicInput(e.target.value)}
-                className="w-full h-12 px-4 text-sm font-bold bg-gray-50 dark:bg-[#251D3A] border-2 border-purple-500/50 dark:border-purple-400/60 rounded-2xl focus:border-purple-600 focus:ring-2 focus:ring-purple-500/20 outline-none text-gray-900 dark:text-white transition-all shadow-inner"
+                className="w-full h-12 px-4 text-sm font-bold bg-gray-50 dark:bg-[#202C2C] border-2 border-[#287C78]/50 dark:border-[#42A39E]/60 rounded-2xl focus:border-[#287C78] focus:ring-2 focus:ring-[#287C78]/20 outline-none text-gray-900 dark:text-white transition-all shadow-inner"
               />
               {topicInput && (
                 <button
@@ -181,15 +181,15 @@ export const CreateSessionModal: React.FC<CreateSessionModalProps> = ({
                     onClick={() => handleSelectTopic(topic.text)}
                     className={`p-3 rounded-2xl border-2 text-left transition-all cursor-pointer flex items-center gap-3 ${
                       isSelected
-                        ? 'bg-purple-500/15 border-purple-600 text-purple-700 dark:text-purple-300 shadow-xs'
-                        : 'bg-gray-50 dark:bg-[#251D3A] border-gray-200 dark:border-gray-800 hover:border-purple-500/40 text-gray-800 dark:text-gray-200'
+                        ? 'bg-[#287C78]/15 border-[#287C78] text-[#287C78] dark:text-[#42A39E] shadow-xs'
+                        : 'bg-gray-50 dark:bg-[#202C2C] border-gray-200 dark:border-gray-800 hover:border-[#287C78]/40 text-gray-800 dark:text-gray-200'
                     }`}
                   >
                     <div
                       className={`w-9 h-9 rounded-xl flex items-center justify-center shrink-0 ${
                         isSelected
-                          ? 'bg-purple-600 text-white'
-                          : 'bg-purple-500/10 text-purple-600 dark:text-purple-400'
+                          ? 'bg-[#287C78] text-white'
+                          : 'bg-[#287C78]/10 text-[#287C78] dark:text-[#42A39E]'
                       }`}
                     >
                       <Icon className="w-4 h-4" />
@@ -218,7 +218,7 @@ export const CreateSessionModal: React.FC<CreateSessionModalProps> = ({
             <button
               type="submit"
               disabled={isSubmitting}
-              className="flex-1 py-3 text-xs font-black bg-gradient-to-r from-[#7C4DFF] to-[#A45CFF] hover:opacity-90 text-white rounded-xl shadow-lg transition-all cursor-pointer flex items-center justify-center gap-1.5 disabled:opacity-50"
+              className="flex-1 py-3 text-xs font-black bg-gradient-to-r from-[#287C78] to-[#1F625F] hover:opacity-90 text-white rounded-xl shadow-lg transition-all cursor-pointer flex items-center justify-center gap-1.5 disabled:opacity-50"
             >
               <CheckCircle2 className="w-4 h-4" />
               <span>{isSubmitting ? 'Đang khởi tạo...' : 'Bắt đầu phiên ngay'}</span>
