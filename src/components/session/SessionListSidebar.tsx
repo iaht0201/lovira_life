@@ -34,7 +34,7 @@ export const SessionListSidebar: React.FC<SessionListSidebarProps> = ({
   className = '',
 }) => {
   const [searchQuery, setSearchQuery] = useState('');
-  const [activeFilter, setActiveFilter] = useState<'all' | 'active' | 'completed'>('all');
+  const [activeFilter, setActiveFilter] = useState<'all' | 'active' | 'completed' | 'archived'>('all');
 
   const filteredSessions = useMemo(() => {
     return sessionsList.filter((s) => {
@@ -53,8 +53,12 @@ export const SessionListSidebar: React.FC<SessionListSidebarProps> = ({
       if (activeFilter === 'completed') {
         return s.status === 'completed';
       }
+      if (activeFilter === 'archived') {
+        return s.status === 'archived';
+      }
 
-      return true;
+      // Default 'all': Exclude archived sessions
+      return s.status !== 'archived';
     });
   }, [sessionsList, searchQuery, activeFilter]);
 
@@ -86,6 +90,13 @@ export const SessionListSidebar: React.FC<SessionListSidebarProps> = ({
           <span className="text-[11px] font-bold text-amber-700 dark:text-amber-400 flex items-center gap-1">
             <PauseCircle className="w-3 h-3" />
             Tạm dừng
+          </span>
+        );
+      case 'archived':
+        return (
+          <span className="text-[11px] font-bold text-gray-500 dark:text-gray-400 flex items-center gap-1">
+            <Clock className="w-3 h-3" />
+            Lưu trữ
           </span>
         );
       default:
@@ -136,10 +147,10 @@ export const SessionListSidebar: React.FC<SessionListSidebarProps> = ({
           </div>
 
           {/* Filter Pills */}
-          <div className="flex items-center gap-1.5 text-[11px] font-bold">
+          <div className="flex items-center gap-1.5 text-[11px] font-bold overflow-x-auto pb-0.5 custom-scrollbar">
             <button
               onClick={() => setActiveFilter('all')}
-              className={`px-2.5 py-1 rounded-lg transition-colors cursor-pointer ${
+              className={`px-2.5 py-1 rounded-lg transition-colors cursor-pointer shrink-0 ${
                 activeFilter === 'all'
                   ? 'bg-[#287C78] text-white shadow-2xs'
                   : 'bg-[#F0F5F4] dark:bg-[#1C2828] text-[#586268] hover:text-[#11181C] dark:text-[#8E9E9E]'
@@ -149,7 +160,7 @@ export const SessionListSidebar: React.FC<SessionListSidebarProps> = ({
             </button>
             <button
               onClick={() => setActiveFilter('active')}
-              className={`px-2.5 py-1 rounded-lg transition-colors cursor-pointer ${
+              className={`px-2.5 py-1 rounded-lg transition-colors cursor-pointer shrink-0 ${
                 activeFilter === 'active'
                   ? 'bg-[#287C78] text-white shadow-2xs'
                   : 'bg-[#F0F5F4] dark:bg-[#1C2828] text-[#586268] hover:text-[#11181C] dark:text-[#8E9E9E]'
@@ -159,13 +170,23 @@ export const SessionListSidebar: React.FC<SessionListSidebarProps> = ({
             </button>
             <button
               onClick={() => setActiveFilter('completed')}
-              className={`px-2.5 py-1 rounded-lg transition-colors cursor-pointer ${
+              className={`px-2.5 py-1 rounded-lg transition-colors cursor-pointer shrink-0 ${
                 activeFilter === 'completed'
                   ? 'bg-[#287C78] text-white shadow-2xs'
                   : 'bg-[#F0F5F4] dark:bg-[#1C2828] text-[#586268] hover:text-[#11181C] dark:text-[#8E9E9E]'
               }`}
             >
               Đã xong
+            </button>
+            <button
+              onClick={() => setActiveFilter('archived')}
+              className={`px-2.5 py-1 rounded-lg transition-colors cursor-pointer shrink-0 ${
+                activeFilter === 'archived'
+                  ? 'bg-[#287C78] text-white shadow-2xs'
+                  : 'bg-[#F0F5F4] dark:bg-[#1C2828] text-[#586268] hover:text-[#11181C] dark:text-[#8E9E9E]'
+              }`}
+            >
+              Lưu trữ
             </button>
           </div>
         </div>

@@ -171,13 +171,22 @@ export function parseVietnameseReminderText(
   }
 
   // 6. Title extraction
-  // Clean command prefixes like "nhắc chú", "nhắc tôi", "nhắc nhở con", "lên lịch"...
+  // Clean temporal phrases, time phrases, and command prefixes from raw text
   let cleanedTitle = raw
-    .replace(/^(hãy\s+)?(nhắc|lên lịch|đặt lịch|hẹn giờ|báo thức)\s*(cho\s+)?(chú|bác|tôi|cô|bà|anh|em|mình|nhé|nha|giúp)?\s*/i, '')
-    .replace(/(nhé|nha|nhen|ạ|nhé con|nha con|giúp chú|giúp bác|giúp tôi)$/i, '')
+    .replace(/hàng\s+ngày|mỗi\s+ngày|hằng\s+ngày|hàng\s+tuần|mỗi\s+tuần|hàng\s+tháng|mỗi\s+tháng/gi, '')
+    .replace(/\d+\s*(phút|p)\s*(nữa|sau)/gi, '')
+    .replace(/\d+\s*(tiếng|giờ|h)\s*(nữa|sau)/gi, '')
+    .replace(/ngày\s+mai|sáng\s+mai|chiều\s+mai|tối\s+mai|trưa\s+mai|ngày\s+mốt|ngày\s+kia|hôm\s+nay|sáng\s+nay|chiều\s+nay|tối\s+nay|trưa\s+nay|hôm\s+kia/gi, '')
+    .replace(/lúc\s+\d{1,2}(:\d{2}|\s*h\s*\d{0,2}|\s*giờ\s*\d{0,2})?(\s*(sáng|trưa|chiều|tối|đêm))?/gi, '')
+    .replace(/\b\d{1,2}(:\d{2}|\s*h\s*\d{0,2}|\s*giờ\s*\d{0,2})?(\s*(sáng|trưa|chiều|tối|đêm))/gi, '')
+    .replace(/lúc\s+(sáng|trưa|chiều|tối|đêm)/gi, '')
+    .replace(/\b(sáng|trưa|chiều|tối|đêm)\b/gi, '')
+    .replace(/\b(hãy\s+)?(nhắc|lên\s+lịch|đặt\s+lịch|hẹn\s+giờ|báo\s+thức|nhắc\s+nhở)\b(\s*(cho\s+)?(chú|bác|tôi|cô|bà|anh|em|mình|nhé|nha|giúp))?/gi, '')
+    .replace(/(nhé|nha|nhen|ạ|nhé con|nha con|giúp chú|giúp bác|giúp tôi)$/gi, '')
+    .replace(/\s+/g, ' ')
     .trim();
 
-  // If after time parsing the title still has temporal words, keep it clean
+  // If title was stripped down too much, fallback to sensible category defaults
   if (!cleanedTitle || cleanedTitle.length < 3) {
     if (category === 'medication') cleanedTitle = 'Uống thuốc đúng giờ';
     else if (category === 'appointment') cleanedTitle = 'Cuộc hẹn quan trọng';

@@ -16,6 +16,7 @@ import {
   Sparkles,
   Flame,
   Download,
+  Trash2,
 } from 'lucide-react';
 import { DetailedReminderModal } from './DetailedReminderModal';
 import { ReminderCalendarView } from './ReminderCalendarView';
@@ -43,6 +44,7 @@ export const RemindersPage: React.FC<RemindersPageProps> = ({
   // Modal State
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingReminder, setEditingReminder] = useState<Reminder | null>(null);
+  const [deletingReminder, setDeletingReminder] = useState<Reminder | null>(null);
   const [selectedCalendarDate, setSelectedCalendarDate] = useState<string | undefined>(undefined);
 
   // Filter & Search
@@ -98,8 +100,18 @@ export const RemindersPage: React.FC<RemindersPageProps> = ({
   };
 
   const handleDeleteReminder = (id: string) => {
-    reminderService.deleteReminder(id);
-    if (onShowToast) onShowToast('🗑️ Đã xóa nhắc nhở');
+    const rem = reminders.find((r) => r.id === id);
+    if (rem) {
+      setDeletingReminder(rem);
+    }
+  };
+
+  const handleConfirmDelete = () => {
+    if (deletingReminder) {
+      reminderService.deleteReminder(deletingReminder.id);
+      if (onShowToast) onShowToast(`🗑️ Đã xóa nhắc nhở "${deletingReminder.title}"`);
+      setDeletingReminder(null);
+    }
   };
 
   const handleToggleComplete = (id: string) => {
@@ -133,7 +145,7 @@ export const RemindersPage: React.FC<RemindersPageProps> = ({
   }, [reminders, searchQuery, selectedCategory]);
 
   // Group active vs completed
-  const activeReminders = filteredReminders.filter((r) => r.status !== 'completed');
+  const activeReminders = filteredReminders.filter((r) => r.status === 'active');
   const completedReminders = filteredReminders.filter((r) => r.status === 'completed');
 
   const groupedActive = useMemo(
@@ -143,13 +155,13 @@ export const RemindersPage: React.FC<RemindersPageProps> = ({
 
   // Category counts for badges
   const counts = useMemo(() => {
-    const uncompleted = reminders.filter((r) => r.status !== 'completed');
+    const activeOnly = reminders.filter((r) => r.status === 'active');
     return {
-      all: uncompleted.length,
-      medication: uncompleted.filter((r) => r.category === 'medication').length,
-      appointment: uncompleted.filter((r) => r.category === 'appointment').length,
-      family: uncompleted.filter((r) => r.category === 'family').length,
-      high_priority: uncompleted.filter((r) => r.priority === 'high').length,
+      all: activeOnly.length,
+      medication: activeOnly.filter((r) => r.category === 'medication').length,
+      appointment: activeOnly.filter((r) => r.category === 'appointment').length,
+      family: activeOnly.filter((r) => r.category === 'family').length,
+      high_priority: activeOnly.filter((r) => r.priority === 'high').length,
       completed: reminders.filter((r) => r.status === 'completed').length,
     };
   }, [reminders]);
@@ -494,6 +506,42 @@ export const RemindersPage: React.FC<RemindersPageProps> = ({
         initialReminder={editingReminder}
         initialDate={selectedCalendarDate}
       />
+
+      {/* Delete Confirmation Modal */}
+      {deletingReminder && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4 z-50 animate-in fade-in duration-150">
+          <div className="bg-white dark:bg-[#1A2626] rounded-3xl p-6 max-w-sm w-full space-y-4 border border-gray-200 dark:border-gray-800 shadow-2xl">
+            <div className="flex items-center gap-3 text-rose-500">
+              <div className="p-3 rounded-2xl bg-rose-500/10 shrink-0">
+                <Trash2 className="w-6 h-6" />
+              </div>
+              <div>
+                <h3 className="font-extrabold text-base text-gray-900 dark:text-white">Xóa nhắc nhở?</h3>
+                <p className="text-xs text-gray-500 dark:text-gray-400">Xác nhận thao tác xóa</p>
+              </div>
+            </div>
+
+            <p className="text-xs sm:text-sm text-gray-600 dark:text-gray-300">
+              Chú có chắc chắn muốn xóa nhắc nhở <strong className="text-gray-900 dark:text-white">"{deletingReminder.title}"</strong> không ạ? Thao tác này không thể hoàn tác.
+            </p>
+
+            <div className="flex items-center justify-end gap-2.5 pt-2">
+              <button
+                onClick={() => setDeletingReminder(null)}
+                className="px-4 py-2.5 rounded-xl border border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-300 font-bold text-xs hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors cursor-pointer"
+              >
+                Hủy
+              </button>
+              <button
+                onClick={handleConfirmDelete}
+                className="px-4 py-2.5 rounded-xl bg-rose-600 hover:bg-rose-700 text-white font-bold text-xs transition-colors shadow-xs cursor-pointer"
+              >
+                Xóa nhắc nhở
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

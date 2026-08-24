@@ -9,6 +9,7 @@ export interface GroundingInput {
   appliedSessionActions: AgentAction[];
   rejectedSessionActions: { action: AgentAction; reason: string }[];
   executedAppActions: AppAction[];
+  pendingAppActions?: AppAction[];
   rejectedAppActions: { action: AppAction; reason: string }[];
   session?: LifeSession | null;
   userProfile?: UserProfile | null;
@@ -99,6 +100,7 @@ export function validateAndGroundAIResponse(input: GroundingInput): GroundingRes
     appliedSessionActions,
     rejectedSessionActions,
     executedAppActions,
+    pendingAppActions = [],
     rejectedAppActions,
     userProfile,
     userInput,
@@ -140,9 +142,20 @@ export function validateAndGroundAIResponse(input: GroundingInput): GroundingRes
     }
   }
 
-  // 3. App Action Rejection Grounding
-  // If an app action (like OPEN_SESSION with non-existent title) was rejected, explain truthfully
-  if (rejectedAppActions.length > 0 && executedAppActions.length === 0) {
+  // 3. App Action Rejection & Pending Confirmation Grounding
+  if (pendingAppActions.length > 0) {
+    const pendingAct = pendingAppActions[0];
+    const prompt = (pendingAct as any).confirmationPrompt || `Dạ ${honorifics.addressing}, ${honorifics.addressing} có chắc chắn muốn thực hiện thao tác này không ạ?`;
+    // If reply falsely claims action was already executed or doesn't ask confirmation
+    const claimsCompleted = /\b(đã|vừa)\s+(xóa|hủy|sửa|cập nhật|hoàn thành)\b/i.test(finalReply);
+    const lacksQuestion = !finalReply.includes('?') && !finalReply.toLowerCase().includes('chắc');
+
+    if (claimsCompleted || lacksQuestion) {
+      finalReply = prompt;
+      groundingNotes.push(`Reply grounded for pending confirmation action: ${pendingAct.type}`);
+      wasModified = true;
+    }
+  } else if (rejectedAppActions.length > 0 && executedAppActions.length === 0) {
     const firstAppReject = rejectedAppActions[0];
     if (firstAppReject.reason) {
       finalReply = `Dạ ${honorifics.addressing}, ${firstAppReject.reason}`;

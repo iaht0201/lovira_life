@@ -32,6 +32,7 @@ import { resolvePendingInteraction } from '../services/interaction/pendingIntera
 import { validateAndGroundAIResponse } from '../services/interaction/CapabilityResponseValidator';
 import { cloudSyncService } from '../services/firebase/cloudSyncService';
 import { LoviraAuthUser, CloudSyncSettings } from '../services/firebase/firebaseTypes';
+import { parseVietnameseReminderText } from '../utils/dateTimeResolver';
 
 export interface InteractionOptions {
   inputMode?: InteractionInputMode;
@@ -537,13 +538,24 @@ export function useSessionManager({
     rawAction: AppAction,
     appCtx: AppInteractionContext,
     rtCtx: any
-  ): Promise<{ executed: boolean; action: AppAction; reason?: string }> => {
+  ): Promise<{
+    status: 'executed' | 'pending_confirmation' | 'rejected';
+    executed: boolean;
+    action: AppAction;
+    reason?: string;
+    confirmationPrompt?: string;
+  }> => {
     const val = validateAppAction(rawAction, appCtx);
     if (!val.valid || !val.action) {
       if (val.reason) {
         showToast(`⚠️ ${val.reason}`);
       }
-      return { executed: false, action: rawAction, reason: val.reason || 'Hành động không hợp lệ' };
+      return {
+        status: 'rejected',
+        executed: false,
+        action: rawAction,
+        reason: val.reason || 'Hành động không hợp lệ',
+      };
     }
 
     const actionToApply = { ...val.action };
@@ -555,6 +567,7 @@ export function useSessionManager({
     }
 
     if (val.action.requiresConfirmation) {
+      const prompt = val.action.confirmationPrompt || 'Chú có chắc chắn muốn thực hiện thao tác này không ạ?';
       setPendingInteraction({
         type: 'confirm_action',
         data: {
@@ -566,17 +579,27 @@ export function useSessionManager({
           payload: val.action.payload,
           successReply: `Dạ vâng, con đã xóa nhắc nhở "${val.action.payload?.title || ''}" rồi ạ.`,
           cancelReply: 'Dạ vâng, con đã giữ nguyên nhắc nhở cho chú rồi ạ.',
-          question: val.action.confirmationPrompt || 'Chú có chắc chắn muốn thực hiện thao tác này không ạ?',
+          question: prompt,
         },
         createdAt: new Date().toISOString(),
         expiresAt: Date.now() + 180000,
       });
-      showToast(val.action.confirmationPrompt || 'Vui lòng xác nhận thao tác.');
-      return { executed: false, action: val.action, reason: 'Chờ người dùng xác nhận thao tác' };
+      showToast(prompt);
+      return {
+        status: 'pending_confirmation',
+        executed: false,
+        action: val.action,
+        confirmationPrompt: prompt,
+      };
     }
 
     const executed = await applyAppAction(actionToApply, rtCtx);
-    return { executed, action: actionToApply, reason: executed ? undefined : 'Lỗi khi thực thi thao tác' };
+    return {
+      status: executed ? 'executed' : 'rejected',
+      executed,
+      action: actionToApply,
+      reason: executed ? undefined : 'Lỗi khi thực thi thao tác',
+    };
   }, [showToast]);
 
   const sendInteraction = useCallback(async (
@@ -638,16 +661,52 @@ export function useSessionManager({
         setPendingInteraction(null);
       }
       if (pendingRes.resolved) {
+        let finalReply = pendingRes.reply || '';
         if (pendingRes.appAction) {
-          await executeValidatedAppAction(pendingRes.appAction, appContext, runtimeContext);
-        }
-        if (pendingRes.reply) {
-          if (inputMode === 'voice' || accessibilitySettings.speakResponse) {
-            speakWithVoiceStatus(pendingRes.reply);
+          const execRes = await executeValidatedAppAction(pendingRes.appAction, appContext, runtimeContext);
+          if (execRes.executed) {
+            finalReply = pendingRes.reply || 'Dạ vâng, con đã thực hiện xong rồi ạ.';
           } else {
-            showToast(pendingRes.reply);
+            finalReply = execRes.reason || 'Dạ, con chưa thực hiện được thao tác này do có lỗi xảy ra.';
+          }
+        }
+        if (finalReply) {
+          if (inputMode === 'voice' || accessibilitySettings.speakResponse) {
+            speakWithVoiceStatus(finalReply);
+          } else {
+            showToast(finalReply);
             setVoiceStatus('idle');
           }
+        } else {
+          setVoiceStatus('idle');
+        }
+        setIsLoading(false);
+        return;
+      }
+    }
+
+    // A2. Fast Deterministic Vietnamese Reminder Parsing
+    const parsedReminder = parseVietnameseReminderText(trimmedText);
+    if (parsedReminder) {
+      const reminderAction: AppAction = {
+        type: 'CREATE_REMINDER',
+        payload: {
+          title: parsedReminder.title,
+          scheduledAt: parsedReminder.scheduledAt,
+          category: parsedReminder.category,
+          repeat: parsedReminder.repeat,
+          priority: parsedReminder.priority,
+        },
+      };
+      const execRes = await executeValidatedAppAction(reminderAction, appContext, runtimeContext);
+      if (execRes.executed) {
+        const dObj = new Date(parsedReminder.scheduledAt);
+        const timeFormatted = dObj.toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' });
+        const dateFormatted = dObj.toLocaleDateString('vi-VN');
+        const confirmMsg = `Dạ, con đã lên lịch nhắc nhở "${parsedReminder.title}" vào lúc ${timeFormatted} (${dateFormatted}) rồi ạ.`;
+        showToast(confirmMsg);
+        if (inputMode === 'voice' || accessibilitySettings.speakResponse) {
+          speakWithVoiceStatus(confirmMsg);
         } else {
           setVoiceStatus('idle');
         }
@@ -711,13 +770,16 @@ export function useSessionManager({
 
         // Step 2: App Actions (AppAction[]) Validation & Execution
         const executedAppActions: AppAction[] = [];
+        const pendingAppActions: AppAction[] = [];
         const rejectedAppActions: { action: AppAction; reason: string }[] = [];
 
         if (appActions.length > 0) {
           for (const appAct of appActions) {
             const execRes = await executeValidatedAppAction(appAct, appContext, runtimeContext);
-            if (execRes.executed) {
+            if (execRes.status === 'executed') {
               executedAppActions.push(execRes.action);
+            } else if (execRes.status === 'pending_confirmation') {
+              pendingAppActions.push(execRes.action);
             } else {
               rejectedAppActions.push({ action: appAct, reason: execRes.reason || 'Thao tác bị từ chối' });
             }
@@ -732,6 +794,7 @@ export function useSessionManager({
           appliedSessionActions,
           rejectedSessionActions,
           executedAppActions,
+          pendingAppActions,
           rejectedAppActions,
           session: sessionAfterActions,
           userProfile,
@@ -844,13 +907,16 @@ export function useSessionManager({
       const rawSpeech = data.speech;
       const appActions: AppAction[] = data.appActions || [];
       const executedAppActions: AppAction[] = [];
+      const pendingAppActions: AppAction[] = [];
       const rejectedAppActions: { action: AppAction; reason: string }[] = [];
 
       if (appActions.length > 0) {
         for (const appAct of appActions) {
           const execRes = await executeValidatedAppAction(appAct, appContext, runtimeContext);
-          if (execRes.executed) {
+          if (execRes.status === 'executed') {
             executedAppActions.push(execRes.action);
+          } else if (execRes.status === 'pending_confirmation') {
+            pendingAppActions.push(execRes.action);
           } else {
             rejectedAppActions.push({ action: appAct, reason: execRes.reason || 'Thao tác bị từ chối' });
           }
@@ -881,6 +947,7 @@ export function useSessionManager({
         appliedSessionActions: [],
         rejectedSessionActions: [],
         executedAppActions,
+        pendingAppActions,
         rejectedAppActions,
         session: null,
         userProfile,
