@@ -28,6 +28,9 @@ import {
   setTTSVoice,
   getAvailableVoices,
   EdgeTTSVoice,
+  TTSEnginePreference,
+  getTTSEnginePreference,
+  setTTSEnginePreference,
 } from '../../services/ttsService';
 import { storageService } from '../../services/storageService';
 import { buildAddressing } from '../../utils/filterRelevantConditions';
@@ -61,6 +64,7 @@ export const SettingsPage: React.FC<SettingsPageProps> = ({
   const [provider, setProvider] = useState<'gemini' | 'groq' | 'demo'>(aiSettings.provider);
   const [selectedModel, setSelectedModel] = useState(aiSettings.selectedModel || 'gemini-2.5-flash');
   const [voiceSupport, setVoiceSupport] = useState<'available' | 'unavailable' | 'pending'>('pending');
+  const [ttsEngine, setTtsEngine] = useState<TTSEnginePreference>(getTTSEnginePreference());
   const [selectedTtsVoice, setSelectedTtsVoice] = useState<EdgeTTSVoice>(getTTSVoice());
   const [testResult, setTestResult] = useState<string | null>(null);
   const [showClearConfirm, setShowClearConfirm] = useState(false);
@@ -69,6 +73,16 @@ export const SettingsPage: React.FC<SettingsPageProps> = ({
     setVoiceSupport(checkVietnameseVoiceSupport());
   }, []);
 
+  const handleSelectEngine = (engine: TTSEnginePreference) => {
+    setTtsEngine(engine);
+    setTTSEnginePreference(engine);
+    onShowToast?.(
+      engine === 'native'
+        ? 'Đã ưu tiên Giọng đọc máy / Trợ năng thiết bị (Mặc định)'
+        : 'Đã chuyển sang Giọng đọc AI Cloud (Microsoft Edge Neural)'
+    );
+  };
+
   const handleSelectTtsVoice = (v: EdgeTTSVoice) => {
     setSelectedTtsVoice(v);
     setTTSVoice(v);
@@ -76,10 +90,17 @@ export const SettingsPage: React.FC<SettingsPageProps> = ({
   };
 
   const handleTestTTS = () => {
-    speakText(
-      'Xin chào! Đây là thử nghiệm giọng đọc tiếng Việt Microsoft Edge Neural mượt mà của ứng dụng Lovira Life.',
-      { voice: selectedTtsVoice }
-    );
+    if (ttsEngine === 'native') {
+      speakText(
+        'Xin chào! Đây là thử nghiệm giọng đọc trực tiếp từ bộ trợ năng và thiết bị của bạn.',
+        { preferEngine: 'native' }
+      );
+    } else {
+      speakText(
+        'Xin chào! Đây là thử nghiệm giọng đọc tiếng Việt Microsoft Edge Neural mượt mà của ứng dụng Lovira Life.',
+        { voice: selectedTtsVoice, preferEngine: 'edge' }
+      );
+    }
   };
 
   const fontScales = [
@@ -325,8 +346,8 @@ export const SettingsPage: React.FC<SettingsPageProps> = ({
         </div>
       </section>
 
-      {/* 3. VIETNAMESE VOICE PACK CHECK & EDGE TTS */}
-      <section className="p-6 rounded-[22px] bg-lovira-card border border-lovira shadow-2xs space-y-4">
+      {/* 3. VIETNAMESE VOICE PACK CHECK & TTS ENGINE */}
+      <section className="p-6 rounded-[22px] bg-lovira-card border border-lovira shadow-2xs space-y-5">
         <div className="flex items-center justify-between border-b border-lovira-subtle pb-3.5">
           <div className="flex items-center gap-2.5">
             <div className="w-[36px] h-[36px] rounded-[12px] bg-[#ECFDF5] dark:bg-[#064E3B] text-[#059669] dark:text-[#34D399] flex items-center justify-center font-[700]">
@@ -334,77 +355,140 @@ export const SettingsPage: React.FC<SettingsPageProps> = ({
             </div>
             <div>
               <h3 className="text-[16px] font-[800] text-lovira-title">
-                Giọng nói tiếng Việt (Microsoft Edge Neural TTS)
+                Động cơ giọng đọc & Trợ năng âm thanh
               </h3>
               <p className="text-[12px] font-[500] text-lovira-muted">
-                Động cơ tổng hợp giọng nói trí tuệ nhân tạo cao cấp, phát âm chuẩn Việt tự nhiên
+                Tùy chọn ưu tiên giọng đọc nội bộ của máy hoặc giọng đọc AI Cloud truyền cảm
               </p>
             </div>
           </div>
 
           <span className="text-[11px] font-[700] px-3 py-1 rounded-full border bg-[#ECFDF5] text-[#047857] border-[#A7F3D0] dark:bg-[#064E3B] dark:text-[#34D399] dark:border-[#047857]">
-            ✓ Edge TTS Active
+            {ttsEngine === 'native' ? '✓ Trợ năng máy (Mặc định)' : '✓ Edge Neural TTS'}
           </span>
         </div>
 
-        <div className="space-y-4">
-          <p className="text-[12px] font-[500] text-lovira-muted leading-relaxed">
-            Chọn giọng đọc tiếng Việt ưa thích. Lovira sẽ sử dụng giọng nói này để đọc to phản hồi và trợ lý đồng hành:
-          </p>
-
-          {/* Voice selector cards */}
+        {/* Engine Preference Selector */}
+        <div className="space-y-2">
+          <label className="text-[12px] font-[700] text-lovira-title block">
+            Ưu tiên nguồn giọng đọc:
+          </label>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            {getAvailableVoices().map((v) => {
-              const isSelected = selectedTtsVoice === v.id;
-              return (
-                <button
-                  key={v.id}
-                  type="button"
-                  onClick={() => handleSelectTtsVoice(v.id)}
-                  className={`p-4 rounded-[16px] border text-left transition-all cursor-pointer relative overflow-hidden ${
-                    isSelected
-                      ? 'bg-lovira-badge-purple border-lovira-purple ring-2 ring-lovira-purple/20'
-                      : 'bg-lovira-input border-lovira hover:border-lovira-purple/50'
-                  }`}
-                >
-                  <div className="flex items-center justify-between mb-1.5">
-                    <span className="text-[14px] font-[800] text-lovira-title flex items-center gap-1.5">
-                      <span>{v.name}</span>
-                    </span>
-                    <span
-                      className={`text-[10px] font-[800] px-2 py-0.5 rounded-full ${
-                        v.gender === 'Nữ'
-                          ? 'bg-pink-100 text-pink-700 dark:bg-pink-950/50 dark:text-pink-300'
-                          : 'bg-blue-100 text-blue-700 dark:bg-blue-950/50 dark:text-blue-300'
-                      }`}
-                    >
-                      Giọng {v.gender}
-                    </span>
-                  </div>
-                  <p className="text-[11px] font-[500] text-lovira-muted leading-snug">
-                    {v.desc}
-                  </p>
-                  {isSelected && (
-                    <div className="mt-2 text-[11px] font-[700] text-lovira-purple flex items-center gap-1">
-                      <CheckCircle2 className="w-[14px] h-[14px]" />
-                      <span>Đang chọn</span>
-                    </div>
-                  )}
-                </button>
-              );
-            })}
-          </div>
-
-          <div className="flex items-center gap-3 pt-1">
             <button
               type="button"
-              onClick={handleTestTTS}
-              className="flex items-center gap-2 min-h-[42px] px-5 py-2.5 rounded-[12px] bg-[#287C78] hover:bg-[#1F625F] text-white font-[700] text-[13px] shadow-xs transition-colors cursor-pointer"
+              onClick={() => handleSelectEngine('native')}
+              className={`p-4 rounded-[16px] border text-left transition-all cursor-pointer relative ${
+                ttsEngine === 'native'
+                  ? 'bg-lovira-badge-purple border-lovira-purple ring-2 ring-lovira-purple/20'
+                  : 'bg-lovira-input border-lovira hover:border-lovira-purple/50'
+              }`}
             >
-              <Volume2 className="w-[18px] h-[18px]" />
-              <span>Thử nghe giọng đọc Edge TTS</span>
+              <div className="flex items-center justify-between mb-1">
+                <span className="text-[14px] font-[800] text-lovira-title">
+                  📱 Giọng đọc máy / Trợ năng máy
+                </span>
+                <span className="text-[10px] font-[800] px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-700 dark:bg-emerald-950/50 dark:text-emerald-300">
+                  Mặc định
+                </span>
+              </div>
+              <p className="text-[11px] font-[500] text-lovira-muted leading-relaxed">
+                Sử dụng bộ trợ năng âm thanh tích hợp sẵn của máy (TalkBack, VoiceOver, Android TTS). Hoạt động hoàn toàn offline, không phụ thuộc mạng.
+              </p>
+              {ttsEngine === 'native' && (
+                <div className="mt-2.5 text-[11px] font-[700] text-lovira-purple flex items-center gap-1">
+                  <CheckCircle2 className="w-[14px] h-[14px]" />
+                  <span>Đang ưu tiên sử dụng</span>
+                </div>
+              )}
+            </button>
+
+            <button
+              type="button"
+              onClick={() => handleSelectEngine('edge')}
+              className={`p-4 rounded-[16px] border text-left transition-all cursor-pointer relative ${
+                ttsEngine === 'edge'
+                  ? 'bg-lovira-badge-purple border-lovira-purple ring-2 ring-lovira-purple/20'
+                  : 'bg-lovira-input border-lovira hover:border-lovira-purple/50'
+              }`}
+            >
+              <div className="flex items-center justify-between mb-1">
+                <span className="text-[14px] font-[800] text-lovira-title">
+                  ☁️ Giọng đọc AI Cloud (Edge TTS)
+                </span>
+                <span className="text-[10px] font-[800] px-2 py-0.5 rounded-full bg-indigo-100 text-indigo-700 dark:bg-indigo-950/50 dark:text-indigo-300">
+                  Neural AI
+                </span>
+              </div>
+              <p className="text-[11px] font-[500] text-lovira-muted leading-relaxed">
+                Giọng đọc AI ngữ điệu tự nhiên, truyền cảm như người thật. Tự động chuyển về giọng máy nếu mất kết nối mạng.
+              </p>
+              {ttsEngine === 'edge' && (
+                <div className="mt-2.5 text-[11px] font-[700] text-lovira-purple flex items-center gap-1">
+                  <CheckCircle2 className="w-[14px] h-[14px]" />
+                  <span>Đang ưu tiên sử dụng</span>
+                </div>
+              )}
             </button>
           </div>
+        </div>
+
+        {/* Voice selector cards for Edge TTS */}
+        {ttsEngine === 'edge' && (
+          <div className="space-y-3 pt-2 border-t border-lovira-subtle animate-in fade-in duration-200">
+            <p className="text-[12px] font-[700] text-lovira-title">
+              Chọn nhân vật giọng đọc AI:
+            </p>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              {getAvailableVoices().map((v) => {
+                const isSelected = selectedTtsVoice === v.id;
+                return (
+                  <button
+                    key={v.id}
+                    type="button"
+                    onClick={() => handleSelectTtsVoice(v.id)}
+                    className={`p-3.5 rounded-[14px] border text-left transition-all cursor-pointer relative overflow-hidden ${
+                      isSelected
+                        ? 'bg-lovira-badge-purple border-lovira-purple ring-1 ring-lovira-purple'
+                        : 'bg-lovira-input border-lovira hover:border-lovira-purple/50'
+                    }`}
+                  >
+                    <div className="flex items-center justify-between mb-1">
+                      <span className="text-[13px] font-[800] text-lovira-title">
+                        {v.name}
+                      </span>
+                      <span
+                        className={`text-[10px] font-[800] px-2 py-0.5 rounded-full ${
+                          v.gender === 'Nữ'
+                            ? 'bg-pink-100 text-pink-700 dark:bg-pink-950/50 dark:text-pink-300'
+                            : 'bg-blue-100 text-blue-700 dark:bg-blue-950/50 dark:text-blue-300'
+                        }`}
+                      >
+                        Giọng {v.gender}
+                      </span>
+                    </div>
+                    <p className="text-[11px] font-[500] text-lovira-muted leading-snug">
+                      {v.desc}
+                    </p>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        )}
+
+        <div className="flex items-center gap-3 pt-1">
+          <button
+            type="button"
+            onClick={handleTestTTS}
+            className="flex items-center gap-2 min-h-[42px] px-5 py-2.5 rounded-[12px] bg-[#287C78] hover:bg-[#1F625F] text-white font-[700] text-[13px] shadow-xs transition-colors cursor-pointer"
+          >
+            <Volume2 className="w-[18px] h-[18px]" />
+            <span>
+              {ttsEngine === 'native'
+                ? 'Thử nghe giọng đọc máy của bạn'
+                : 'Thử nghe giọng đọc Edge AI'}
+            </span>
+          </button>
         </div>
       </section>
 

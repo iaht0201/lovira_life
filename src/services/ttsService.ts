@@ -1,13 +1,31 @@
 export type EdgeTTSVoice = 'vi-VN-HoaiMyNeural' | 'vi-VN-NamMinhNeural';
+export type TTSEnginePreference = 'native' | 'edge';
 
 export interface SpeakOptions {
   onStart?: () => void;
   onEnd?: () => void;
   onError?: (err: any) => void;
   voice?: EdgeTTSVoice;
+  preferEngine?: TTSEnginePreference;
 }
 
 const STORAGE_KEY_VOICE = 'lovira_edge_tts_voice';
+const STORAGE_KEY_ENGINE = 'lovira_tts_engine_preference';
+
+/**
+ * Mặc định ưu tiên giọng đọc nội bộ máy (Web Speech API / Trợ năng thiết bị).
+ */
+export function getTTSEnginePreference(): TTSEnginePreference {
+  if (typeof window === 'undefined') return 'native';
+  const saved = localStorage.getItem(STORAGE_KEY_ENGINE);
+  if (saved === 'edge') return 'edge';
+  return 'native'; // Mặc định là 'native' (giọng đọc máy)
+}
+
+export function setTTSEnginePreference(engine: TTSEnginePreference): void {
+  if (typeof window === 'undefined') return;
+  localStorage.setItem(STORAGE_KEY_ENGINE, engine);
+}
 
 export function getTTSVoice(): EdgeTTSVoice {
   if (typeof window === 'undefined') return 'vi-VN-HoaiMyNeural';
@@ -39,6 +57,11 @@ export function getAvailableVoices(): Array<{ id: EdgeTTSVoice; name: string; ge
 }
 
 export function checkVietnameseVoiceSupport(): 'available' | 'unavailable' | 'pending' {
+  if (typeof window !== 'undefined' && 'speechSynthesis' in window) {
+    const voices = window.speechSynthesis.getVoices();
+    const hasVi = voices.some((v) => v.lang.toLowerCase().startsWith('vi'));
+    if (hasVi) return 'available';
+  }
   return 'available';
 }
 
@@ -113,13 +136,104 @@ export function speakText(
     return true;
   }
 
+  const preferredEngine = options.preferEngine || getTTSEnginePreference();
+
+  // 1. Nếu ưu tiên giọng đọc máy (Mặc định)
+  if (preferredEngine === 'native') {
+    if (typeof window !== 'undefined' && 'speechSynthesis' in window) {
+      console.log(`[TTS] Prioritizing Device Native Voice for: "${cleanText.substring(0, 40)}..."`);
+      return speakWebSpeech(cleanText, options, () => {
+        console.warn('[TTS] WebSpeech fallback to Edge-TTS...');
+        speakEdgeTTS(cleanText, options);
+      });
+    } else {
+      // Thiết bị không hỗ trợ WebSpeech -> chuyển sang Edge-TTS
+      console.log(`[TTS] Device has no SpeechSynthesis, falling back to Edge-TTS...`);
+      return speakEdgeTTS(cleanText, options);
+    }
+  }
+
+  // 2. Nếu ưu tiên Edge TTS Neural
+  return speakEdgeTTS(cleanText, options, () => {
+    console.warn('[TTS] Edge-TTS failed, falling back to Native WebSpeech...');
+    speakWebSpeech(cleanText, options);
+  });
+}
+
+function speakWebSpeech(
+  cleanText: string,
+  options: SpeakOptions,
+  onFallback?: () => void
+): boolean {
+  if (typeof window === 'undefined' || !('speechSynthesis' in window)) {
+    if (onFallback) {
+      onFallback();
+      return true;
+    }
+    speakingActive = false;
+    options.onError?.('Trình duyệt không hỗ trợ đọc giọng nói');
+    return false;
+  }
+
+  try {
+    window.speechSynthesis.cancel();
+    const utterance = new SpeechSynthesisUtterance(cleanText);
+    utterance.lang = 'vi-VN';
+    utterance.rate = 0.95;
+    utterance.pitch = 1.0;
+
+    const voices = window.speechSynthesis.getVoices();
+    const viVoice = voices.find((v) => v.lang.toLowerCase().startsWith('vi'));
+    if (viVoice) {
+      utterance.voice = viVoice;
+    }
+
+    let started = false;
+
+    utterance.onstart = () => {
+      started = true;
+      speakingActive = true;
+      options.onStart?.();
+    };
+
+    utterance.onend = () => {
+      speakingActive = false;
+      options.onEnd?.();
+    };
+
+    utterance.onerror = (e) => {
+      speakingActive = false;
+      if (!started && onFallback) {
+        onFallback();
+        return;
+      }
+      options.onError?.(e);
+    };
+
+    window.speechSynthesis.speak(utterance);
+    return true;
+  } catch (e) {
+    speakingActive = false;
+    if (onFallback) {
+      onFallback();
+      return true;
+    }
+    options.onError?.(e);
+    return false;
+  }
+}
+
+function speakEdgeTTS(
+  cleanText: string,
+  options: SpeakOptions,
+  onFallback?: () => void
+): boolean {
   const selectedVoice = options.voice || getTTSVoice();
   speakingActive = true;
   options.onStart?.();
 
-  console.log(`[TTS] Requesting Edge-TTS for: "${cleanText.substring(0, 50)}..." (Voice: ${selectedVoice})`);
+  console.log(`[TTS] Requesting Edge-TTS: "${cleanText.substring(0, 40)}..." (Voice: ${selectedVoice})`);
 
-  // 1. Try Edge TTS API Endpoint first
   fetch('/api/tts', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
@@ -136,9 +250,6 @@ export function speakText(
     .then((data: { audioBase64?: string; voice?: string; engine?: string }) => {
       if (!data.audioBase64) throw new Error('Missing audioBase64 from Edge TTS response');
 
-      console.log(`[TTS] Edge-TTS audio received (${data.engine || 'EdgeTTS'}), playing audio...`);
-
-      // Convert Base64 data URL to Blob for seamless browser audio playback
       const base64Data = data.audioBase64.replace(/^data:audio\/\w+;base64,/, '');
       const binaryString = atob(base64Data);
       const bytes = new Uint8Array(binaryString.length);
@@ -153,7 +264,6 @@ export function speakText(
       activeAudio = audio;
 
       audio.onended = () => {
-        console.log('[TTS] Audio playback completed.');
         speakingActive = false;
         activeAudio = null;
         if (activeBlobUrl) {
@@ -164,68 +274,39 @@ export function speakText(
       };
 
       audio.onerror = (e) => {
-        console.warn('[TTS] Audio Playback Error, falling back to WebSpeech:', e);
         speakingActive = false;
         activeAudio = null;
         if (activeBlobUrl) {
           URL.revokeObjectURL(activeBlobUrl);
           activeBlobUrl = null;
         }
-        speakWebSpeechFallback(cleanText, options);
+        if (onFallback) {
+          onFallback();
+        } else {
+          options.onError?.(e);
+        }
       };
 
       const playPromise = audio.play();
       if (playPromise !== undefined) {
         playPromise.catch((playErr) => {
-          console.warn('[TTS] Autoplay/Audio play error, falling back to WebSpeech:', playErr);
-          speakWebSpeechFallback(cleanText, options);
+          if (onFallback) {
+            onFallback();
+          } else {
+            options.onError?.(playErr);
+          }
         });
       }
     })
     .catch((err) => {
-      console.warn('[TTS] Edge TTS Service Failure, falling back to WebSpeech:', err);
-      speakWebSpeechFallback(cleanText, options);
+      if (onFallback) {
+        onFallback();
+      } else {
+        speakingActive = false;
+        options.onError?.(err);
+      }
     });
 
   return true;
 }
 
-function speakWebSpeechFallback(cleanText: string, options: SpeakOptions): void {
-  if (typeof window === 'undefined' || !('speechSynthesis' in window)) {
-    speakingActive = false;
-    options.onError?.('Trình duyệt không hỗ trợ đọc giọng nói');
-    return;
-  }
-
-  try {
-    window.speechSynthesis.cancel();
-    const utterance = new SpeechSynthesisUtterance(cleanText);
-    utterance.lang = 'vi-VN';
-    utterance.rate = 0.95;
-    utterance.pitch = 1.0;
-
-    const voices = window.speechSynthesis.getVoices();
-    const viVoice = voices.find((v) => v.lang.toLowerCase().startsWith('vi'));
-    if (viVoice) utterance.voice = viVoice;
-
-    utterance.onstart = () => {
-      speakingActive = true;
-      options.onStart?.();
-    };
-
-    utterance.onend = () => {
-      speakingActive = false;
-      options.onEnd?.();
-    };
-
-    utterance.onerror = (e) => {
-      speakingActive = false;
-      options.onError?.(e);
-    };
-
-    window.speechSynthesis.speak(utterance);
-  } catch (e) {
-    speakingActive = false;
-    options.onError?.(e);
-  }
-}
