@@ -1,7 +1,7 @@
 import { GoogleGenAI, Type } from '@google/genai';
-import { LifeSession, LoviraAgentResponse, AgentAction, AppAction, UserProfile, InteractionInputMode, AppInteractionContext } from '../../types';
-import { buildSessionContextPrompt } from './SessionContextBuilder';
-import { deduceHonorifics } from '../conversationStyle';
+import { LifeSession, LoviraAgentResponse, AgentAction, AppAction, UserProfile, InteractionInputMode, AppInteractionContext } from '../../types.js';
+import { buildSessionContextPrompt } from './SessionContextBuilder.js';
+import { deduceHonorifics } from '../conversationStyle.js';
 
 export class GeminiProvider {
   private getClient(): GoogleGenAI | null {

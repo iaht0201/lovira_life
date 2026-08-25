@@ -1,6 +1,6 @@
-import { Reminder, ReminderCategory, ReminderPriority, ReminderRepeat, ReminderStatus, AgendaItem, SnoozePreset } from '../types/reminder';
-import { BriefSessionHeader, storageService } from './storageService';
-import { notificationService } from './notificationService';
+import { Reminder, ReminderCategory, ReminderPriority, ReminderRepeat, ReminderStatus, AgendaItem, SnoozePreset } from '../types/reminder.js';
+import { BriefSessionHeader, storageService } from './storageService.js';
+import { notificationService } from './notificationService.js';
 
 const KEY_REMINDERS = 'lovira_reminders';
 const NOTIFIED_CACHE = new Set<string>();

@@ -1,10 +1,10 @@
-import { AppAction } from './appActionTypes';
-import { AgentAction, LifeSession, UserProfile } from '../../types';
-import { normalizeVietnameseText, stripVietnameseAccents } from './VietnameseNormalizer';
-import { reminderService } from '../reminderService';
-import { SCENARIO_REGISTRY, ScenarioRegistryEntry } from '../scenarioRegistry';
-import { deduceHonorifics } from '../conversationStyle';
-import { fetchCurrentWeatherReport } from '../weatherService';
+import { AppAction } from './appActionTypes.js';
+import { AgentAction, LifeSession, UserProfile } from '../../types.js';
+import { normalizeVietnameseText, stripVietnameseAccents } from './VietnameseNormalizer.js';
+import { reminderService } from '../reminderService.js';
+import { SCENARIO_REGISTRY, ScenarioRegistryEntry } from '../scenarioRegistry.js';
+import { deduceHonorifics } from '../conversationStyle.js';
+import { fetchCurrentWeatherReport } from '../weatherService.js';
 
 export type FastIntentSource = 'exact' | 'alias' | 'pattern' | 'context' | 'utility';
 

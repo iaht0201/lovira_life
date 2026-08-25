@@ -1,7 +1,7 @@
-import { PendingInteraction } from './interactionTypes';
-import { AppAction } from './appActionTypes';
-import { parseClarifiedTime } from '../../utils/dateTimeResolver';
-import { fetchCurrentWeatherReport } from '../weatherService';
+import { PendingInteraction } from './interactionTypes.js';
+import { AppAction } from './appActionTypes.js';
+import { parseClarifiedTime } from '../../utils/dateTimeResolver.js';
+import { fetchCurrentWeatherReport } from '../weatherService.js';
 
 const AFFIRMATIVE_REGEX =
   /^(có|ừ|uh|u|ok|oke|okie|được|tạo đi|tạo giúp|tạo luôn|đồng ý|nhất trí|tạo giúp chú|tạo giúp bác|tạo giúp tôi|tạo giúp cô|làm đi|tiến hành đi|mở đi|mở giúp|xóa|xóa đi|xóa giúp|xóa luôn|chắc chắn|đồng ý xóa|ừ xóa đi|ok xóa)$/i;

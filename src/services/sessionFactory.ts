@@ -7,12 +7,12 @@ import {
   ImportantFact,
   AccessibilityContext,
   UserProfile,
-} from '../types';
-import { calculateNextRecommendedAction } from './actionEngine';
-import { ScenarioRoutingResult } from './scenarioRouter';
-import { normalizeGeneratedLifePlan } from './planValidator';
-import { deduceHonorifics, formatInitialSessionGreeting } from './conversationStyle';
-import { SCENARIO_REGISTRY } from './scenarioRegistry';
+} from '../types.js';
+import { calculateNextRecommendedAction } from './actionEngine.js';
+import { ScenarioRoutingResult } from './scenarioRouter.js';
+import { normalizeGeneratedLifePlan } from './planValidator.js';
+import { deduceHonorifics, formatInitialSessionGreeting } from './conversationStyle.js';
+import { SCENARIO_REGISTRY } from './scenarioRegistry.js';
 
 /**
  * Creates a complete, fully-hydrated LifeSession from a GeneratedSessionPlan

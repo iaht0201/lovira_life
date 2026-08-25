@@ -1,7 +1,7 @@
-import { AppAction } from './appActionTypes';
-import { AppInteractionContext } from './interactionTypes';
-import { reminderService } from '../reminderService';
-import { storageService } from '../storageService';
+import { AppAction } from './appActionTypes.js';
+import { AppInteractionContext } from './interactionTypes.js';
+import { reminderService } from '../reminderService.js';
+import { storageService } from '../storageService.js';
 
 export interface AppActionValidationResult {
   valid: boolean;

@@ -1,6 +1,6 @@
-import { AgentAction, LifeSession, UserProfile } from '../../types';
-import { AppAction } from './appActionTypes';
-import { deduceHonorifics, HonorificContext, buildPartialSuccessReply } from '../conversationStyle';
+import { AgentAction, LifeSession, UserProfile } from '../../types.js';
+import { AppAction } from './appActionTypes.js';
+import { deduceHonorifics, HonorificContext, buildPartialSuccessReply } from '../conversationStyle.js';
 
 export interface GroundingInput {
   rawReply: string;

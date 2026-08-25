@@ -1,5 +1,5 @@
-import { LifeSession } from '../../types';
-import { GroqModel } from './GroqProvider';
+import { LifeSession } from '../../types.js';
+import { GroqModel } from './GroqProvider.js';
 
 export function selectGroqModel(message: string, session?: LifeSession | null): GroqModel {
   const text = message.toLowerCase();

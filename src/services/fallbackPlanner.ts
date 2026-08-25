@@ -1,7 +1,7 @@
-import { GeneratedSessionPlan } from '../types';
-import { SCENARIO_REGISTRY } from './scenarioRegistry';
-import { routeScenario, extractKnownFacts } from './scenarioRouter';
-import { normalizeGeneratedLifePlan } from './planValidator';
+import { GeneratedSessionPlan } from '../types.js';
+import { SCENARIO_REGISTRY } from './scenarioRegistry.js';
+import { routeScenario, extractKnownFacts } from './scenarioRouter.js';
+import { normalizeGeneratedLifePlan } from './planValidator.js';
 
 /**
  * Universal generic fallback plan generator for offline mode or demo fallback.

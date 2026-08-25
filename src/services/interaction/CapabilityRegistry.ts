@@ -1,4 +1,4 @@
-import { AppActionType } from './appActionTypes';
+import { AppActionType } from './appActionTypes.js';
 
 export interface AppCapability {
   name: string;

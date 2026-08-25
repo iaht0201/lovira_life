@@ -2,8 +2,8 @@ import {
   LifeSession,
   AgentAction,
   UserProfile,
-} from '../types';
-import { reminderService } from './reminderService';
+} from '../types.js';
+import { reminderService } from './reminderService.js';
 import {
   findBestMatchingTask,
   resolveCurrentStep,
@@ -12,8 +12,8 @@ import {
   resolveMultiTaskCompletionTargets,
   resolveSemanticTaskMatches,
   applyAgentActionBatch,
-} from './actionEngine';
-import { deduceHonorifics, formatSoftNextStepGuidance } from './conversationStyle';
+} from './actionEngine.js';
+import { deduceHonorifics, formatSoftNextStepGuidance } from './conversationStyle.js';
 
 export { deduceHonorifics, formatSoftNextStepGuidance };
 

@@ -1,4 +1,4 @@
-import { ScenarioFamily, LifeModule, ImportantFactType } from '../types';
+import { ScenarioFamily, LifeModule, ImportantFactType } from '../types.js';
 
 export interface ScenarioRegistryEntry {
   family: ScenarioFamily;

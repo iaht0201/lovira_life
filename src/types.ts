@@ -1,13 +1,13 @@
-import { AppAction } from './services/interaction/appActionTypes';
-import { PendingInteraction } from './services/interaction/interactionTypes';
+import { AppAction } from './services/interaction/appActionTypes.js';
+import { PendingInteraction } from './services/interaction/interactionTypes.js';
 
-export * from './types/userProfile';
-export * from './types/clarification';
-export * from './types/notification';
-export * from './types/reminder';
-export * from './services/voice/voiceTypes';
-export * from './services/interaction/interactionTypes';
-export * from './services/interaction/appActionTypes';
+export * from './types/userProfile.js';
+export * from './types/clarification.js';
+export * from './types/notification.js';
+export * from './types/reminder.js';
+export * from './services/voice/voiceTypes.js';
+export * from './services/interaction/interactionTypes.js';
+export * from './services/interaction/appActionTypes.js';
 
 export type SessionStatus = 'draft' | 'active' | 'paused' | 'completed' | 'archived';
 
@@ -284,4 +284,4 @@ export interface AISettings {
   demoMode: boolean;
 }
 
-export type { BriefSessionHeader } from './services/storageService';
+export type { BriefSessionHeader } from './services/storageService.js';

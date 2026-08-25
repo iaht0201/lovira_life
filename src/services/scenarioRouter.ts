@@ -1,5 +1,5 @@
-import { ScenarioFamily, LifeModule, ImportantFactType } from '../types';
-import { SCENARIO_REGISTRY } from './scenarioRegistry';
+import { ScenarioFamily, LifeModule, ImportantFactType } from '../types.js';
+import { SCENARIO_REGISTRY } from './scenarioRegistry.js';
 
 export interface ScenarioRoutingResult {
   family: ScenarioFamily;

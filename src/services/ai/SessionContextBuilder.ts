@@ -1,10 +1,10 @@
-import { LifeSession, UserProfile, InteractionInputMode, AppInteractionContext } from '../../types';
-import { getRelevantConditions } from '../../utils/filterRelevantConditions';
-import { resolveCurrentStep } from '../actionEngine';
-import { getCapabilityGroundingPrompt } from '../interaction/CapabilityRegistry';
-import { deduceHonorifics } from '../conversationStyle';
-import { BehaviorService } from '../behaviorService';
-import { reminderService } from '../reminderService';
+import { LifeSession, UserProfile, InteractionInputMode, AppInteractionContext } from '../../types.js';
+import { getRelevantConditions } from '../../utils/filterRelevantConditions.js';
+import { resolveCurrentStep } from '../actionEngine.js';
+import { getCapabilityGroundingPrompt } from '../interaction/CapabilityRegistry.js';
+import { deduceHonorifics } from '../conversationStyle.js';
+import { BehaviorService } from '../behaviorService.js';
+import { reminderService } from '../reminderService.js';
 
 export interface PromptContextOptions {
   session?: LifeSession | null;

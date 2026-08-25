@@ -5,7 +5,7 @@ import {
   LifeTask,
   ImportantFact,
   RecommendedAction,
-} from '../types';
+} from '../types.js';
 
 export function reconcileParentTaskStatus(task: LifeTask): LifeTask {
   if (!task.subtasks || task.subtasks.length === 0) return task;

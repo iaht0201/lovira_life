@@ -1,6 +1,6 @@
-import { AgentAction } from '../types';
-import { UserProfile } from '../types/userProfile';
-import { buildAddressing } from '../utils/filterRelevantConditions';
+import { AgentAction } from '../types.js';
+import { UserProfile } from '../types/userProfile.js';
+import { buildAddressing } from '../utils/filterRelevantConditions.js';
 
 export interface HonorificContext {
   addressing: string;

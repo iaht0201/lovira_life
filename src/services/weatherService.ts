@@ -4,7 +4,7 @@
  * Supports explicit city detection, daily precipitation probabilities, Open-Meteo Geocoding, and location clarification.
  */
 
-import { stripVietnameseAccents } from './interaction/VietnameseNormalizer';
+import { stripVietnameseAccents } from './interaction/VietnameseNormalizer.js';
 
 export interface WeatherReportOptions {
   addressing?: string;

@@ -1,6 +1,6 @@
-import { GeneratedSessionPlan, GeneratedTask, ScenarioFamily, LifeModule, ImportantFactType } from '../types';
-import { ScenarioRoutingResult, extractKnownFacts } from './scenarioRouter';
-import { SCENARIO_REGISTRY } from './scenarioRegistry';
+import { GeneratedSessionPlan, GeneratedTask, ScenarioFamily, LifeModule, ImportantFactType } from '../types.js';
+import { ScenarioRoutingResult, extractKnownFacts } from './scenarioRouter.js';
+import { SCENARIO_REGISTRY } from './scenarioRegistry.js';
 
 export interface PlanValidationResult {
   valid: boolean;

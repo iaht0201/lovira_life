@@ -6,8 +6,8 @@ import {
   InteractionInputMode,
   AppInteractionContext,
   AppAction,
-} from '../../types';
-import { buildSessionContextPrompt } from './SessionContextBuilder';
+} from '../../types.js';
+import { buildSessionContextPrompt } from './SessionContextBuilder.js';
 
 // Enum cho toàn bộ các mô hình Groq chính thức được hỗ trợ
 export enum GroqModel {
