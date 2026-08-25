@@ -28,8 +28,6 @@ export function normalizeVietnameseText(input: string): string {
     [/\bmở\s+cờ\s+me\s+ra\b/g, 'mở camera'],
     [/\bmở\s+ca\s+me\s+ra\b/g, 'mở camera'],
     [/\bmo\s+camera\b/g, 'mở camera'],
-    [/\bchụp\s+ảnh\b/g, 'mở camera'],
-    [/\bchụp\s+hình\b/g, 'mở camera'],
     [/\bmở\s+cam\b/g, 'mở camera'],
 
     // Dialect words

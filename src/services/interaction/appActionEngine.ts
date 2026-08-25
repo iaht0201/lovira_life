@@ -9,6 +9,7 @@ export interface AppActionRuntimeContext {
   openProfile: () => void;
   openSession: (sessionId: string) => void;
   createSession: (goal: string) => Promise<void>;
+  createSessionFromScenario?: (scenarioKey: string, goal: string) => Promise<void>;
   openCamera: () => void;
   openReminders?: () => void;
   updateAccessibilitySetting?: (key: string, value: any) => void;
@@ -176,6 +177,11 @@ export async function applyAppAction(
 
       case 'CREATE_SESSION': {
         const goal = action.payload?.goal;
+        const scenarioKey = action.payload?.scenarioKey;
+        if (scenarioKey && context.createSessionFromScenario) {
+          await context.createSessionFromScenario(scenarioKey, goal || '');
+          return true;
+        }
         if (goal) {
           await context.createSession(goal);
           return true;

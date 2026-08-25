@@ -67,16 +67,22 @@ export async function routeFastIntent(
   // LAYER A: Certain Local Navigation & App Controls (Confidence 1.0)
   // -------------------------------------------------------------
 
-  // A1. Camera & Scanner
-  if (
-    normalized.includes('mở camera') ||
-    normalized.includes('máy ảnh') ||
-    normalized.includes('chụp ảnh') ||
-    normalized.includes('chụp hình') ||
-    normalized.includes('mở cam') ||
-    unaccented.includes('mo camera') ||
-    unaccented.includes('chup anh')
-  ) {
+  // A1. Camera & Scanner (Explicit camera open commands only)
+  const isCameraCommand =
+    (normalized.includes('mở camera') ||
+      normalized.includes('mở máy ảnh') ||
+      normalized.includes('mở cam') ||
+      normalized.includes('bật camera') ||
+      normalized.includes('bật máy ảnh') ||
+      normalized.includes('chụp ảnh cho chú') ||
+      normalized === 'máy ảnh' ||
+      normalized === 'camera' ||
+      unaccented.includes('mo camera') ||
+      unaccented.includes('bat camera')) &&
+    !normalized.includes('xong') &&
+    !normalized.includes('rồi');
+
+  if (isCameraCommand) {
     return {
       handled: true,
       confidence: 1.0,
@@ -87,14 +93,20 @@ export async function routeFastIntent(
     };
   }
 
-  // A2. Home / Dashboard
-  if (
-    normalized.includes('trang chủ') ||
-    normalized.includes('màn hình chính') ||
-    normalized.includes('về nhà') ||
-    unaccented.includes('trang chu') ||
-    unaccented.includes('man hinh chinh')
-  ) {
+  // A2. Home / Dashboard (Explicit navigation command only)
+  const isHomeCommand =
+    (normalized === 'trang chủ' ||
+      normalized === 'màn hình chính' ||
+      normalized.includes('về trang chủ') ||
+      normalized.includes('về màn hình chính') ||
+      normalized.includes('mở trang chủ') ||
+      unaccented === 'trang chu' ||
+      unaccented === 'man hinh chinh' ||
+      unaccented.includes('ve trang chu')) &&
+    !normalized.includes('xong') &&
+    !normalized.includes('rồi');
+
+  if (isHomeCommand) {
     return {
       handled: true,
       confidence: 1.0,
@@ -244,18 +256,30 @@ export async function routeFastIntent(
   }
 
   // -------------------------------------------------------------
-  // LAYER B: Deterministic Utility Queries (Date, Time, Schedule, Weather)
+  // LAYER B: Deterministic Utility Queries (Date, Time, Schedule)
   // -------------------------------------------------------------
 
   const now = new Date();
 
   // B1. Time Query ("mấy giờ rồi", "bây giờ mấy giờ", "xem giờ")
-  if (
-    normalized.includes('mấy giờ') ||
-    normalized.includes('bây giờ mấy giờ') ||
-    normalized === 'xem giờ' ||
-    unaccented.includes('may gio')
-  ) {
+  // Must be asking for current time, not contextual times like "công ty mấy giờ mở cửa"
+  const isAskingCurrentTime =
+    (normalized === 'mấy giờ rồi' ||
+      normalized === 'bây giờ mấy giờ' ||
+      normalized === 'bây giờ là mấy giờ' ||
+      normalized === 'xem giờ' ||
+      normalized.includes('mấy giờ rồi') ||
+      normalized.includes('bây giờ mấy giờ') ||
+      normalized.includes('cho chú hỏi mấy giờ') ||
+      unaccented === 'may gio roi' ||
+      unaccented === 'bay gio may gio') &&
+    !normalized.includes('mở cửa') &&
+    !normalized.includes('bắt đầu') &&
+    !normalized.includes('kết thúc') &&
+    !normalized.includes('chuyến') &&
+    !normalized.includes('hẹn');
+
+  if (isAskingCurrentTime) {
     const hh = String(now.getHours()).padStart(2, '0');
     const mm = String(now.getMinutes()).padStart(2, '0');
     const timeStr = `${hh} giờ ${mm} phút`;
@@ -271,7 +295,15 @@ export async function routeFastIntent(
   }
 
   // B2. Day of Week Query ("hôm nay thứ mấy")
-  if (normalized.includes('thứ mấy') || unaccented.includes('thu may')) {
+  const isAskingDayOfWeek =
+    (normalized.includes('hôm nay thứ mấy') ||
+      normalized.includes('hôm nay là thứ mấy') ||
+      normalized === 'thứ mấy' ||
+      unaccented.includes('hom nay thu may')) &&
+    !normalized.includes('phỏng vấn') &&
+    !normalized.includes('lịch hẹn');
+
+  if (isAskingDayOfWeek) {
     const dowStr = DAYS_OF_WEEK_VI[now.getDay()];
     return {
       handled: true,
@@ -285,12 +317,17 @@ export async function routeFastIntent(
   }
 
   // B3. Date Query ("hôm nay ngày mấy", "hôm nay ngày bao nhiêu")
-  if (
-    normalized.includes('ngày mấy') ||
-    normalized.includes('ngày bao nhiêu') ||
-    normalized.includes('ngày mấy tháng mấy') ||
-    unaccented.includes('ngay may')
-  ) {
+  const isAskingCurrentDate =
+    (normalized.includes('hôm nay ngày mấy') ||
+      normalized.includes('hôm nay ngày bao nhiêu') ||
+      normalized.includes('hôm nay ngày mấy tháng mấy') ||
+      normalized === 'ngày mấy' ||
+      unaccented.includes('hom nay ngay may')) &&
+    !normalized.includes('phỏng vấn') &&
+    !normalized.includes('lịch hẹn') &&
+    !normalized.includes('hạn');
+
+  if (isAskingCurrentDate) {
     const dowStr = DAYS_OF_WEEK_VI[now.getDay()];
     const dateStr = `ngày ${now.getDate()} tháng ${now.getMonth() + 1} năm ${now.getFullYear()}`;
     return {
@@ -391,7 +428,7 @@ export async function routeFastIntent(
     };
   }
 
-  // B6. Weather Query ("thời tiết hôm nay", "hôm nay trời có mưa không")
+  // B6. Weather Query -> Pass to AI/Provider for actual data (No hardcoded fake forecast)
   if (
     normalized.includes('thời tiết') ||
     normalized.includes('trời có mưa') ||
@@ -400,13 +437,10 @@ export async function routeFastIntent(
     unaccented.includes('thoi tiet')
   ) {
     return {
-      handled: true,
-      confidence: 0.95,
-      source: 'utility',
-      utilityQuery: 'GET_WEATHER',
-      reply: `${da}, dự báo thời tiết hôm nay khoảng 30°C - 32°C, trời nhiều mây, có thể có mưa rào nhẹ rải rác vào buổi chiều. ${addressing.charAt(0).toUpperCase() + addressing.slice(1)} nhớ mang theo ô (dù) khi đi ra ngoài nhé ạ!`,
-      speech: `${da}, dự báo thời tiết hôm nay khoảng 31 độ C, trời nhiều mây, có thể có mưa rào nhẹ vào buổi chiều ạ.`,
-      suggestedReplies: ['Lịch hôm nay có gì?', 'Tạo nhắc nhở mang ô'],
+      handled: false,
+      confidence: 0.3,
+      needsAI: true,
+      reason: 'weather_requires_ai_or_provider',
     };
   }
 
@@ -414,16 +448,22 @@ export async function routeFastIntent(
   // Check if phrase matches one of the known life scenario templates (healthcare, administrative, shopping, interview, repair)
   const templateMatch = matchScenarioTemplate(normalized, unaccented);
   if (templateMatch) {
+    const cleanTitle = templateMatch.label.replace(/^[\p{Extended_Pictographic}\u{1F300}-\u{1F9FF}\u{2600}-\u{26FF}\u{2700}-\u{27BF}\s]+/gu, '');
     return {
       handled: true,
       confidence: 0.92,
       source: 'pattern',
       appAction: {
         type: 'CREATE_SESSION',
-        payload: { goal: rawText, sessionTitle: templateMatch.label },
+        payload: {
+          goal: rawText,
+          sessionTitle: cleanTitle,
+          scenarioKey: templateMatch.family,
+          creationMode: 'template',
+        },
       },
-      reply: `${da}, ${me} tạo ngay phiên hướng dẫn "${templateMatch.label}" cho ${addressing} đây ạ! ${me} đã chuẩn bị sẵn danh sách các bước thực hiện để đồng hành cùng ${addressing}.`,
-      speech: `${da}, ${me} đã tạo ngay phiên hướng dẫn "${templateMatch.label}" cho ${addressing} rồi ạ!`,
+      reply: `${da}, ${me} tạo ngay phiên hướng dẫn "${cleanTitle}" cho ${addressing} đây ạ! ${me} đã chuẩn bị sẵn danh sách các bước thực hiện để đồng hành cùng ${addressing}.`,
+      speech: `${da}, ${me} đã tạo ngay phiên hướng dẫn "${cleanTitle}" cho ${addressing} rồi ạ!`,
     };
   }
 

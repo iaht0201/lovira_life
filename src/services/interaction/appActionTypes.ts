@@ -22,6 +22,8 @@ export interface AppActionPayload {
   sessionId?: string;
   sessionTitle?: string;
   goal?: string;
+  scenarioKey?: string;
+  creationMode?: 'template' | 'custom' | 'ai';
   page?: string;
   setting?: string;
   value?: unknown;

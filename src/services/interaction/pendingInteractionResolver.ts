@@ -80,7 +80,33 @@ export function resolvePendingInteraction(
     if (NEGATIVE_REGEX.test(trimmed)) {
       return {
         resolved: true,
-        reply: 'Dạ vâng, con đã hủy việc tạo nhắc nhở rồi ạ.',
+        reply: 'Dạ vâng, con đã hủy thao tác rồi ạ.',
+        clearPending: true,
+      };
+    }
+
+    const norm = trimmed.toLowerCase();
+    if (norm.includes('camera') || norm.includes('máy ảnh') || norm.includes('chụp')) {
+      return {
+        resolved: true,
+        appAction: { type: 'OPEN_CAMERA' },
+        reply: 'Dạ, con mở camera cho chú ngay đây ạ!',
+        clearPending: true,
+      };
+    }
+    if (norm.includes('nhắc nhở') || norm.includes('lịch hẹn') || norm.includes('lịch')) {
+      return {
+        resolved: true,
+        appAction: { type: 'OPEN_REMINDERS' },
+        reply: 'Dạ, con mở trang lịch nhắc nhở cho chú đây ạ!',
+        clearPending: true,
+      };
+    }
+    if (norm.includes('trang chủ') || norm.includes('về nhà') || norm.includes('màn hình chính')) {
+      return {
+        resolved: true,
+        appAction: { type: 'GO_HOME' },
+        reply: 'Dạ, con đưa chú về trang chủ ạ!',
         clearPending: true,
       };
     }

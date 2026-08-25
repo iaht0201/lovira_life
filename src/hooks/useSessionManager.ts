@@ -25,7 +25,7 @@ import {
 } from '../services/actionEngine';
 import { buildPartialSuccessReply, deduceHonorifics, formatInitialSessionGreeting } from '../services/conversationStyle';
 import { parseLocalIntent } from '../services/localIntentEngine';
-import { createLifeSessionFromPlan } from '../services/sessionFactory';
+import { createLifeSessionFromPlan, createLifeSessionFromScenario } from '../services/sessionFactory';
 import { validateAppAction } from '../services/interaction/appActionValidator';
 import { applyAppAction } from '../services/interaction/appActionEngine';
 import { resolvePendingInteraction } from '../services/interaction/pendingInteractionResolver';
@@ -257,6 +257,33 @@ export function useSessionManager({
       showToast(`Đã khởi tạo phiên "${newSession.title}"`);
     },
     [aiSettings, accessibilitySettings, userProfile, saveUpdatedSession, setActiveTab, onNavigate, showToast, speakWithVoiceStatus]
+  );
+
+  const handleCreateSessionFromScenario = useCallback(
+    (scenarioKey: ScenarioFamily, customGoal?: string) => {
+      const accessibilityCtx: AccessibilityContext = {
+        preferredInteraction: accessibilitySettings.speakResponse ? 'voice' : 'text',
+        oneStepMode: accessibilitySettings.reducedMotion,
+      };
+      const newSession = createLifeSessionFromScenario(
+        scenarioKey,
+        customGoal || '',
+        accessibilityCtx,
+        userProfile
+      );
+      saveUpdatedSession(newSession);
+      storageService.setActiveSessionId(newSession.id);
+      if (onNavigate) {
+        onNavigate(`/session/${newSession.id}`);
+      } else if (setActiveTab) {
+        setActiveTab('session');
+      }
+      showToast(`⚡ Đã khởi tạo phiên: "${newSession.title}"`);
+      if (accessibilitySettings.speakResponse) {
+        speakWithVoiceStatus(`Lovira đã chuẩn bị xong phiên ${newSession.title}`);
+      }
+    },
+    [accessibilitySettings, userProfile, saveUpdatedSession, onNavigate, setActiveTab, showToast, speakWithVoiceStatus]
   );
 
   const handleDeleteSession = useCallback((id: string, onConfirmModalShow: (modal: any) => void) => {
@@ -638,6 +665,9 @@ export function useSessionManager({
       createSession: async (goal: string) => {
         await handleCreateSessionFromTemplate('custom', goal);
       },
+      createSessionFromScenario: async (scenarioKey: string, goal: string) => {
+        handleCreateSessionFromScenario(scenarioKey as ScenarioFamily, goal);
+      },
       openCamera: () => setCameraModalOpen(true),
       updateAccessibilitySetting: (key: string, value: any) => {
         setAccessibility((prev: any) => ({ ...prev, [key]: value }));
@@ -881,6 +911,29 @@ export function useSessionManager({
     });
 
     if (fastRoute.handled) {
+      if (fastRoute.needsClarification) {
+        const q = fastRoute.clarificationQuestion || 'Chú có thể nói rõ hơn được không ạ?';
+        setPendingInteraction({
+          type: 'clarification',
+          data: {
+            question: q,
+            candidates: fastRoute.clarificationCandidates || [],
+            suggestedReplies: fastRoute.suggestedReplies,
+          },
+          createdAt: new Date().toISOString(),
+          expiresAt: Date.now() + 180000,
+        });
+
+        showToast(q);
+        if (inputMode === 'voice' || accessibilitySettings.speakResponse) {
+          speakWithVoiceStatus(q);
+        } else {
+          setVoiceStatus('idle');
+        }
+        setIsLoading(false);
+        return;
+      }
+
       let replyText = fastRoute.reply || 'Dạ, con đã thực hiện xong thao tác rồi ạ.';
       let speechText = fastRoute.speech || replyText;
 

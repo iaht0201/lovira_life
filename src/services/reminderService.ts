@@ -708,7 +708,13 @@ class ReminderService {
 
         return false;
       })
-      .sort((a, b) => new Date(a.scheduledAt).getTime() - new Date(b.scheduledAt).getTime());
+      .sort((a, b) => {
+        const da = new Date(a.scheduledAt);
+        const db = new Date(b.scheduledAt);
+        const timeA = da.getHours() * 60 + da.getMinutes();
+        const timeB = db.getHours() * 60 + db.getMinutes();
+        return timeA - timeB;
+      });
   }
 }
 

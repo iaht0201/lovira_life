@@ -2,6 +2,7 @@ import {
   LifeSession,
   GeneratedSessionPlan,
   ScenarioType,
+  ScenarioFamily,
   LifeTask,
   ImportantFact,
   AccessibilityContext,
@@ -11,6 +12,7 @@ import { calculateNextRecommendedAction } from './actionEngine';
 import { ScenarioRoutingResult } from './scenarioRouter';
 import { normalizeGeneratedLifePlan } from './planValidator';
 import { deduceHonorifics, formatInitialSessionGreeting } from './conversationStyle';
+import { SCENARIO_REGISTRY } from './scenarioRegistry';
 
 /**
  * Creates a complete, fully-hydrated LifeSession from a GeneratedSessionPlan
@@ -120,3 +122,102 @@ export function createLifeSessionFromPlan(
 
   return session;
 }
+
+/**
+ * Creates an instant, local LifeSession directly from a SCENARIO_REGISTRY template without calling AI.
+ */
+export function createLifeSessionFromScenario(
+  scenarioKey: ScenarioFamily,
+  originalUserRequest: string,
+  accessibilityContext?: AccessibilityContext,
+  userProfile?: UserProfile | null
+): LifeSession {
+  const entry = SCENARIO_REGISTRY[scenarioKey] || SCENARIO_REGISTRY.custom || Object.values(SCENARIO_REGISTRY)[0];
+  const now = new Date().toISOString();
+  const newId = `session-${scenarioKey}-${Date.now()}`;
+
+  const tasks: LifeTask[] = (entry.suggestedTasks || []).map((t, i) => {
+    const taskId = `task-${i + 1}`;
+    const subtasks: LifeTask[] | undefined =
+      t.subtasks && t.subtasks.length > 0
+        ? t.subtasks.map((st, j) => ({
+            id: `${taskId}-sub-${j + 1}`,
+            parentTaskId: taskId,
+            title: st.title,
+            order: st.order || j + 1,
+            status: 'pending' as const,
+            source: 'template' as const,
+          }))
+        : undefined;
+
+    return {
+      id: taskId,
+      title: t.title,
+      description: t.description,
+      order: t.order || i + 1,
+      status: 'pending' as const,
+      important: t.important || false,
+      subtasks,
+    };
+  });
+
+  const facts: ImportantFact[] = (entry.suggestedRequirements || []).map((f, i) => ({
+    id: `fact-${i + 1}`,
+    type: f.type,
+    title: f.title,
+    value: f.value,
+    createdAt: now,
+    updatedAt: now,
+  }));
+
+  const cleanLabel = entry.label.replace(/^[\p{Extended_Pictographic}\u{1F300}-\u{1F9FF}\u{2600}-\u{26FF}\u{2700}-\u{27BF}\s]+/gu, '');
+
+  const session: LifeSession = {
+    id: newId,
+    title: cleanLabel,
+    scenarioType: (scenarioKey as ScenarioType) || 'custom',
+    scenarioFamily: scenarioKey,
+    modules: entry.defaultModules,
+    status: 'active',
+    goal: originalUserRequest || entry.description,
+    createdAt: now,
+    updatedAt: now,
+    currentStepId: tasks[0]?.id || 'task-1',
+    importantFacts: facts,
+    tasks,
+    resources: [],
+    messages: [],
+    actionLog: [
+      {
+        id: `log-${Date.now()}`,
+        timestamp: now,
+        actionType: 'CREATE_SESSION_TEMPLATE',
+        summary: `Lovira khởi tạo nhanh phiên mẫu: ${cleanLabel}`,
+        triggeredBy: 'system',
+      },
+    ],
+    accessibilityContext,
+  };
+
+  session.nextRecommendedAction = calculateNextRecommendedAction(session);
+
+  const honorifics = deduceHonorifics(userProfile || null, originalUserRequest);
+  const initialGreeting = formatInitialSessionGreeting(
+    session.title,
+    tasks,
+    honorifics,
+    session.goal
+  );
+
+  session.messages = [
+    {
+      id: `msg-${Date.now()}`,
+      sender: 'lovira',
+      text: initialGreeting,
+      timestamp: now,
+    },
+  ];
+
+  return session;
+}
+
