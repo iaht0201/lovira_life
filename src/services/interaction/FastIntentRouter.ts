@@ -5,6 +5,7 @@ import { reminderService } from '../reminderService.js';
 import { SCENARIO_REGISTRY, ScenarioRegistryEntry } from '../scenarioRegistry.js';
 import { deduceHonorifics } from '../conversationStyle.js';
 import { fetchCurrentWeatherReport } from '../weatherService.js';
+import { executeLocalBrain } from '../localBrain/LocalBrainEngine.js';
 
 export type FastIntentSource = 'exact' | 'alias' | 'pattern' | 'context' | 'utility';
 
@@ -55,6 +56,26 @@ export async function routeFastIntent(
 ): Promise<FastIntentResult> {
   if (!rawText || !rawText.trim()) {
     return { handled: false, confidence: 0, needsAI: false };
+  }
+
+  // 1. Run Local Brain Engine (74 intents, negative blockers, dialect aliases)
+  const brainResult = await executeLocalBrain(rawText, context);
+  if (brainResult.handled) {
+    return {
+      handled: true,
+      confidence: brainResult.confidence,
+      source: 'pattern',
+      appAction: brainResult.appAction,
+      agentActions: brainResult.agentActions,
+      utilityQuery: brainResult.utilityQuery as UtilityQueryType,
+      reply: brainResult.reply,
+      speech: brainResult.speech,
+      suggestedReplies: brainResult.suggestedReplies,
+      needsClarification: brainResult.needsClarification,
+      clarificationActionType: brainResult.clarificationActionType,
+      clarificationQuestion: brainResult.clarificationQuestion,
+      clarificationCandidates: brainResult.clarificationCandidates,
+    };
   }
 
   const trimmedText = rawText.trim();
