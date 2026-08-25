@@ -1365,7 +1365,13 @@
         "bạn ơi lên lịch họp lúc 2 giờ chiều",
         "bữa mai 7 giờ nhắc tui uống thuốc",
         "8 giờ tối nhắc chú nghe con",
-        "lát nữa nhắc tui gọi điện"
+        "lát nữa nhắc tui gọi điện",
+        "ngày mai nhắc chú uống thuốc",
+        "ngày mai nhắc tôi uống thuốc",
+        "nhắc chú uống thuốc",
+        "nhắc tôi uống thuốc",
+        "ngày mai nhắc đi khám",
+        "nhắc nhở đi khám"
       ],
       "negativeExamples": [
         "hôm nay có nhắc nhở gì",

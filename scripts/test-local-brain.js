@@ -101,6 +101,68 @@ async function runTests() {
     }
   }
 
+  // 9. Deep Regression Tests for PolicyGuard & Context Retention
+  console.log('\n--- Deep Regression Tests ---');
+
+  // A. Reminder missing time context retention
+  const missingTimeQuery = 'Ngày mai nhắc chú uống thuốc';
+  const missingTimeExec = await executeLocalBrain(missingTimeQuery);
+  if (
+    missingTimeExec.needsClarification &&
+    missingTimeExec.clarificationPayload &&
+    missingTimeExec.clarificationPayload.title &&
+    missingTimeExec.clarificationPayload.title.toLowerCase().includes('uống thuốc') &&
+    missingTimeExec.clarificationPayload.targetDateStr
+  ) {
+    console.log(`✅ [Context Retention Pass] "${missingTimeQuery}" -> Retained title="${missingTimeExec.clarificationPayload.title}", targetDateStr="${missingTimeExec.clarificationPayload.targetDateStr}"`);
+    passed++;
+  } else {
+    console.error(`❌ [Context Retention Fail] "${missingTimeQuery}" -> clarificationPayload missing or incomplete:`, missingTimeExec.clarificationPayload);
+    failed++;
+  }
+
+  // B. PolicyGuard check for COMPLETE_SESSION
+  const completeSessionQuery = 'Hoàn thành phiên này';
+  const completeSessionExec = await executeLocalBrain(completeSessionQuery, {
+    session: {
+      id: 'sess-123',
+      title: 'Tập thể dục buổi sáng',
+      category: 'health',
+      goal: 'Tập thể dục',
+      status: 'in_progress',
+      tasks: [],
+      messages: [],
+      facts: [],
+      keyNotes: [],
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    },
+    hasActiveSession: true,
+  });
+
+  if (completeSessionExec.requiresConfirmation && completeSessionExec.agentActions?.some((a) => a.type === 'COMPLETE_SESSION')) {
+    console.log(`✅ [PolicyGuard Pass] "${completeSessionQuery}" -> Enforced requiresConfirmation=true before COMPLETE_SESSION`);
+    passed++;
+  } else {
+    console.error(`❌ [PolicyGuard Fail] "${completeSessionQuery}" -> Did not enforce confirmation:`, completeSessionExec);
+    failed++;
+  }
+
+  // C. PolicyGuard & Target Extraction for DELETE_REMINDER
+  const deleteRemQuery = 'Xóa nhắc nhở uống thuốc của chú';
+  const deleteRemExec = await executeLocalBrain(deleteRemQuery);
+  if (
+    deleteRemExec.requiresConfirmation &&
+    deleteRemExec.appAction?.type === 'DELETE_REMINDER' &&
+    deleteRemExec.appAction?.payload?.title?.toLowerCase().includes('uống thuốc')
+  ) {
+    console.log(`✅ [Reminder Target Resolver Pass] "${deleteRemQuery}" -> Resolved title="${deleteRemExec.appAction?.payload?.title}" with requiresConfirmation=true`);
+    passed++;
+  } else {
+    console.error(`❌ [Reminder Target Resolver Fail] "${deleteRemQuery}" ->`, deleteRemExec);
+    failed++;
+  }
+
   console.log(`\n========================================`);
   console.log(`Result: ${passed}/${passed + failed} test cases passed.`);
   console.log(`========================================\n`);

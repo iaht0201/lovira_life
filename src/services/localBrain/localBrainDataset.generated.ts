@@ -1,4 +1,12 @@
-{
+/**
+ * AUTO-GENERATED FILE. DO NOT EDIT DIRECTLY.
+ * Source of truth: src/data/localBrain/localBrain.json
+ * Run `npm run generate:local-brain` to regenerate.
+ */
+
+import type { LocalBrainDataset } from './localBrainDataset.js';
+
+export const LOCAL_BRAIN_DATASET_GENERATED: LocalBrainDataset = {
   "schemaVersion": 1,
   "name": "Lovira Local Brain Intent Dataset",
   "language": "vi-VN",
@@ -1365,7 +1373,13 @@
         "bạn ơi lên lịch họp lúc 2 giờ chiều",
         "bữa mai 7 giờ nhắc tui uống thuốc",
         "8 giờ tối nhắc chú nghe con",
-        "lát nữa nhắc tui gọi điện"
+        "lát nữa nhắc tui gọi điện",
+        "ngày mai nhắc chú uống thuốc",
+        "ngày mai nhắc tôi uống thuốc",
+        "nhắc chú uống thuốc",
+        "nhắc tôi uống thuốc",
+        "ngày mai nhắc đi khám",
+        "nhắc nhở đi khám"
       ],
       "negativeExamples": [
         "hôm nay có nhắc nhở gì",
@@ -4221,4 +4235,4 @@
       "responseTemplate": "{da}, {addressing} muốn {me} hỗ trợ việc gì cụ thể ạ? Ví dụ đi khám, làm giấy tờ, mua sắm hay tạo lịch nhắc."
     }
   ]
-}
+};

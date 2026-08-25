@@ -6,6 +6,7 @@ import { reminderService } from '../reminderService.js';
 import { fetchCurrentWeatherReport } from '../weatherService.js';
 import { parseVietnameseReminderText } from '../../utils/dateTimeResolver.js';
 import { parseLocalIntent } from '../localIntentEngine.js';
+import { resolveReminderTarget } from './ReminderTargetResolver.js';
 
 export interface LocalBrainExecutionResult {
   handled: boolean;
@@ -23,6 +24,11 @@ export interface LocalBrainExecutionResult {
   clarificationActionType?: string;
   clarificationQuestion?: string;
   clarificationCandidates?: string[];
+  clarificationPayload?: any;
+  requiresConfirmation?: boolean;
+  confirmationPrompt?: string;
+  confirmSuccessReply?: string;
+  confirmCancelReply?: string;
   reason?: string;
 }
 
@@ -63,7 +69,8 @@ function formatResponseTemplate(
 
 /**
  * Core Local Brain Engine
- * Takes raw user utterance and routes deterministically using the 74 local intents.
+ * Takes raw user utterance and routes deterministically using the local intents dataset,
+ * enforcing negative blockers, confirmation policies, and slot extraction.
  */
 export async function executeLocalBrain(
   rawText: string,
@@ -95,17 +102,24 @@ export async function executeLocalBrain(
   // 2. Handle by Handler Type
   switch (intent.handler) {
     // -------------------------------------------------------------
-    // TEMPLATE RESPONSES (Greetings, Thanks, Goodbye, Identity, Acknowledge)
+    // TEMPLATE RESPONSES (Greetings, Thanks, Goodbye, Identity, Acknowledge, Capabilities)
     // -------------------------------------------------------------
-    case 'template_response': {
-      const template = intent.responseTemplate || `${da}, ${me} đang nghe ${addressing} ạ.`;
-      const reply = formatResponseTemplate(template, honorifics, extractedSlots);
+    case 'template_response':
+    case 'capability_summary': {
+      const template =
+        intent.responseTemplate ||
+        (intent.id === 'social.capabilities'
+          ? `${da}, ${me} có thể hỗ trợ ${addressing}: nhắc nhở uống thuốc, đi khám bệnh, mở máy ảnh, xem thời tiết, ngày giờ và hướng dẫn từng bước trong cuộc sống ạ!`
+          : `${da}, ${me} chào ${addressing} ạ!`);
+      const reply = formatResponseTemplate(template, honorifics);
 
-      let suggestedReplies: string[] | undefined;
+      let suggestedReplies: string[] = [];
       if (intent.id === 'social.greeting') {
-        suggestedReplies = ['Hôm nay có lịch gì?', 'Thời tiết hôm nay', 'Mở camera chụp ảnh'];
-      } else if (intent.id === 'social.thanks') {
-        suggestedReplies = ['Xem lịch hôm nay', 'Tạo nhắc nhở mới'];
+        suggestedReplies = ['Hôm nay có lịch gì?', 'Thời tiết hôm nay thế nào?', 'Mở Camera'];
+      } else if (intent.id === 'social.capabilities') {
+        suggestedReplies = ['Tạo lịch nhắc uống thuốc', 'Mở camera chụp ảnh', 'Xem lịch hôm nay'];
+      } else if (intent.id === 'social.identity') {
+        suggestedReplies = ['Bạn làm được những gì?', 'Hôm nay mấy giờ?'];
       }
 
       return {
@@ -115,40 +129,16 @@ export async function executeLocalBrain(
         confidence,
         reply,
         speech: reply,
-        suggestedReplies,
+        suggestedReplies: suggestedReplies.length > 0 ? suggestedReplies : undefined,
       };
     }
 
     // -------------------------------------------------------------
-    // CAPABILITY SUMMARY
+    // STATIC APP ACTIONS (Go Home, Back, Settings, Profile, Camera, Reminders, Accessibility)
     // -------------------------------------------------------------
-    case 'capability_summary': {
-      const reply = `${da}, ${me} có thể hỗ trợ ${addressing} các công việc hàng ngày như:\n` +
-        `• 📸 Mở camera chụp & nhận diện giấy tờ, đơn thuốc, đồ vật\n` +
-        `• ⏰ Tạo & nhắc lịch uống thuốc, đi khám bệnh, việc cần làm\n` +
-        `• 🧭 Lập kế hoạch đồng hành từng bước cho các việc đời sống\n` +
-        `• ☀️ Xem thời tiết, ngày giờ, lịch trình hôm nay và ngày mai\n` +
-        `• ♿ Tuỳ chỉnh trợ năng: đọc to phản hồi, chỉnh chữ lớn, tương phản cao.\n` +
-        `${addressing.charAt(0).toUpperCase() + addressing.slice(1)} muốn ${me} hỗ trợ việc gì trước ạ?`;
-
-      const speech = `${da}, ${me} có thể hỗ trợ ${addressing} chụp ảnh nhận diện, nhắc lịch uống thuốc, hướng dẫn từng bước và xem thời tiết ngày giờ ạ!`;
-
-      return {
-        handled: true,
-        intentId: intent.id,
-        category: intent.category,
-        confidence,
-        reply,
-        speech,
-        suggestedReplies: ['Tạo nhắc nhở', 'Xem lịch hôm nay', 'Thời tiết hôm nay', 'Mở camera'],
-      };
-    }
-
-    // -------------------------------------------------------------
-    // APP ACTIONS (Navigation, Camera, Accessibility Settings)
-    // -------------------------------------------------------------
-    case 'app_action': {
-      let appAction = intent.appAction as AppAction;
+    case 'app_action':
+    case 'app_action_static': {
+      const appAction = intent.appAction as AppAction;
       let reply = '';
       let speech = '';
 
@@ -161,12 +151,12 @@ export async function executeLocalBrain(
       } else if (intent.id === 'nav.camera') {
         reply = `${da}, ${me} mở máy ảnh cho ${addressing} ngay đây ạ!`;
         speech = `${da}, ${me} mở máy ảnh cho ${addressing} ngay đây ạ!`;
-      } else if (intent.id === 'nav.reminders') {
-        reply = `${da}, ${me} mở trang lịch nhắc nhở cho ${addressing} đây ạ.`;
-        speech = `${da}, ${me} mở trang lịch nhắc nhở cho ${addressing} đây ạ.`;
       } else if (intent.id === 'nav.settings') {
         reply = `${da}, ${me} mở mục cài đặt cho ${addressing} đây ạ.`;
         speech = `${da}, ${me} mở mục cài đặt cho ${addressing} đây ạ.`;
+      } else if (intent.id === 'nav.reminders') {
+        reply = `${da}, ${me} mở trang lịch nhắc nhở cho ${addressing} đây ạ.`;
+        speech = `${da}, ${me} mở trang lịch nhắc nhở cho ${addressing} đây ạ.`;
       } else if (intent.id === 'nav.profile') {
         reply = `${da}, ${me} mở hồ sơ cá nhân cho ${addressing} đây ạ.`;
         speech = `${da}, ${me} mở hồ sơ cá nhân cho ${addressing} đây ạ.`;
@@ -196,10 +186,6 @@ export async function executeLocalBrain(
     // APP ACTION WITH SLOTS (Open named session, Reminder CRUD, etc.)
     // -------------------------------------------------------------
     case 'app_action_slot': {
-      const appAction = intent.appAction as AppAction;
-      let reply = '';
-      let speech = '';
-
       if (intent.id === 'nav.open_named_session' && extractedSlots?.sessionTitle) {
         const title = extractedSlots.sessionTitle;
         return {
@@ -216,20 +202,218 @@ export async function executeLocalBrain(
         };
       }
 
-      if (intent.id.startsWith('reminder.')) {
-        // Reminder update/delete/snooze/complete
-        reply = `${da}, ${me} đã ghi nhận thao tác lịch nhắc của ${addressing} ạ.`;
-        speech = reply;
+      // Reminder Delete (High risk - requires confirmation & target extraction)
+      if (intent.id === 'reminder.delete') {
+        const target = resolveReminderTarget(trimmedText, extractedSlots);
+        if (target.isAmbiguous) {
+          return {
+            handled: true,
+            intentId: intent.id,
+            category: intent.category,
+            confidence,
+            needsClarification: true,
+            clarificationActionType: 'DELETE_REMINDER',
+            clarificationQuestion: target.errorReason || `${da}, ${addressing} muốn xóa nhắc nhở nào cụ thể ạ?`,
+            clarificationCandidates: target.candidates?.map((c) => c.title) || [],
+            suggestedReplies: target.candidates?.slice(0, 3).map((c) => `Xóa "${c.title}"`) || [],
+          };
+        }
+
+        if (target.errorReason && !target.targetText) {
+          return {
+            handled: true,
+            intentId: intent.id,
+            category: intent.category,
+            confidence,
+            reply: `${da}, hiện không có lịch nhắc nào đang hoạt động để xóa ạ.`,
+            speech: `${da}, hiện không có lịch nhắc nào để xóa ạ.`,
+          };
+        }
+
+        const remTitle = target.title || target.targetText || 'này';
+        const prompt = `${da}, ${addressing} có chắc chắn muốn xóa lịch nhắc "${remTitle}" không ạ?`;
+
+        return {
+          handled: true,
+          intentId: intent.id,
+          category: intent.category,
+          confidence,
+          requiresConfirmation: true,
+          confirmationPrompt: prompt,
+          confirmSuccessReply: `${da} vâng, ${me} đã xóa lịch nhắc "${remTitle}" rồi ạ.`,
+          confirmCancelReply: `${da} vâng, ${me} giữ nguyên lịch nhắc "${remTitle}" cho ${addressing} nhé ạ.`,
+          appAction: {
+            type: 'DELETE_REMINDER',
+            payload: {
+              reminderId: target.reminderId,
+              title: remTitle,
+            },
+            requiresConfirmation: true,
+            confirmationPrompt: prompt,
+          },
+          reply: prompt,
+          speech: prompt,
+          suggestedReplies: ['Đồng ý xóa', 'Thôi không xóa'],
+        };
       }
 
+      // Reminder Snooze (Low risk - auto execute with target extraction)
+      if (intent.id === 'reminder.snooze') {
+        const target = resolveReminderTarget(trimmedText, extractedSlots);
+        if (target.isAmbiguous) {
+          return {
+            handled: true,
+            intentId: intent.id,
+            category: intent.category,
+            confidence,
+            needsClarification: true,
+            clarificationActionType: 'SNOOZE_REMINDER',
+            clarificationQuestion: target.errorReason || `${da}, ${addressing} muốn hoãn nhắc nhở nào cụ thể ạ?`,
+            clarificationCandidates: target.candidates?.map((c) => c.title) || [],
+            suggestedReplies: target.candidates?.slice(0, 3).map((c) => `Hoãn "${c.title}"`) || [],
+          };
+        }
+
+        if (target.errorReason && !target.targetText) {
+          return {
+            handled: true,
+            intentId: intent.id,
+            category: intent.category,
+            confidence,
+            reply: `${da}, hiện không có lịch nhắc nào đang hoạt động để hoãn ạ.`,
+            speech: `${da}, hiện không có lịch nhắc nào để hoãn ạ.`,
+          };
+        }
+
+        const remTitle = target.title || target.targetText || 'này';
+        return {
+          handled: true,
+          intentId: intent.id,
+          category: intent.category,
+          confidence,
+          appAction: {
+            type: 'SNOOZE_REMINDER',
+            payload: {
+              reminderId: target.reminderId,
+              title: remTitle,
+              snoozePreset: '10m',
+            },
+          },
+          reply: `${da}, ${me} đã hoãn lịch nhắc "${remTitle}" thêm 10 phút cho ${addressing} rồi ạ.`,
+          speech: `${da}, ${me} đã hoãn lịch nhắc "${remTitle}" thêm 10 phút rồi ạ.`,
+          suggestedReplies: ['Xem tất cả lịch nhắc', 'Tạo nhắc nhở mới'],
+        };
+      }
+
+      // Reminder Complete (Low risk - auto execute with target extraction)
+      if (intent.id === 'reminder.complete') {
+        const target = resolveReminderTarget(trimmedText, extractedSlots);
+        if (target.isAmbiguous) {
+          return {
+            handled: true,
+            intentId: intent.id,
+            category: intent.category,
+            confidence,
+            needsClarification: true,
+            clarificationActionType: 'COMPLETE_REMINDER',
+            clarificationQuestion: target.errorReason || `${da}, ${addressing} muốn đánh dấu hoàn thành nhắc nhở nào cụ thể ạ?`,
+            clarificationCandidates: target.candidates?.map((c) => c.title) || [],
+            suggestedReplies: target.candidates?.slice(0, 3).map((c) => `Xong "${c.title}"`) || [],
+          };
+        }
+
+        if (target.errorReason && !target.targetText) {
+          return {
+            handled: true,
+            intentId: intent.id,
+            category: intent.category,
+            confidence,
+            reply: `${da}, hiện không có lịch nhắc nào đang hoạt động để đánh dấu hoàn thành ạ.`,
+            speech: `${da}, hiện không có lịch nhắc nào để hoàn thành ạ.`,
+          };
+        }
+
+        const remTitle = target.title || target.targetText || 'này';
+        return {
+          handled: true,
+          intentId: intent.id,
+          category: intent.category,
+          confidence,
+          appAction: {
+            type: 'COMPLETE_REMINDER',
+            payload: {
+              reminderId: target.reminderId,
+              title: remTitle,
+            },
+          },
+          reply: `${da}, ${me} đã đánh dấu hoàn thành lịch nhắc "${remTitle}" rồi ạ. Tuyệt vời lắm ạ! 👏`,
+          speech: `${da}, ${me} đã đánh dấu hoàn thành lịch nhắc "${remTitle}" rồi ạ.`,
+          suggestedReplies: ['Xem tất cả lịch nhắc', 'Tạo nhắc nhở mới'],
+        };
+      }
+
+      // Reminder Update (Medium risk - requires time clarification)
+      if (intent.id === 'reminder.update') {
+        const target = resolveReminderTarget(trimmedText, extractedSlots);
+        if (target.isAmbiguous) {
+          return {
+            handled: true,
+            intentId: intent.id,
+            category: intent.category,
+            confidence,
+            needsClarification: true,
+            clarificationActionType: 'UPDATE_REMINDER',
+            clarificationQuestion: target.errorReason || `${da}, ${addressing} muốn chỉnh sửa lịch nhắc nào cụ thể ạ?`,
+            clarificationCandidates: target.candidates?.map((c) => c.title) || [],
+            suggestedReplies: target.candidates?.slice(0, 3).map((c) => `Sửa "${c.title}"`) || [],
+          };
+        }
+
+        const remTitle = target.title || target.targetText || '';
+        return {
+          handled: true,
+          intentId: intent.id,
+          category: intent.category,
+          confidence,
+          needsClarification: true,
+          clarificationActionType: 'UPDATE_REMINDER',
+          clarificationPayload: {
+            reminderId: target.reminderId,
+            title: remTitle,
+          },
+          clarificationQuestion: remTitle
+            ? `${da}, ${addressing} muốn đổi lịch nhắc "${remTitle}" sang lúc mấy giờ ạ?`
+            : `${da}, ${addressing} muốn đổi giờ cho lịch nhắc nào và sang lúc mấy giờ ạ?`,
+          suggestedReplies: ['7 giờ sáng', '8 giờ tối', 'ngày mai 9 giờ'],
+        };
+      }
+
+      // Session Archive (Medium risk)
+      if (intent.id === 'session.archive') {
+        const sessionTitle = session?.title || 'hiện tại';
+        return {
+          handled: true,
+          intentId: intent.id,
+          category: intent.category,
+          confidence,
+          appAction: {
+            type: 'ARCHIVE_SESSION',
+            payload: { sessionId: session?.id },
+          },
+          reply: `${da}, ${me} đã chuyển phiên "${sessionTitle}" vào mục lưu trữ cho ${addressing} rồi ạ.`,
+          speech: `${da}, ${me} đã lưu trữ phiên rồi ạ.`,
+        };
+      }
+
+      const defaultAppAction = intent.appAction as AppAction;
       return {
         handled: true,
         intentId: intent.id,
         category: intent.category,
         confidence,
-        appAction,
-        reply: reply || `${da}, ${me} đã thực hiện yêu cầu rồi ạ.`,
-        speech: speech || reply,
+        appAction: defaultAppAction,
+        reply: `${da}, ${me} đã thực hiện yêu cầu rồi ạ.`,
+        speech: `${da}, ${me} đã thực hiện yêu cầu rồi ạ.`,
       };
     }
 
@@ -439,7 +623,7 @@ export async function executeLocalBrain(
     }
 
     // -------------------------------------------------------------
-    // DELEGATE REMINDER PARSER (Create Reminders)
+    // DELEGATE REMINDER PARSER (Create Reminders with Full Context Retention)
     // -------------------------------------------------------------
     case 'delegate_reminder_parser': {
       const parseRes = parseVietnameseReminderText(trimmedText);
@@ -462,6 +646,7 @@ export async function executeLocalBrain(
               repeat: rem.repeat,
               priority: rem.priority,
               notes: rem.notes,
+              sessionId: session?.id,
               skipConfirmation: true,
             },
           },
@@ -472,7 +657,22 @@ export async function executeLocalBrain(
       }
 
       if (parseRes.status === 'needs_clarification') {
+        const hasDateStr = parseRes.targetDateStr;
+        let dayInfo = '';
+        if (hasDateStr) {
+          const d = new Date(hasDateStr);
+          const tomorrow = new Date();
+          tomorrow.setDate(tomorrow.getDate() + 1);
+          const isTomorrow =
+            d.getFullYear() === tomorrow.getFullYear() &&
+            d.getMonth() === tomorrow.getMonth() &&
+            d.getDate() === tomorrow.getDate();
+          if (isTomorrow) dayInfo = 'ngày mai ';
+        }
+
         const missing = parseRes.missing.includes('time') ? 'mấy giờ' : 'ngày nào';
+        const q = `${da}, ${dayInfo}${addressing} muốn ${me} đặt nhắc ${parseRes.title ? `"${parseRes.title}" ` : ''}vào lúc ${missing} ạ?`;
+
         return {
           handled: true,
           intentId: intent.id,
@@ -480,12 +680,23 @@ export async function executeLocalBrain(
           confidence,
           needsClarification: true,
           clarificationActionType: 'CREATE_REMINDER',
-          clarificationQuestion: `${da}, ${addressing} muốn ${me} đặt nhắc "${parseRes.title}" vào lúc ${missing} ạ?`,
+          clarificationPayload: {
+            title: parseRes.title,
+            category: parseRes.category,
+            repeat: parseRes.repeat,
+            priority: parseRes.priority,
+            targetDateStr: parseRes.targetDateStr,
+            sessionId: session?.id,
+          },
+          clarificationQuestion: q,
+          reply: q,
+          speech: q,
           suggestedReplies: ['Lúc 7 giờ sáng', 'Lúc 8 giờ tối', '30 phút nữa'],
         };
       }
 
       // Default affirmative reminder response if text didn't extract specific time
+      const defaultQ = `${da}, ${addressing} muốn tạo nhắc nhở việc gì và vào lúc mấy giờ ạ?`;
       return {
         handled: true,
         intentId: intent.id,
@@ -493,13 +704,18 @@ export async function executeLocalBrain(
         confidence,
         needsClarification: true,
         clarificationActionType: 'CREATE_REMINDER',
-        clarificationQuestion: `${da}, ${addressing} muốn tạo nhắc nhở việc gì và vào lúc mấy giờ ạ?`,
+        clarificationPayload: {
+          sessionId: session?.id,
+        },
+        clarificationQuestion: defaultQ,
+        reply: defaultQ,
+        speech: defaultQ,
         suggestedReplies: ['Nhắc uống thuốc 7h sáng', 'Nhắc đi khám 8h sáng mai'],
       };
     }
 
     // -------------------------------------------------------------
-    // AGENT ACTIONS (Session Pause, Resume, Complete)
+    // AGENT ACTIONS (Session Pause, Resume, Complete - Enforcing PolicyGuard)
     // -------------------------------------------------------------
     case 'agent_action': {
       if (!session) {
@@ -540,15 +756,23 @@ export async function executeLocalBrain(
         };
       }
 
+      // PolicyGuard for COMPLETE_SESSION (High risk, requires user confirmation)
       if (intent.id === 'session.complete') {
+        const sessionTitle = session.title || 'hiện tại';
+        const prompt = `${da}, ${addressing} có chắc muốn hoàn thành và kết thúc phiên "${sessionTitle}" không ạ?`;
         return {
           handled: true,
           intentId: intent.id,
           category: intent.category,
           confidence,
+          requiresConfirmation: true,
+          confirmationPrompt: prompt,
+          confirmSuccessReply: `${praise} ${me.charAt(0).toUpperCase() + me.slice(1)} chúc mừng ${addressing} đã hoàn thành xuất sắc toàn bộ phiên "${sessionTitle}" nhé! 🎉`,
+          confirmCancelReply: `${da} vâng, ${me} giữ nguyên phiên cho ${addressing} nhé ạ.`,
           agentActions: [{ type: 'COMPLETE_SESSION', payload: {} }],
-          reply: `${praise} ${me.charAt(0).toUpperCase() + me.slice(1)} chúc mừng ${addressing} đã hoàn thành xuất sắc toàn bộ phiên "${session.title}" nhé! 🎉`,
-          speech: `${praise} Chúc mừng ${addressing} đã hoàn thành toàn bộ phiên "${session.title}" rồi ạ!`,
+          reply: prompt,
+          speech: prompt,
+          suggestedReplies: ['Đồng ý hoàn thành', 'Chưa, để sau'],
         };
       }
 
@@ -627,7 +851,8 @@ export async function executeLocalBrain(
     // -------------------------------------------------------------
     case 'unsupported_response': {
       const cap = intent.unsupportedCapability || 'việc này';
-      const template = intent.responseTemplate ||
+      const template =
+        intent.responseTemplate ||
         `${da}, hiện ${me} chưa thể trực tiếp thực hiện {unsupportedCapability} bên ngoài ứng dụng. ${me} có thể tạo phiên hướng dẫn ${addressing} từng bước nếu cần ạ.`;
 
       const reply = formatResponseTemplate(template, honorifics, {
@@ -672,13 +897,12 @@ export async function executeLocalBrain(
     }
 
     default:
-      break;
+      console.warn(`LocalBrainEngine: Unhandled handler "${intent.handler}" for intent ${intent.id}`);
   }
 
-  // Fallback to AI if unhandled
   return {
     handled: false,
-    confidence: 0.3,
+    confidence: 0.2,
     needsAI: true,
   };
 }

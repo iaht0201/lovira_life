@@ -702,6 +702,13 @@ export function useSessionManager({
             finalReply = execRes.reason || 'Dạ, con chưa thực hiện được thao tác này do có lỗi xảy ra.';
           }
         }
+        if (pendingRes.agentActions && pendingRes.agentActions.length > 0 && activeSession) {
+          const batchTrigger = inputMode === 'voice' ? 'voice' : 'chat';
+          const batchRes = applyAgentActionBatch(activeSession, pendingRes.agentActions, batchTrigger);
+          const sessionToSave = batchRes.newState;
+          setActiveSession(sessionToSave);
+          saveUpdatedSession(sessionToSave);
+        }
         if (finalReply) {
           if (activeSession && isSessionContext) {
             const now = new Date().toISOString();
@@ -918,7 +925,7 @@ export function useSessionManager({
           type: 'clarification',
           data: {
             actionType: fastRoute.clarificationActionType,
-            payload: { originalQuery: trimmedText },
+            payload: fastRoute.clarificationPayload || { originalQuery: trimmedText },
             question: q,
             candidates: fastRoute.clarificationCandidates || [],
             suggestedReplies: fastRoute.suggestedReplies,
@@ -927,9 +934,87 @@ export function useSessionManager({
           expiresAt: Date.now() + 180000,
         });
 
+        if (activeSession && isSessionContext) {
+          const now = new Date().toISOString();
+          const userMsg = {
+            id: `msg-${Date.now()}`,
+            sender: 'user' as const,
+            text: trimmedText,
+            timestamp: now,
+            inputMode,
+          };
+          const loviraMsg = {
+            id: `msg-${Date.now() + 1}`,
+            sender: 'lovira' as const,
+            text: q,
+            timestamp: new Date().toISOString(),
+            suggestedReplies: fastRoute.suggestedReplies,
+          };
+          const updatedSession = {
+            ...activeSession,
+            messages: [...activeSession.messages, userMsg, loviraMsg],
+            updatedAt: now,
+          };
+          setActiveSession(updatedSession);
+          saveUpdatedSession(updatedSession);
+        }
+
         showToast(q);
         if (inputMode === 'voice' || accessibilitySettings.speakResponse) {
           speakWithVoiceStatus(q);
+        } else {
+          setVoiceStatus('idle');
+        }
+        setIsLoading(false);
+        return;
+      }
+
+      if (fastRoute.requiresConfirmation) {
+        const prompt = fastRoute.confirmationPrompt || fastRoute.reply || 'Chú có chắc muốn thực hiện thao tác này không ạ?';
+        setPendingInteraction({
+          type: 'confirm_action',
+          data: {
+            actionType: fastRoute.intentId || fastRoute.appAction?.type || 'CONFIRM_ACTION',
+            action: fastRoute.appAction,
+            agentActions: fastRoute.agentActions,
+            payload: fastRoute.appAction?.payload,
+            question: prompt,
+            successReply: fastRoute.confirmSuccessReply,
+            cancelReply: fastRoute.confirmCancelReply,
+            suggestedReplies: fastRoute.suggestedReplies,
+          },
+          createdAt: new Date().toISOString(),
+          expiresAt: Date.now() + 180000,
+        });
+
+        if (activeSession && isSessionContext) {
+          const now = new Date().toISOString();
+          const userMsg = {
+            id: `msg-${Date.now()}`,
+            sender: 'user' as const,
+            text: trimmedText,
+            timestamp: now,
+            inputMode,
+          };
+          const loviraMsg = {
+            id: `msg-${Date.now() + 1}`,
+            sender: 'lovira' as const,
+            text: prompt,
+            timestamp: new Date().toISOString(),
+            suggestedReplies: fastRoute.suggestedReplies || ['Đồng ý', 'Thôi không cần'],
+          };
+          const updatedSession = {
+            ...activeSession,
+            messages: [...activeSession.messages, userMsg, loviraMsg],
+            updatedAt: now,
+          };
+          setActiveSession(updatedSession);
+          saveUpdatedSession(updatedSession);
+        }
+
+        showToast(prompt);
+        if (inputMode === 'voice' || accessibilitySettings.speakResponse) {
+          speakWithVoiceStatus(prompt);
         } else {
           setVoiceStatus('idle');
         }

@@ -1,4 +1,5 @@
 import { BriefSessionHeader } from '../storageService.js';
+import { AgentAction } from '../../types.js';
 
 export type InteractionInputMode = 'text' | 'voice';
 
@@ -31,6 +32,9 @@ export interface PendingInteraction {
     payload?: any;
     question?: string;
     action?: any;
+    agentActions?: AgentAction[];
+    candidates?: string[];
+    suggestedReplies?: string[];
     successReply?: string;
     cancelReply?: string;
   };

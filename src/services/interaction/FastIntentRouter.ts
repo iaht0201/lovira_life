@@ -22,6 +22,7 @@ export interface FastIntentResult {
   handled: boolean;
   confidence: number;
   source?: FastIntentSource;
+  intentId?: string;
   appAction?: AppAction;
   agentActions?: AgentAction[];
   utilityQuery?: UtilityQueryType;
@@ -33,6 +34,11 @@ export interface FastIntentResult {
   clarificationActionType?: string;
   clarificationQuestion?: string;
   clarificationCandidates?: string[];
+  clarificationPayload?: any;
+  requiresConfirmation?: boolean;
+  confirmationPrompt?: string;
+  confirmSuccessReply?: string;
+  confirmCancelReply?: string;
   reason?: string;
 }
 
@@ -65,6 +71,7 @@ export async function routeFastIntent(
       handled: true,
       confidence: brainResult.confidence,
       source: 'pattern',
+      intentId: brainResult.intentId,
       appAction: brainResult.appAction,
       agentActions: brainResult.agentActions,
       utilityQuery: brainResult.utilityQuery as UtilityQueryType,
@@ -75,6 +82,11 @@ export async function routeFastIntent(
       clarificationActionType: brainResult.clarificationActionType,
       clarificationQuestion: brainResult.clarificationQuestion,
       clarificationCandidates: brainResult.clarificationCandidates,
+      clarificationPayload: brainResult.clarificationPayload,
+      requiresConfirmation: brainResult.requiresConfirmation,
+      confirmationPrompt: brainResult.confirmationPrompt,
+      confirmSuccessReply: brainResult.confirmSuccessReply,
+      confirmCancelReply: brainResult.confirmCancelReply,
     };
   }
 

@@ -1,17 +1,19 @@
 import { PendingInteraction } from './interactionTypes.js';
 import { AppAction } from './appActionTypes.js';
+import { AgentAction } from '../../types.js';
 import { parseClarifiedTime } from '../../utils/dateTimeResolver.js';
 import { fetchCurrentWeatherReport } from '../weatherService.js';
 
 const AFFIRMATIVE_REGEX =
-  /^(có|ừ|uh|u|ok|oke|okie|được|tạo đi|tạo giúp|tạo luôn|đồng ý|nhất trí|tạo giúp chú|tạo giúp bác|tạo giúp tôi|tạo giúp cô|làm đi|tiến hành đi|mở đi|mở giúp|xóa|xóa đi|xóa giúp|xóa luôn|chắc chắn|đồng ý xóa|ừ xóa đi|ok xóa)$/i;
+  /^(có|ừ|uh|u|ok|oke|okie|được|tạo đi|tạo giúp|tạo luôn|đồng ý|nhất trí|tạo giúp chú|tạo giúp bác|tạo giúp tôi|tạo giúp cô|làm đi|tiến hành đi|mở đi|mở giúp|xóa|xóa đi|xóa giúp|xóa luôn|chắc chắn|đồng ý xóa|ừ xóa đi|ok xóa|hoàn thành|kết thúc|đúng rồi)$/i;
 
 const NEGATIVE_REGEX =
-  /^(không|thôi|hủy|khỏi|không cần|thôi khỏi|bỏ qua|đừng|không tạo|không xóa|đừng xóa|giữ lại|thôi nha|thôi đừng)$/i;
+  /^(không|thôi|hủy|khỏi|không cần|thôi khỏi|bỏ qua|đừng|không tạo|không xóa|đừng xóa|giữ lại|thôi nha|thôi đừng|chưa|chưa đâu)$/i;
 
 export interface PendingResolution {
   resolved: boolean;
   appAction?: AppAction;
+  agentActions?: AgentAction[];
   reply?: string;
   clearPending: boolean;
 }
@@ -56,23 +58,42 @@ export async function resolvePendingInteraction(
   }
 
   if (pending.type === 'confirm_action') {
-    if (AFFIRMATIVE_REGEX.test(trimmed) || trimmed.toLowerCase().includes('xóa') || trimmed.toLowerCase().includes('đồng ý')) {
-      const actionToRun: AppAction = pending.data.action || {
-        type: pending.data.actionType,
-        payload: pending.data.payload,
-      };
+    if (
+      AFFIRMATIVE_REGEX.test(trimmed) ||
+      trimmed.toLowerCase().includes('xóa') ||
+      trimmed.toLowerCase().includes('đồng ý') ||
+      trimmed.toLowerCase().includes('hoàn thành') ||
+      trimmed.toLowerCase().includes('kết thúc') ||
+      trimmed.toLowerCase().includes('đúng rồi') ||
+      trimmed.toLowerCase().includes('chắc chắn')
+    ) {
+      const actionToRun: AppAction | undefined =
+        pending.data.action ||
+        (pending.data.actionType && pending.data.actionType !== 'COMPLETE_SESSION'
+          ? {
+              type: pending.data.actionType,
+              payload: pending.data.payload,
+            }
+          : undefined);
       return {
         resolved: true,
         appAction: actionToRun,
+        agentActions: pending.data.agentActions || (pending.data.payload?.agentActions as AgentAction[]),
         reply: pending.data.successReply || 'Dạ vâng, con đã thực hiện thao tác rồi ạ!',
         clearPending: true,
       };
     }
 
-    if (NEGATIVE_REGEX.test(trimmed) || trimmed.toLowerCase().includes('không') || trimmed.toLowerCase().includes('thôi')) {
+    if (
+      NEGATIVE_REGEX.test(trimmed) ||
+      trimmed.toLowerCase().includes('không') ||
+      trimmed.toLowerCase().includes('thôi') ||
+      trimmed.toLowerCase().includes('chưa') ||
+      trimmed.toLowerCase().includes('hủy')
+    ) {
       return {
         resolved: true,
-        reply: pending.data.cancelReply || 'Dạ vâng, con đã hủy thao tác và giữ nguyên cho chú rồi ạ.',
+        reply: pending.data.cancelReply || 'Dạ vâng, con đã giữ nguyên cho chú rồi ạ.',
         clearPending: true,
       };
     }
@@ -136,6 +157,32 @@ export async function resolvePendingInteraction(
         reply: 'Dạ, con đưa chú về trang chủ ạ!',
         clearPending: true,
       };
+    }
+
+    if (pending.data.actionType === 'UPDATE_REMINDER') {
+      const targetDateStr = pending.data.payload?.targetDateStr;
+      const resolvedDate = parseClarifiedTime(trimmed, targetDateStr);
+      if (resolvedDate && !isNaN(resolvedDate.getTime())) {
+        const reminderId = pending.data.payload?.reminderId;
+        const title = pending.data.payload?.title || 'Nhắc nhở';
+        const scheduledAt = resolvedDate.toISOString();
+        const timeFormatted = resolvedDate.toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' });
+        const dateFormatted = resolvedDate.toLocaleDateString('vi-VN');
+
+        return {
+          resolved: true,
+          appAction: {
+            type: 'UPDATE_REMINDER',
+            payload: {
+              reminderId,
+              title,
+              scheduledAt,
+            },
+          },
+          reply: `Dạ, con đã cập nhật lịch nhắc "${title}" sang lúc ${timeFormatted} (${dateFormatted}) rồi ạ.`,
+          clearPending: true,
+        };
+      }
     }
 
     if (pending.data.actionType === 'CREATE_REMINDER') {
