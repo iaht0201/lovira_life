@@ -1,23 +1,41 @@
 {
+  "id": "/",
   "name": "Lovira Life - Trợ lý Đời sống thông minh",
   "short_name": "Lovira Life",
   "description": "Trợ lý Đời sống thông minh dành cho người khuyết tật, người cao tuổi và người cần hỗ trợ trong các hoạt động đời sống",
   "start_url": "/",
+  "scope": "/",
   "display": "standalone",
+  "orientation": "portrait",
   "background_color": "#F6F4EF",
   "theme_color": "#287C78",
+  "lang": "vi",
+  "categories": ["lifestyle", "utilities", "health"],
   "icons": [
     {
       "src": "/brand/logo-icon.png",
       "sizes": "192x192",
       "type": "image/png",
-      "purpose": "any maskable"
+      "purpose": "any"
+    },
+    {
+      "src": "/brand/logo-icon.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "maskable"
     },
     {
       "src": "/brand/logo.png",
       "sizes": "512x512",
       "type": "image/png",
-      "purpose": "any maskable"
+      "purpose": "any"
+    },
+    {
+      "src": "/brand/logo.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
     }
   ]
 }
+
