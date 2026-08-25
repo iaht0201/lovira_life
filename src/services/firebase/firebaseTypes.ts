@@ -1,5 +1,5 @@
-import { LifeSession, LifeTask, ImportantFact, SessionResource, SessionMessage, SessionActionLogEntry, RecommendedAction, ScenarioFamily } from '../../types';
-import { UserProfile } from '../../types/userProfile';
+import { LifeSession, LifeTask, ImportantFact, SessionResource, SessionMessage, SessionActionLogEntry, RecommendedAction, ScenarioFamily } from '../../types.js';
+import { UserProfile } from '../../types/userProfile.js';
 
 export type LoviraAuthStatus =
   | 'initializing'

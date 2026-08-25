@@ -1,4 +1,4 @@
-import { LifeSession, LoviraAgentResponse, UserProfile, InteractionInputMode, AppInteractionContext } from '../../../types';
+import { LifeSession, LoviraAgentResponse, UserProfile, InteractionInputMode, AppInteractionContext } from '../../../types.js';
 
 export interface ChatOptions {
   session?: LifeSession | null;

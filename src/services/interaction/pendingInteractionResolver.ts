@@ -88,8 +88,10 @@ export async function resolvePendingInteraction(
     }
 
     if (pending.data.actionType === 'GET_WEATHER') {
+      const origQuery = pending.data.payload?.originalQuery || '';
+      const combinedText = origQuery ? `${origQuery} ${trimmed}` : trimmed;
       const weatherResult = await fetchCurrentWeatherReport({
-        rawText: trimmed,
+        rawText: combinedText,
         addressing: opts?.addressing,
         me: opts?.me,
         da: opts?.da,

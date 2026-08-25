@@ -1,4 +1,4 @@
-import { Reminder, SnoozePreset } from '../../types/reminder';
+import { Reminder, SnoozePreset } from '../../types/reminder.js';
 
 export type AppActionType =
   | 'GO_HOME'

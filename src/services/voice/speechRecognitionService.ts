@@ -1,4 +1,4 @@
-import { SpeechRecognitionEvents, VoiceErrorType } from './voiceTypes';
+import { SpeechRecognitionEvents, VoiceErrorType } from './voiceTypes.js';
 
 interface IWindowWithSpeech extends Window {
   SpeechRecognition?: any;

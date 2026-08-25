@@ -11,9 +11,9 @@ import {
   onAuthStateChanged,
   reload,
 } from 'firebase/auth';
-import { auth, isFirebaseConfigured } from './firebaseClient';
-import { LoviraAuthUser } from './firebaseTypes';
-import { mapFirebaseAuthError } from './firebaseErrors';
+import { auth, isFirebaseConfigured } from './firebaseClient.js';
+import { LoviraAuthUser } from './firebaseTypes.js';
+import { mapFirebaseAuthError } from './firebaseErrors.js';
 
 export function toLoviraAuthUser(user: FirebaseUser | null): LoviraAuthUser | null {
   if (!user) return null;

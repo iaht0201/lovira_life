@@ -83,9 +83,9 @@ function extractCityFromText(text?: string): { name: string; lat: number; lon: n
 async function geocodeCityOpenMeteo(rawText?: string): Promise<{ name: string; lat: number; lon: number } | null> {
   if (!rawText) return null;
   const norm = normalizeLocationText(rawText);
-  // Clean text from common weather queries
+  // Clean text from common weather queries and filler words
   const clean = norm
-    .replace(/\b(thoi tiet|mua|nang|hom nay|bay gio|du bao|nhiet do|co mua khong|nhu the nao|o|tai|tinh|thanh pho|du|o|khong|may do)\b/g, ' ')
+    .replace(/\b(thoi tiet|mua|nang|hom nay|bay gio|du bao|nhiet do|co mua khong|mua khong|nhu the nao|the nao|ngoai troi|troi|ngay mai|a|nhe|co|xem|cho|gio|may do|o|tai|tinh|thanh pho|du|khong|chua|hoi|dung|ngay)\b/g, ' ')
     .replace(/\s+/g, ' ')
     .trim();
 

@@ -1,5 +1,5 @@
-import { LifeSession } from '../types';
-import { UserProfile, PronounStyle } from '../types/userProfile';
+import { LifeSession } from '../types.js';
+import { UserProfile, PronounStyle } from '../types/userProfile.js';
 
 export interface SessionContextDescriptor {
   scenarioType?: string;

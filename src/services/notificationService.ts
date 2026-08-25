@@ -1,4 +1,4 @@
-import { AppNotification, NotificationType } from '../types';
+import { AppNotification, NotificationType } from '../types.js';
 
 const KEY_NOTIFICATIONS = 'lovira_notifications';
 

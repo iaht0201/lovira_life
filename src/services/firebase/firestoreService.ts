@@ -7,7 +7,7 @@ import {
   deleteDoc,
   serverTimestamp,
 } from 'firebase/firestore';
-import { db, isFirebaseConfigured, auth } from './firebaseClient';
+import { db, isFirebaseConfigured, auth } from './firebaseClient.js';
 import {
   LoviraAuthUser,
   CloudSyncSettings,
@@ -15,8 +15,8 @@ import {
   CloudUserProfile,
   FirestoreOperationType,
   FirestoreErrorInfo,
-} from './firebaseTypes';
-import { LifeSession, UserProfile } from '../../types';
+} from './firebaseTypes.js';
+import { LifeSession, UserProfile } from '../../types.js';
 
 function handleFirestoreError(
   error: unknown,

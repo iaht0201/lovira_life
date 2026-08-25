@@ -1,4 +1,4 @@
-import { LifeSession, ModelProfile } from '../types';
+import { LifeSession, ModelProfile } from '../types.js';
 
 export const MODEL_POOL: ModelProfile[] = [
   { id: "openai/gpt-oss-20b", provider: "groq", capability: "fast", supportsVision: false, supportsToolCalling: true },

@@ -1,4 +1,4 @@
-import { BriefSessionHeader } from '../storageService';
+import { BriefSessionHeader } from '../storageService.js';
 
 export type InteractionInputMode = 'text' | 'voice';
 

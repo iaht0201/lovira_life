@@ -465,9 +465,15 @@ export async function routeFastIntent(
   if (
     normalized.includes('thời tiết') ||
     normalized.includes('trời có mưa') ||
+    normalized.includes('có mưa không') ||
+    normalized.includes('mưa không') ||
+    normalized.includes('hôm nay có mưa') ||
+    normalized.includes('hôm nay mưa không') ||
     normalized.includes('nhiệt độ') ||
     normalized.includes('trời hôm nay thế nào') ||
-    unaccented.includes('thoi tiet')
+    unaccented.includes('thoi tiet') ||
+    unaccented.includes('co mua khong') ||
+    unaccented.includes('mua khong')
   ) {
     const weatherResult = await fetchCurrentWeatherReport({
       addressing,

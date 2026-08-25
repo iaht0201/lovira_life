@@ -917,6 +917,8 @@ export function useSessionManager({
         setPendingInteraction({
           type: 'clarification',
           data: {
+            actionType: fastRoute.clarificationActionType,
+            payload: { originalQuery: trimmedText },
             question: q,
             candidates: fastRoute.clarificationCandidates || [],
             suggestedReplies: fastRoute.suggestedReplies,

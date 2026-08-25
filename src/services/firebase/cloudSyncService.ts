@@ -1,7 +1,7 @@
-import { firestoreService } from './firestoreService';
-import { storageService } from '../storageService';
-import { CloudSyncSettings, CloudSyncStatus } from './firebaseTypes';
-import { LifeSession, UserProfile } from '../../types';
+import { firestoreService } from './firestoreService.js';
+import { storageService } from '../storageService.js';
+import { CloudSyncSettings, CloudSyncStatus } from './firebaseTypes.js';
+import { LifeSession, UserProfile } from '../../types.js';
 
 const KEY_CLOUD_SYNC_SETTINGS_PREFIX = 'lovira_cloud_sync_settings';
 

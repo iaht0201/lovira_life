@@ -1,4 +1,4 @@
-import { ReminderCategory, ReminderRepeat } from '../types/reminder';
+import { ReminderCategory, ReminderRepeat } from '../types/reminder.js';
 
 export interface ParsedReminderIntent {
   title: string;

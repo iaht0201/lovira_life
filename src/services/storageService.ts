@@ -1,6 +1,6 @@
-import { LifeSession, AccessibilitySettings, AISettings, UserProfile, ScenarioFamily } from '../types';
-import { DEMO_MEDICAL_SESSION } from '../data/initialData';
-import { calculateNextRecommendedAction, resolveCurrentStep } from './actionEngine';
+import { LifeSession, AccessibilitySettings, AISettings, UserProfile, ScenarioFamily } from '../types.js';
+import { DEMO_MEDICAL_SESSION } from '../data/initialData.js';
+import { calculateNextRecommendedAction, resolveCurrentStep } from './actionEngine.js';
 
 const KEY_SESSIONS_LIST = 'lovira_sessions';
 const KEY_SESSION_PREFIX = 'lovira_session_';
