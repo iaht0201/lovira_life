@@ -1,27 +1,11 @@
-export type VoiceInteractionState =
-  | 'idle'
-  | 'listening'
-  | 'processing'
-  | 'speaking'
-  | 'error';
-
 export type VoiceErrorType =
   | 'not-allowed'
-  | 'audio-capture'
   | 'no-speech'
+  | 'audio-capture'
   | 'network'
   | 'aborted'
   | 'unsupported-browser'
   | 'unknown';
-
-export interface VoiceRuntimeState {
-  status: VoiceInteractionState;
-  interimTranscript?: string;
-  finalTranscript?: string;
-  error?: string;
-  errorType?: VoiceErrorType;
-  startedAt?: number;
-}
 
 export interface SpeechRecognitionEvents {
   onStart?: () => void;
@@ -31,3 +15,5 @@ export interface SpeechRecognitionEvents {
   onEnd?: () => void;
   onVolumeChange?: (volume: number) => void;
 }
+
+export type VoiceInteractionState = 'idle' | 'listening' | 'processing' | 'speaking' | 'error';

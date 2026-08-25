@@ -5,6 +5,7 @@ import express from 'express';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import { createServer as createViteServer } from 'vite';
+import { WebSocketServer } from 'ws';
 
 import { LifeSession, AgentAction } from './src/types.js';
 import { parseLocalIntent } from './src/services/localIntentEngine.js';
@@ -16,6 +17,7 @@ import { selectGroqModel } from './src/services/ai/AIRouter.js';
 import { routeScenario } from './src/services/scenarioRouter.js';
 import { normalizeGeneratedLifePlan, validateGeneratedLifePlan } from './src/services/planValidator.js';
 import { geminiProvider } from './src/services/ai/GeminiProvider.js';
+import { EdgeTTS } from '@andresaya/edge-tts';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -87,6 +89,99 @@ async function startServer() {
     } catch (err: any) {
       console.error('[Transcribe API Exception]:', err);
       return res.status(500).json({ error: err.message || 'Lỗi xử lý âm thanh' });
+    }
+  });
+
+  // 1.6 Edge TTS Endpoint (Microsoft Edge Vietnamese Neural Speech Synthesis)
+  app.post('/api/tts', async (req, res) => {
+    try {
+      const { text, voice = 'vi-VN-HoaiMyNeural', rate = '+0%', pitch = '+0Hz', format = 'base64' } = req.body as {
+        text: string;
+        voice?: string;
+        rate?: string;
+        pitch?: string;
+        format?: 'mp3' | 'base64';
+      };
+
+      if (!text || !text.trim()) {
+        return res.status(400).json({ error: 'Thiếu văn bản cần đọc' });
+      }
+
+      // Clean text from markdown bold/bullets/emojis
+      const cleanText = text
+        .replace(/\*\*/g, '')
+        .replace(/#/g, '')
+        .replace(/•/g, '')
+        .replace(/⚠️/g, 'Cảnh báo:')
+        .replace(/👉/g, '')
+        .replace(/🏥|🏛️|🛒|📄|🌟|📍|🕒|👤|📋|💬|🎙️|🎙|✅|❌|❤️|🔔|💡/g, '')
+        .trim();
+
+      if (!cleanText) {
+        return res.status(400).json({ error: 'Văn bản rỗng sau khi làm sạch' });
+      }
+
+      const ttsVoice = voice === 'vi-VN-NamMinhNeural' ? 'vi-VN-NamMinhNeural' : 'vi-VN-HoaiMyNeural';
+      console.log(`[EdgeTTS] Synthesizing Vietnamese speech (${ttsVoice}): "${cleanText.substring(0, 40)}..."`);
+
+      let audioBuffer: Buffer | null = null;
+      let usedEngine = 'EdgeTTS';
+
+      try {
+        const edgeTTSPromise = (async () => {
+          const tts = new EdgeTTS();
+          await tts.synthesize(cleanText, ttsVoice, {
+            rate: rate || '+0%',
+            pitch: pitch || '+0Hz',
+          });
+          return await tts.toBuffer();
+        })();
+
+        const timeoutPromise = new Promise<never>((_, reject) =>
+          setTimeout(() => reject(new Error('EdgeTTS timeout (4000ms)')), 4000)
+        );
+
+        audioBuffer = await Promise.race([edgeTTSPromise, timeoutPromise]);
+      } catch (edgeErr: any) {
+        console.warn(`[EdgeTTS API Notice] EdgeTTS unavailable or timed out (${edgeErr?.message || edgeErr}), switching to Google TTS fallback...`);
+        usedEngine = 'GoogleTTS';
+
+        // Google Translate TTS Fallback
+        const encodedText = encodeURIComponent(cleanText.slice(0, 200));
+        const googleUrl = `https://translate.google.com/translate_tts?ie=UTF-8&q=${encodedText}&tl=vi&client=tw-ob`;
+        const googleRes = await fetch(googleUrl, {
+          headers: {
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+          },
+        });
+
+        if (googleRes.ok) {
+          audioBuffer = Buffer.from(await googleRes.arrayBuffer());
+        } else {
+          throw new Error(`Fallback Google TTS failed with status ${googleRes.status}`);
+        }
+      }
+
+      if (!audioBuffer || audioBuffer.length === 0) {
+        throw new Error('Failed to generate audio buffer from both EdgeTTS and GoogleTTS');
+      }
+
+      if (format === 'base64') {
+        const audioBase64 = audioBuffer.toString('base64');
+        return res.json({
+          audioBase64: `data:audio/mp3;base64,${audioBase64}`,
+          voice: usedEngine === 'EdgeTTS' ? ttsVoice : 'Google-vi-VN',
+          engine: usedEngine,
+          mimeType: 'audio/mp3',
+        });
+      }
+
+      res.setHeader('Content-Type', 'audio/mpeg');
+      res.setHeader('Content-Length', audioBuffer.length);
+      return res.send(audioBuffer);
+    } catch (err: any) {
+      console.error('[TTS API Error]:', err?.message || err);
+      return res.status(500).json({ error: err.message || 'Lỗi đọc giọng nói TTS' });
     }
   });
 
@@ -388,10 +483,14 @@ QUY TẮC NGÔN NGỮ BẮT BUỘC:
   app.use('/assets/images', express.static(assetsImagesPath));
   app.use(express.static(publicPath));
 
+  const server = app.listen(PORT, '0.0.0.0', () => {
+    console.log(`Lovira Life Server running on http://0.0.0.0:${PORT}`);
+  });
+
   // 7. Vite Middleware for development / Static files for production
   if (process.env.NODE_ENV !== 'production') {
     const vite = await createViteServer({
-      server: { middlewareMode: true },
+      server: { middlewareMode: true, hmr: false },
       appType: 'spa',
     });
     app.use(vite.middlewares);
@@ -403,8 +502,80 @@ QUY TẮC NGÔN NGỮ BẮT BUỘC:
     });
   }
 
-  app.listen(PORT, '0.0.0.0', () => {
-    console.log(`Lovira Life Server running on http://0.0.0.0:${PORT}`);
+  // 8. Real-time WebSocket Speech Streaming Endpoint
+  const wss = new WebSocketServer({ server, path: '/ws/speech' });
+
+  wss.on('connection', (ws) => {
+    console.log('[WebSocket /ws/speech] Client connected successfully!');
+    let audioChunks: Buffer[] = [];
+
+    ws.on('message', async (data, isBinary) => {
+      try {
+        if (isBinary) {
+          audioChunks.push(Buffer.from(data as ArrayBuffer));
+        } else {
+          const message = JSON.parse(data.toString());
+          if (message.type === 'transcribe' || message.type === 'stop') {
+            if (audioChunks.length === 0) {
+              ws.send(JSON.stringify({ type: message.type === 'stop' ? 'final' : 'interim', text: '' }));
+              return;
+            }
+            const completeAudio = Buffer.concat(audioChunks);
+            const groqKey = process.env.GROQ_API_KEY;
+            if (!groqKey) {
+              ws.send(JSON.stringify({ type: 'error', message: 'GROQ_API_KEY missing' }));
+              return;
+            }
+
+            const boundary = '----WebKitFormBoundary' + Math.random().toString(36).substring(2);
+            const multipartBuffer = Buffer.concat([
+              Buffer.from(
+                `--${boundary}\r\nContent-Disposition: form-data; name="file"; filename="audio.webm"\r\nContent-Type: audio/webm\r\n\r\n`
+              ),
+              completeAudio,
+              Buffer.from(
+                `\r\n--${boundary}\r\nContent-Disposition: form-data; name="model"\r\n\r\nwhisper-large-v3-turbo` +
+                  `\r\n--${boundary}\r\nContent-Disposition: form-data; name="language"\r\n\r\nvi` +
+                  `\r\n--${boundary}--\r\n`
+              ),
+            ]);
+
+            const whisperRes = await fetch('https://api.groq.com/openai/v1/audio/transcriptions', {
+              method: 'POST',
+              headers: {
+                Authorization: `Bearer ${groqKey}`,
+                'Content-Type': `multipart/form-data; boundary=${boundary}`,
+              },
+              body: multipartBuffer,
+            });
+
+            if (whisperRes.ok) {
+              const resData = (await whisperRes.json()) as { text?: string };
+              ws.send(
+                JSON.stringify({
+                  type: message.type === 'stop' ? 'final' : 'interim',
+                  text: resData.text || '',
+                })
+              );
+            } else {
+              ws.send(JSON.stringify({ type: 'error', message: 'Whisper failed' }));
+            }
+
+            if (message.type === 'stop') {
+              audioChunks = [];
+            }
+          } else if (message.type === 'reset') {
+            audioChunks = [];
+          }
+        }
+      } catch (err: any) {
+        console.warn('[WebSocket /ws/speech Error]:', err.message);
+      }
+    });
+
+    ws.on('close', () => {
+      audioChunks = [];
+    });
   });
 }
 

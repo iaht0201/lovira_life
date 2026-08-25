@@ -68,99 +68,58 @@ export const VoiceAssistantOverlay: React.FC<VoiceAssistantOverlayProps> = ({
     );
   }
 
-  // 3. Listening Mode: Semi-transparent backdrop + Bottom Sheet
+  // 3. Listening Mode: Compact non-blocking toast at bottom (no backdrop, no modal)
   if (voiceStatus === 'listening') {
     return (
-      <div className="fixed inset-0 z-[9999] flex items-end sm:items-center justify-center p-3 sm:p-4 bg-black/40 backdrop-blur-sm animate-in fade-in duration-150">
-        <div className="w-full max-w-lg rounded-[28px] bg-lovira-card border border-lovira-subtle shadow-2xl p-5 sm:p-6 flex flex-col items-center text-center relative overflow-hidden animate-in slide-in-from-bottom-6 duration-200">
-          {/* Top Close Button */}
+      <div className="fixed bottom-[80px] lg:bottom-6 left-1/2 -translate-x-1/2 z-[9999] pointer-events-auto w-[92%] max-w-sm animate-in slide-in-from-bottom-4 duration-200">
+        <div className="flex items-center gap-3 px-4 py-3 rounded-2xl bg-lovira-card/96 border border-rose-500/40 shadow-2xl backdrop-blur-md">
+          {/* Pulsing mic icon */}
+          <div className="w-9 h-9 rounded-full bg-gradient-to-tr from-[#287C78] to-[#1F625F] flex items-center justify-center shrink-0 shadow-md">
+            <Mic className="w-4 h-4 text-white animate-pulse" aria-hidden="true" />
+          </div>
+
+          {/* Live waveform + transcript */}
+          <div className="flex-1 min-w-0">
+            <div className="flex items-center gap-1.5 mb-0.5">
+              <span className="relative flex h-2 w-2">
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-rose-400 opacity-75" />
+                <span className="relative inline-flex rounded-full h-2 w-2 bg-rose-500" />
+              </span>
+              <span className="text-[11px] font-bold text-rose-500 uppercase tracking-wider">Đang nghe</span>
+            </div>
+            <p className="text-xs text-lovira-title font-medium truncate">
+              {interimTranscript
+                ? `"${interimTranscript}"`
+                : audioVolume > 2
+                ? 'Đã phát hiện tiếng nói...'
+                : 'Hãy nói nhu cầu của bạn...'}
+            </p>
+          </div>
+
+          {/* Waveform bars */}
+          <div className="flex items-center gap-0.5 shrink-0">
+            {[0.4, 0.8, 0.5, 1.0, 0.6].map((mult, i) => (
+              <span
+                key={i}
+                className="w-1 bg-[#287C78] rounded-full transition-all duration-75"
+                style={{ height: `${Math.max(6, Math.min(20, audioVolume * mult + 4))}px` }}
+              />
+            ))}
+          </div>
+
+          {/* Cancel button */}
           <button
             onClick={onCancel}
-            className="absolute top-3.5 right-3.5 w-9 h-9 rounded-full bg-lovira-input hover:bg-lovira-card-hover text-lovira-muted hover:text-lovira-title flex items-center justify-center transition-colors cursor-pointer"
-            aria-label="Đóng"
-            title="Đóng"
+            className="w-7 h-7 rounded-full bg-lovira-input hover:bg-lovira-card-hover text-lovira-muted hover:text-lovira-title flex items-center justify-center transition-colors shrink-0 cursor-pointer"
+            aria-label="Hủy nghe"
           >
-            <X className="w-5 h-5" />
+            <X className="w-3.5 h-3.5" />
           </button>
-
-          <div className="flex flex-col items-center w-full py-1 space-y-4">
-            {/* Live Recording Badge */}
-            <div className="flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-rose-500/15 border border-rose-500/30 text-rose-600 dark:text-rose-400 text-xs font-bold animate-pulse">
-              <span className="relative flex h-2.5 w-2.5">
-                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-rose-400 opacity-75"></span>
-                <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-rose-500"></span>
-              </span>
-              <span>BẬT MICRO • ĐANG LẮNG NGHE</span>
-            </div>
-
-            <div className="relative flex items-center justify-center w-20 h-20 rounded-full bg-gradient-to-tr from-[#287C78] to-[#1F625F] text-white shadow-lg">
-              <span className="absolute -inset-2 rounded-full border-2 border-[#287C78]/40 animate-ping" />
-              <Mic className="w-9 h-9 text-white z-10 animate-pulse" />
-            </div>
-
-            {/* Equalizer & Volume Level */}
-            <div className="flex flex-col items-center gap-1 w-full">
-              <div className="flex items-center justify-center gap-1.5 h-7 py-1">
-                <span className="w-1.5 bg-[#287C78] rounded-full transition-all duration-75" style={{ height: `${Math.max(10, Math.min(28, audioVolume * 0.4 + 8))}px` }} />
-                <span className="w-1.5 bg-[#287C78] rounded-full transition-all duration-75" style={{ height: `${Math.max(14, Math.min(32, audioVolume * 0.6 + 12))}px` }} />
-                <span className="w-1.5 bg-[#287C78] rounded-full transition-all duration-75" style={{ height: `${Math.max(8, Math.min(24, audioVolume * 0.3 + 6))}px` }} />
-                <span className="w-1.5 bg-[#287C78] rounded-full transition-all duration-75" style={{ height: `${Math.max(16, Math.min(36, audioVolume * 0.8 + 14))}px` }} />
-                <span className="w-1.5 bg-[#287C78] rounded-full transition-all duration-75" style={{ height: `${Math.max(10, Math.min(28, audioVolume * 0.5 + 8))}px` }} />
-              </div>
-              <span className="text-[11px] font-bold text-lovira-muted">
-                Âm lượng giọng nói: <span className={audioVolume > 5 ? 'text-[#287C78] dark:text-[#42A39E]' : 'text-amber-500'}>{audioVolume}%</span>
-              </span>
-            </div>
-
-            <div className="space-y-2 w-full">
-              <h3 className="text-base font-extrabold text-lovira-title">
-                Lovira đang lắng nghe chú...
-              </h3>
-
-              {/* Real-time Voice Recognition Box */}
-              {interimTranscript ? (
-                <div className="p-3.5 rounded-xl bg-[#287C78]/10 border-2 border-[#287C78] text-left shadow-sm animate-in fade-in duration-150">
-                  <div className="flex items-center gap-1.5 text-[11px] font-bold text-[#287C78] dark:text-[#42A39E] mb-1 uppercase tracking-wider">
-                    <Mic className="w-3.5 h-3.5 animate-pulse" />
-                    <span>Nội dung nhận diện realtime:</span>
-                  </div>
-                  <p className="text-[#287C78] dark:text-[#42A39E] font-bold text-sm leading-snug">
-                    "{interimTranscript}"
-                  </p>
-                </div>
-              ) : (
-                <div className="space-y-1">
-                  <div className="p-3 rounded-xl bg-lovira-input border border-lovira-subtle text-lovira-muted text-xs font-semibold flex items-center justify-center gap-2">
-                    <span className="w-2 h-2 rounded-full bg-[#287C78] animate-ping" />
-                    <span>Nói vào micro, Lovira sẽ tự nhận diện khi chú im lặng ~1.6 giây</span>
-                  </div>
-                  <p className="text-[11px] text-lovira-muted font-medium">
-                    Ví dụ: "Mở danh sách nhắc nhở cho chú"
-                  </p>
-                </div>
-              )}
-            </div>
-
-            <div className="flex items-center gap-3 w-full pt-2">
-              <button
-                onClick={onCancel}
-                className="flex-1 py-2.5 px-4 rounded-xl bg-lovira-input hover:bg-lovira-card-hover text-lovira-muted text-sm font-bold transition-all cursor-pointer"
-              >
-                Hủy
-              </button>
-              <button
-                onClick={onStopListening}
-                className="flex-1 py-2.5 px-4 rounded-xl bg-gradient-to-r from-[#287C78] to-[#1F625F] hover:opacity-90 text-white text-sm font-bold flex items-center justify-center gap-2 shadow-md transition-all cursor-pointer"
-              >
-                <Send className="w-4 h-4" />
-                <span>Hoàn tất & Gửi</span>
-              </button>
-            </div>
-          </div>
         </div>
       </div>
     );
   }
+
 
   // 4. Error State Modal
   if (voiceStatus === 'error' || voiceError) {

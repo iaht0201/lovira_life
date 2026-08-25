@@ -21,7 +21,14 @@ import {
 } from 'lucide-react';
 import { AccessibilitySettings, AISettings, UserProfile } from '../../types';
 import { MODEL_POOL } from '../../data/initialData';
-import { checkVietnameseVoiceSupport, speakText } from '../../services/ttsService';
+import {
+  checkVietnameseVoiceSupport,
+  speakText,
+  getTTSVoice,
+  setTTSVoice,
+  getAvailableVoices,
+  EdgeTTSVoice,
+} from '../../services/ttsService';
 import { storageService } from '../../services/storageService';
 import { buildAddressing } from '../../utils/filterRelevantConditions';
 import { AuthUserCard } from '../auth/AuthUserCard';
@@ -54,12 +61,26 @@ export const SettingsPage: React.FC<SettingsPageProps> = ({
   const [provider, setProvider] = useState<'gemini' | 'groq' | 'demo'>(aiSettings.provider);
   const [selectedModel, setSelectedModel] = useState(aiSettings.selectedModel || 'gemini-2.5-flash');
   const [voiceSupport, setVoiceSupport] = useState<'available' | 'unavailable' | 'pending'>('pending');
+  const [selectedTtsVoice, setSelectedTtsVoice] = useState<EdgeTTSVoice>(getTTSVoice());
   const [testResult, setTestResult] = useState<string | null>(null);
   const [showClearConfirm, setShowClearConfirm] = useState(false);
 
   useEffect(() => {
     setVoiceSupport(checkVietnameseVoiceSupport());
   }, []);
+
+  const handleSelectTtsVoice = (v: EdgeTTSVoice) => {
+    setSelectedTtsVoice(v);
+    setTTSVoice(v);
+    onShowToast?.(`Đã chọn giọng đọc ${v === 'vi-VN-HoaiMyNeural' ? 'Hoài My (Nữ)' : 'Nam Minh (Nam)'}`);
+  };
+
+  const handleTestTTS = () => {
+    speakText(
+      'Xin chào! Đây là thử nghiệm giọng đọc tiếng Việt Microsoft Edge Neural mượt mà của ứng dụng Lovira Life.',
+      { voice: selectedTtsVoice }
+    );
+  };
 
   const fontScales = [
     { scale: 1.0, label: '100% (Tiêu chuẩn)' },
@@ -79,10 +100,6 @@ export const SettingsPage: React.FC<SettingsPageProps> = ({
     });
     setTestResult('Đã lưu Gemini API Key thành công!');
     setTimeout(() => setTestResult(null), 3000);
-  };
-
-  const handleTestTTS = () => {
-    speakText('Xin chào! Đây là thử nghiệm giọng nói tiếng Việt của ứng dụng Lovira Life.');
   };
 
   const handleToggleHealthSync = () => {
@@ -308,7 +325,7 @@ export const SettingsPage: React.FC<SettingsPageProps> = ({
         </div>
       </section>
 
-      {/* 3. VIETNAMESE VOICE PACK CHECK & TTS */}
+      {/* 3. VIETNAMESE VOICE PACK CHECK & EDGE TTS */}
       <section className="p-6 rounded-[22px] bg-lovira-card border border-lovira shadow-2xs space-y-4">
         <div className="flex items-center justify-between border-b border-lovira-subtle pb-3.5">
           <div className="flex items-center gap-2.5">
@@ -317,48 +334,77 @@ export const SettingsPage: React.FC<SettingsPageProps> = ({
             </div>
             <div>
               <h3 className="text-[16px] font-[800] text-lovira-title">
-                Giọng nói tiếng Việt (Text-to-Speech)
+                Giọng nói tiếng Việt (Microsoft Edge Neural TTS)
               </h3>
-              <p className="text-[12px] font-[500] text-lovira-muted">Tự động đọc to phản hồi bằng giọng tiếng Việt</p>
+              <p className="text-[12px] font-[500] text-lovira-muted">
+                Động cơ tổng hợp giọng nói trí tuệ nhân tạo cao cấp, phát âm chuẩn Việt tự nhiên
+              </p>
             </div>
           </div>
 
-          <span
-            className={`text-[11px] font-[700] px-3 py-1 rounded-full border ${
-              voiceSupport === 'available'
-                ? 'bg-[#ECFDF5] text-[#047857] border-[#A7F3D0] dark:bg-[#064E3B] dark:text-[#34D399] dark:border-[#047857]'
-                : 'bg-[#FEF3C7] text-[#92400E] border-[#FCD34D] dark:bg-[#451A03] dark:text-[#FDE68A] dark:border-[#78350F]'
-            }`}
-          >
-            {voiceSupport === 'available' ? '✓ Đã có gói vi-VN' : '⚠️ Chưa có gói vi-VN'}
+          <span className="text-[11px] font-[700] px-3 py-1 rounded-full border bg-[#ECFDF5] text-[#047857] border-[#A7F3D0] dark:bg-[#064E3B] dark:text-[#34D399] dark:border-[#047857]">
+            ✓ Edge TTS Active
           </span>
         </div>
 
-        <div className="space-y-3">
+        <div className="space-y-4">
           <p className="text-[12px] font-[500] text-lovira-muted leading-relaxed">
-            Lovira sử dụng động cơ tổng hợp giọng nói của thiết bị để phát âm tự nhiên nhất.
+            Chọn giọng đọc tiếng Việt ưa thích. Lovira sẽ sử dụng giọng nói này để đọc to phản hồi và trợ lý đồng hành:
           </p>
 
-          <button
-            onClick={handleTestTTS}
-            className="flex items-center gap-2 min-h-[42px] px-5 py-2.5 rounded-[12px] bg-[#287C78] hover:bg-[#1F625F] text-white font-[700] text-[13px] shadow-xs transition-colors cursor-pointer"
-          >
-            <Volume2 className="w-[18px] h-[18px]" />
-            <span>Thử nghe giọng đọc tiếng Việt</span>
-          </button>
+          {/* Voice selector cards */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            {getAvailableVoices().map((v) => {
+              const isSelected = selectedTtsVoice === v.id;
+              return (
+                <button
+                  key={v.id}
+                  type="button"
+                  onClick={() => handleSelectTtsVoice(v.id)}
+                  className={`p-4 rounded-[16px] border text-left transition-all cursor-pointer relative overflow-hidden ${
+                    isSelected
+                      ? 'bg-lovira-badge-purple border-lovira-purple ring-2 ring-lovira-purple/20'
+                      : 'bg-lovira-input border-lovira hover:border-lovira-purple/50'
+                  }`}
+                >
+                  <div className="flex items-center justify-between mb-1.5">
+                    <span className="text-[14px] font-[800] text-lovira-title flex items-center gap-1.5">
+                      <span>{v.name}</span>
+                    </span>
+                    <span
+                      className={`text-[10px] font-[800] px-2 py-0.5 rounded-full ${
+                        v.gender === 'Nữ'
+                          ? 'bg-pink-100 text-pink-700 dark:bg-pink-950/50 dark:text-pink-300'
+                          : 'bg-blue-100 text-blue-700 dark:bg-blue-950/50 dark:text-blue-300'
+                      }`}
+                    >
+                      Giọng {v.gender}
+                    </span>
+                  </div>
+                  <p className="text-[11px] font-[500] text-lovira-muted leading-snug">
+                    {v.desc}
+                  </p>
+                  {isSelected && (
+                    <div className="mt-2 text-[11px] font-[700] text-lovira-purple flex items-center gap-1">
+                      <CheckCircle2 className="w-[14px] h-[14px]" />
+                      <span>Đang chọn</span>
+                    </div>
+                  )}
+                </button>
+              );
+            })}
+          </div>
 
-          {voiceSupport === 'unavailable' && (
-            <div className="p-4 rounded-[16px] bg-[#FFFBEB] dark:bg-[#2A1808] border border-[#FCD34D] dark:border-[#B45309] space-y-2 text-[12px]">
-              <div className="flex items-center gap-1.5 font-[800] text-[#B45309] dark:text-[#FBBF24]">
-                <HelpCircle className="w-[18px] h-[18px] shrink-0" />
-                <span>Hướng dẫn tải gói giọng nói tiếng Việt:</span>
-              </div>
-              <ul className="list-disc pl-5 space-y-1.5 text-[#78350F] dark:text-[#FEF3C7] font-[500]">
-                <li><strong className="font-[800] text-[#92400E] dark:text-[#FDE68A]">Android:</strong> Cài đặt hệ thống → Ngôn ngữ & Nhập liệu → Đầu ra chuyển văn bản thành giọng nói (TTS) → Tải gói giọng nói tiếng Việt.</li>
-                <li><strong className="font-[800] text-[#92400E] dark:text-[#FDE68A]">iOS / iPhone:</strong> Cài đặt → Trợ năng → Nội dung được đọc → Giọng nói → Tiếng Việt → Tải gói giọng nói.</li>
-              </ul>
-            </div>
-          )}
+          <div className="flex items-center gap-3 pt-1">
+            <button
+              type="button"
+              onClick={handleTestTTS}
+              className="flex items-center gap-2 min-h-[42px] px-5 py-2.5 rounded-[12px] bg-[#287C78] hover:bg-[#1F625F] text-white font-[700] text-[13px] shadow-xs transition-colors cursor-pointer"
+            >
+              <Volume2 className="w-[18px] h-[18px]" />
+              <span>Thử nghe giọng đọc Edge TTS</span>
+            </button>
+          </div>
         </div>
       </section>
 

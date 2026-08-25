@@ -9,28 +9,21 @@ export class SpeechRecognitionService {
   private recognition: any = null;
   private isListening = false;
   private isSubmitted = false;
+  private isCancelled = false;
   private events: SpeechRecognitionEvents = {};
 
-  // Audio Stream & VAD State
-  private activeStream: MediaStream | null = null;
-  private audioCtx: AudioContext | null = null;
-  private animFrameId: number | null = null;
-  private mediaRecorder: MediaRecorder | null = null;
-  private audioChunks: Blob[] = [];
-
-  // VAD Timers & Thresholds
-  private heardSpeech = false;
-  private lastVoiceActivityAt = 0;
-  private silenceTimer: any = null;
-  private noSpeechTimer: any = null;
-
-  private readonly SILENCE_MS = 1600; // 1.6 seconds silence after speech -> auto finalize
-  private readonly NO_SPEECH_TIMEOUT_MS = 8000; // 8 seconds timeout if no speech detected at all
-  private readonly SPEECH_THRESHOLD = 8; // Volume threshold percentage
-
-  // Accumulated Transcripts
+  // Transcripts
+  private latestTranscript = '';
   private confirmedTranscript = '';
-  private currentInterimTranscript = '';
+  private interimTranscript = '';
+
+  // Silence & Timeout Timers
+  private silenceTimer: any = null;
+  private sessionTimeoutTimer: any = null;
+  private hasHeardSpeech = false;
+
+  private readonly SILENCE_COMMIT_MS = 1200; // 1.2s of silence after speaking -> auto-commit
+  private readonly MAX_SESSION_MS = 15000; // 15s max listening window
 
   public isSupported(): boolean {
     if (typeof window === 'undefined') return false;
@@ -38,238 +31,14 @@ export class SpeechRecognitionService {
     return !!(win.SpeechRecognition || win.webkitSpeechRecognition);
   }
 
-  private clearSilenceTimer() {
+  private clearTimers() {
     if (this.silenceTimer) {
       clearTimeout(this.silenceTimer);
       this.silenceTimer = null;
     }
-  }
-
-  private clearNoSpeechTimer() {
-    if (this.noSpeechTimer) {
-      clearTimeout(this.noSpeechTimer);
-      this.noSpeechTimer = null;
-    }
-  }
-
-  /**
-   * Initialize shared microphone MediaStream for both Audio Analyser (VAD) and MediaRecorder
-   */
-  private async setupAudioStream(onVolumeChange?: (volume: number) => void): Promise<MediaStream | null> {
-    this.cleanupAudioStream();
-    try {
-      if (typeof navigator === 'undefined' || !navigator.mediaDevices?.getUserMedia) return null;
-      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-      this.activeStream = stream;
-
-      // 1. Audio Analyser for VAD
-      const AudioContextClass = window.AudioContext || (window as any).webkitAudioContext;
-      if (AudioContextClass) {
-        this.audioCtx = new AudioContextClass();
-        const source = this.audioCtx.createMediaStreamSource(stream);
-        const analyser = this.audioCtx.createAnalyser();
-        analyser.fftSize = 256;
-        analyser.smoothingTimeConstant = 0.5;
-        source.connect(analyser);
-        const dataArray = new Uint8Array(analyser.frequencyBinCount);
-
-        const checkVolume = () => {
-          if (!this.isListening) return;
-          analyser.getByteFrequencyData(dataArray);
-          let sum = 0;
-          for (let i = 0; i < dataArray.length; i++) {
-            sum += dataArray[i];
-          }
-          const avg = sum / dataArray.length;
-          const volumePercent = Math.min(100, Math.round((avg / 64) * 100));
-          onVolumeChange?.(volumePercent);
-
-          // Voice Activity Detection logic
-          if (volumePercent >= this.SPEECH_THRESHOLD) {
-            this.heardSpeech = true;
-            this.lastVoiceActivityAt = Date.now();
-            this.clearSilenceTimer();
-            this.clearNoSpeechTimer();
-          } else if (this.heardSpeech) {
-            // User previously spoke and is now quiet
-            if (!this.silenceTimer && !this.isSubmitted) {
-              this.silenceTimer = setTimeout(() => {
-                console.log('[VAD] 1.6s of silence detected after speech. Auto-finalizing transcript...');
-                this.finishListening();
-              }, this.SILENCE_MS);
-            }
-          }
-
-          this.animFrameId = requestAnimationFrame(checkVolume);
-        };
-        checkVolume();
-      }
-
-      // 2. MediaRecorder for Whisper AI Fallback (using same stream)
-      this.audioChunks = [];
-      const mimeType = MediaRecorder.isTypeSupported('audio/webm;codecs=opus')
-        ? 'audio/webm;codecs=opus'
-        : MediaRecorder.isTypeSupported('audio/webm')
-        ? 'audio/webm'
-        : 'audio/mp4';
-
-      this.mediaRecorder = new MediaRecorder(stream, { mimeType });
-      this.mediaRecorder.ondataavailable = (event) => {
-        if (event.data && event.data.size > 0) {
-          this.audioChunks.push(event.data);
-        }
-      };
-      this.mediaRecorder.start(100);
-
-      return stream;
-    } catch (e) {
-      console.warn('[SpeechRecognitionService] Audio stream setup failed:', e);
-      return null;
-    }
-  }
-
-  private cleanupAudioStream() {
-    this.clearSilenceTimer();
-    this.clearNoSpeechTimer();
-
-    if (this.animFrameId) {
-      cancelAnimationFrame(this.animFrameId);
-      this.animFrameId = null;
-    }
-    if (this.mediaRecorder) {
-      try {
-        if (this.mediaRecorder.state !== 'inactive') {
-          this.mediaRecorder.stop();
-        }
-      } catch (e) {
-        // Ignore
-      }
-      this.mediaRecorder = null;
-    }
-    if (this.activeStream) {
-      this.activeStream.getTracks().forEach((track) => track.stop());
-      this.activeStream = null;
-    }
-    if (this.audioCtx) {
-      this.audioCtx.close().catch(() => {});
-      this.audioCtx = null;
-    }
-  }
-
-  public async stopMediaRecorderAndTranscribe(): Promise<string> {
-    if (!this.mediaRecorder || this.audioChunks.length === 0) {
-      return '';
-    }
-    return new Promise<string>((resolve) => {
-      const recorder = this.mediaRecorder;
-      if (!recorder) return resolve('');
-
-      const timeout = setTimeout(() => {
-        resolve('');
-      }, 5000);
-
-      recorder.onstop = async () => {
-        clearTimeout(timeout);
-        try {
-          const audioBlob = new Blob(this.audioChunks, { type: recorder.mimeType || 'audio/webm' });
-          if (audioBlob.size < 200) return resolve('');
-
-          const reader = new FileReader();
-          reader.readAsDataURL(audioBlob);
-          reader.onloadend = async () => {
-            const base64data = (reader.result as string).split(',')[1];
-            try {
-              const res = await fetch('/api/transcribe', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ audioBase64: base64data, mimeType: recorder.mimeType }),
-              });
-              if (res.ok) {
-                const data = await res.json();
-                console.log('[Whisper Fallback Result]:', data.text);
-                resolve(data.text || '');
-              } else {
-                resolve('');
-              }
-            } catch (err) {
-              console.warn('[Transcribe Fallback Error]:', err);
-              resolve('');
-            }
-          };
-        } catch (e) {
-          resolve('');
-        }
-      };
-
-      try {
-        if (recorder.state !== 'inactive') {
-          recorder.stop();
-        } else {
-          clearTimeout(timeout);
-          resolve('');
-        }
-      } catch (e) {
-        clearTimeout(timeout);
-        resolve('');
-      }
-    });
-  }
-
-  private async submitFinal(text: string) {
-    if (this.isSubmitted) return;
-    this.isSubmitted = true;
-    this.isListening = false;
-
-    if (this.recognition) {
-      try {
-        this.recognition.stop();
-      } catch (e) {
-        // Ignore
-      }
-    }
-
-    let finalSpeechText = text;
-
-    // Fallback to Whisper AI if Web Speech transcript was empty but audio/speech was detected
-    if (!finalSpeechText.trim() && (this.heardSpeech || this.audioChunks.length > 0)) {
-      console.log('[SpeechRecognition] Web Speech returned empty text. Running Whisper AI audio transcription...');
-      finalSpeechText = await this.stopMediaRecorderAndTranscribe();
-    }
-
-    this.cleanupAudioStream();
-
-    if (finalSpeechText.trim()) {
-      console.log('[SpeechRecognition] Chốt transcript thành công:', finalSpeechText.trim());
-      this.events.onFinalResult?.(finalSpeechText.trim());
-    } else {
-      this.events.onError?.(
-        'no-speech',
-        'Lovira chưa nghe thấy câu nói nào. Chú/bạn thử nói lại hoặc gõ tin nhắn cho Lovira nhé.'
-      );
-    }
-  }
-
-  public async ensureMicAccess(): Promise<{ ok: boolean; message?: string }> {
-    if (typeof navigator === 'undefined' || !navigator.mediaDevices?.getUserMedia) {
-      return { ok: true };
-    }
-    try {
-      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-      stream.getTracks().forEach((track) => track.stop());
-      return { ok: true };
-    } catch (err: any) {
-      console.warn('[SpeechRecognitionService] getUserMedia mic check failed:', err);
-      if (err.name === 'NotAllowedError' || err.name === 'PermissionDeniedError') {
-        return {
-          ok: false,
-          message:
-            'Quyền Micro đang bị chặn. Bạn vui lòng bật "Cho phép truy cập Micro" trong cài đặt trình duyệt nhé.',
-        };
-      }
-      return {
-        ok: false,
-        message: `Không thể mở Micro (${err.name || err.message}).`,
-      };
+    if (this.sessionTimeoutTimer) {
+      clearTimeout(this.sessionTimeoutTimer);
+      this.sessionTimeoutTimer = null;
     }
   }
 
@@ -286,7 +55,7 @@ export class SpeechRecognitionService {
         return {
           type: 'no-speech',
           message:
-            'Lovira chưa nghe thấy câu nói nào. Chú/bạn thử nói lại hoặc gõ tin nhắn cho Lovira nhé.',
+            'Lovira chưa nghe thấy câu nói nào. Bạn thử nói lại hoặc gõ tin nhắn nhé.',
         };
       case 'audio-capture':
         return {
@@ -299,10 +68,7 @@ export class SpeechRecognitionService {
           message: 'Lỗi kết nối mạng khi nhận dạng giọng nói. Bạn thử lại nhé.',
         };
       case 'aborted':
-        return {
-          type: 'aborted',
-          message: 'Đã dừng thu âm.',
-        };
+        return { type: 'aborted', message: 'Đã dừng thu âm.' };
       default:
         return {
           type: 'unknown',
@@ -312,8 +78,35 @@ export class SpeechRecognitionService {
     }
   }
 
+  private commitTranscript(text: string) {
+    if (this.isSubmitted || this.isCancelled) return;
+    this.isSubmitted = true;
+    this.isListening = false;
+    this.clearTimers();
+
+    if (this.recognition) {
+      try {
+        this.recognition.stop();
+      } catch {
+        // ignore
+      }
+    }
+
+    const cleanText = text.trim();
+    if (cleanText) {
+      console.log('[SpeechRecognition] Final transcript committed:', cleanText);
+      this.events.onFinalResult?.(cleanText);
+    } else {
+      this.events.onError?.(
+        'no-speech',
+        'Lovira chưa nghe thấy câu nói nào. Bạn thử bấm nói lại nhé.'
+      );
+    }
+  }
+
   public startListening(events: SpeechRecognitionEvents): boolean {
     if (!this.isSupported()) {
+      console.warn('[SpeechRecognition] Web Speech API not supported in this browser');
       events.onError?.(
         'unsupported-browser',
         'Trình duyệt này chưa hỗ trợ nhận dạng giọng nói. Bạn có thể gõ tin nhắn cho Lovira nhé.'
@@ -322,134 +115,150 @@ export class SpeechRecognitionService {
     }
 
     // Clean up any ongoing session
-    this.cancelListeningSilent();
+    this.cancelListening();
 
     try {
       const win = window as IWindowWithSpeech;
       const SpeechRecognitionClass = win.SpeechRecognition || win.webkitSpeechRecognition;
 
-      this.recognition = new SpeechRecognitionClass();
-      this.recognition.lang = 'vi-VN';
-      this.recognition.interimResults = true;
-      this.recognition.continuous = true; // Use continuous mode to capture full sentences without auto-stopping early
-      this.recognition.maxAlternatives = 1;
+      const recognition = new SpeechRecognitionClass();
+      recognition.lang = 'vi-VN';
+      recognition.continuous = true;
+      recognition.interimResults = true;
+      recognition.maxAlternatives = 1;
 
+      this.recognition = recognition;
       this.events = events;
       this.isListening = true;
       this.isSubmitted = false;
-      this.heardSpeech = false;
-      this.lastVoiceActivityAt = 0;
+      this.isCancelled = false;
+      this.hasHeardSpeech = false;
+      this.latestTranscript = '';
       this.confirmedTranscript = '';
-      this.currentInterimTranscript = '';
+      this.interimTranscript = '';
 
-      let hasError = false;
+      let hasFatalError = false;
 
-      // 1. Setup shared Audio Stream (Audio Analyser + MediaRecorder)
-      this.setupAudioStream((vol) => {
-        this.events.onVolumeChange?.(vol);
-      });
-
-      // 2. Set 8s Timeout if no speech is heard at all
-      this.noSpeechTimer = setTimeout(() => {
-        if (this.isListening && !this.heardSpeech && !this.isSubmitted) {
-          console.log('[VAD] No speech detected after 8 seconds. Stopping listening...');
-          this.cancelListening();
-          this.events.onError?.(
-            'no-speech',
-            'Lovira chưa nghe thấy câu nói nào. Chú/bạn thử nói lại hoặc gõ tin nhắn cho Lovira nhé.'
-          );
+      // 15 seconds session max window
+      this.sessionTimeoutTimer = setTimeout(() => {
+        if (this.isListening && !this.isSubmitted && !this.isCancelled) {
+          console.log('[SpeechRecognition] Max session timeout reached');
+          if (this.latestTranscript.trim()) {
+            this.commitTranscript(this.latestTranscript);
+          } else {
+            this.cancelListening();
+            this.events.onError?.(
+              'no-speech',
+              'Lovira chưa nghe thấy câu nói nào. Bạn bấm vào micro để nói lại nhé.'
+            );
+          }
         }
-      }, this.NO_SPEECH_TIMEOUT_MS);
+      }, this.MAX_SESSION_MS);
 
-      this.recognition.onstart = () => {
-        console.log('[SpeechRecognition] Microphone active! Listening for voice...');
+      recognition.onstart = () => {
+        if (this.isCancelled) return;
+        console.log('[SpeechRecognition] Microphone active! Listening continuously...');
         this.isListening = true;
-        this.isSubmitted = false;
         this.events.onStart?.();
       };
 
-      this.recognition.onresult = (event: any) => {
-        let newFinalText = '';
-        let interimText = '';
+      recognition.onresult = (event: any) => {
+        if (this.isCancelled || this.isSubmitted) return;
 
-        for (let i = event.resultIndex; i < event.results.length; ++i) {
-          const result = event.results[i];
-          const text = result[0]?.transcript || '';
-          if (result.isFinal) {
-            newFinalText += (newFinalText ? ' ' : '') + text;
+        let newFinal = '';
+        let newInterim = '';
+
+        for (let i = event.resultIndex; i < event.results.length; i++) {
+          const res = event.results[i];
+          const text = res[0]?.transcript || '';
+          if (res.isFinal) {
+            newFinal += text + ' ';
           } else {
-            interimText += (interimText ? ' ' : '') + text;
+            newInterim += text;
           }
         }
 
-        // Accumulate confirmed final packets so they are NOT lost or overwritten
-        if (newFinalText.trim()) {
-          if (this.confirmedTranscript) {
-            this.confirmedTranscript += ' ' + newFinalText.trim();
-          } else {
-            this.confirmedTranscript = newFinalText.trim();
-          }
+        if (newFinal.trim()) {
+          this.confirmedTranscript = (this.confirmedTranscript + ' ' + newFinal).trim();
         }
+        this.interimTranscript = newInterim.trim();
 
-        this.currentInterimTranscript = interimText.trim();
-
-        // Combine confirmed transcript + current interim transcript
-        const combined = [this.confirmedTranscript, this.currentInterimTranscript]
+        const combined = [this.confirmedTranscript, this.interimTranscript]
           .filter(Boolean)
           .join(' ')
           .trim();
 
         if (combined) {
-          this.heardSpeech = true;
-          this.clearNoSpeechTimer();
-          console.log('[SpeechRecognition] Realtime transcript:', combined);
+          this.hasHeardSpeech = true;
+          this.latestTranscript = combined;
+          console.log('[SpeechRecognition] Live speech:', combined);
           this.events.onInterimResult?.(combined);
-        }
 
-        // IMPORTANT: DO NOT call submitFinal() on isFinal!
-        // Mobile Chrome marks intermediate clauses as isFinal prematurely.
-        // We accumulate transcripts and rely solely on VAD 1.6s silence detection or manual submit.
+          // Reset silence timer on each new word
+          if (this.silenceTimer) clearTimeout(this.silenceTimer);
+          this.silenceTimer = setTimeout(() => {
+            if (this.isListening && !this.isSubmitted && this.hasHeardSpeech) {
+              console.log('[SpeechRecognition] Auto-committing after silence:', this.latestTranscript);
+              this.commitTranscript(this.latestTranscript);
+            }
+          }, this.SILENCE_COMMIT_MS);
+        }
       };
 
-      this.recognition.onerror = (event: any) => {
+      recognition.onerror = (event: any) => {
         const error = event.error || 'unknown';
-        if (error === 'aborted') {
-          this.isListening = false;
+        console.log('[SpeechRecognition] Error notice:', error);
+
+        // Ignore harmless temporary events
+        if (this.isCancelled || error === 'aborted' || error === 'no-speech') {
           return;
         }
 
-        console.warn('[SpeechRecognition] Error event:', error, event);
-        hasError = true;
-        const { type, message } = this.mapError(error);
-        this.cleanupAudioStream();
+        hasFatalError = true;
         this.isListening = false;
+        this.clearTimers();
+        const { type, message } = this.mapError(error);
         this.events.onError?.(type, message);
       };
 
-      this.recognition.onend = () => {
-        if (hasError || this.isSubmitted) return;
+      recognition.onend = () => {
+        console.log(
+          '[SpeechRecognition] onend fired — hasFatalError:',
+          hasFatalError,
+          '| isCancelled:',
+          this.isCancelled,
+          '| isSubmitted:',
+          this.isSubmitted,
+          '| isListening:',
+          this.isListening
+        );
 
-        const combinedText = [this.confirmedTranscript, this.currentInterimTranscript]
-          .filter(Boolean)
-          .join(' ')
-          .trim();
+        if (this.isCancelled || hasFatalError || this.isSubmitted) {
+          this.clearTimers();
+          this.events.onEnd?.();
+          return;
+        }
 
-        // If recognition ended naturally and user has spoken or transcript exists, finalize!
-        if (this.isListening && (this.heardSpeech || combinedText)) {
-          this.submitFinal(combinedText);
-        } else if (this.isListening && !this.isSubmitted) {
-          // Restart recognition silently if still within listening window and user hasn't spoken
-          try {
-            this.recognition.start();
-          } catch (e) {
-            this.cleanupAudioStream();
-            this.isListening = false;
-            this.events.onEnd?.();
+        // If the browser closed the connection naturally while we're still waiting for speech:
+        if (this.isListening) {
+          if (this.latestTranscript.trim()) {
+            // If we have text buffered, finalize it
+            this.commitTranscript(this.latestTranscript);
+          } else {
+            // Keep listening seamlessly (restart recognizer)
+            try {
+              console.log('[SpeechRecognition] Seamlessly restarting listener...');
+              recognition.start();
+            } catch (e) {
+              this.isListening = false;
+              this.clearTimers();
+              this.events.onEnd?.();
+            }
           }
         }
       };
 
-      this.recognition.start();
+      recognition.start();
       return true;
     } catch (e: any) {
       console.warn('Failed to start SpeechRecognition:', e);
@@ -458,61 +267,41 @@ export class SpeechRecognitionService {
     }
   }
 
-  /**
-   * Finish and submit current accumulated transcript immediately.
-   */
-  public async finishListening() {
-    if (this.isSubmitted) return;
-    const combinedText = [this.confirmedTranscript, this.currentInterimTranscript]
-      .filter(Boolean)
-      .join(' ')
-      .trim();
-    await this.submitFinal(combinedText);
+  public finishListening() {
+    if (this.isSubmitted || this.isCancelled) return;
+    this.commitTranscript(this.latestTranscript);
   }
 
-  public async stopListening() {
-    await this.finishListening();
-  }
-
-  private cancelListeningSilent() {
-    this.cleanupAudioStream();
-    this.isListening = false;
-    this.isSubmitted = true;
-    if (this.recognition) {
-      const oldInstance = this.recognition;
-      this.recognition = null;
-      try {
-        oldInstance.onstart = null;
-        oldInstance.onresult = null;
-        oldInstance.onerror = null;
-        oldInstance.onend = null;
-        oldInstance.stop();
-      } catch (e) {
-        // Ignore
-      }
-    }
+  public stopListening() {
+    this.finishListening();
   }
 
   public cancelListening() {
-    this.cleanupAudioStream();
+    this.isCancelled = true;
     this.isListening = false;
-    this.isSubmitted = true;
-    this.confirmedTranscript = '';
-    this.currentInterimTranscript = '';
+    this.isSubmitted = false;
+    this.latestTranscript = '';
+    this.clearTimers();
+
     if (this.recognition) {
+      const rec = this.recognition;
+      this.recognition = null;
       try {
-        this.recognition.abort();
-      } catch (e) {
-        // Ignore
+        rec.onstart = null;
+        rec.onresult = null;
+        rec.onerror = null;
+        rec.onend = null;
+        rec.abort();
+      } catch {
+        // ignore
       }
     }
     this.events.onEnd?.();
   }
 
   public getCurrentTranscript(): string {
-    return [this.confirmedTranscript, this.currentInterimTranscript].filter(Boolean).join(' ').trim();
+    return this.latestTranscript;
   }
 }
 
 export const speechRecognitionService = new SpeechRecognitionService();
-

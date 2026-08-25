@@ -98,157 +98,170 @@ export async function callGroqAgent(
   const jsonInstruction = `
 ---
 ĐỊNH DẠNG ĐẦU RA BẮT BUỘC (100% TIẾNG VIỆT):
-- TẤT CẢ VĂN BẢN (reply, speech, tiêu đề nhiệm vụ, mô tả nhiệm vụ, tên tài nguyên, gợi ý nhanh suggestedReplies) BẮT BUỘC 100% BẰNG TIẾNG VIỆT (VIETNAMESE). TUYỆT ĐỐI KHÔNG DÙNG TIẾNG ANH.
-- Bạn PHẢI trả về duy nhất một đối tượng JSON hợp lệ (không kèm theo văn bản giải thích ngoài JSON) theo đúng cấu trúc sau:
+- Bạn PHẢI trả về duy nhất một đối tượng JSON hợp lệ:
 {
-  "reply": "Câu trả lời thân thiện, ấm áp bằng tiếng Việt (sử dụng gạch đầu dòng • và **in đậm** cho tiêu đề các mục gợi ý rõ ràng)",
-  "speech": "Lời đọc to ngắn gọn, tự nhiên bằng tiếng Việt, không chứa ký tự kỹ thuật",
-  "suggestedReplies": ["Gợi ý nhanh bằng tiếng Việt 1", "Gợi ý nhanh bằng tiếng Việt 2"],
-  "actions": [
-    {
-      "type": "ADD_TASK | UPDATE_TASK | COMPLETE_TASK | SKIP_TASK | DELETE_TASK | REORDER_TASK | ADD_SUBTASK | COMPLETE_SUBTASK | ADD_FACT | UPDATE_FACT | DELETE_FACT | UPDATE_NEXT_ACTION | CHANGE_GOAL | PAUSE_SESSION | RESUME_SESSION | COMPLETE_SESSION | OPEN_CAMERA",
-      "payload": { ... }
-    }
-  ],
-  "appActions": [
-    {
-      "type": "GO_HOME | GO_BACK | OPEN_SESSION | CREATE_SESSION | OPEN_SETTINGS | OPEN_PROFILE | OPEN_CAMERA | UPDATE_ACCESSIBILITY_SETTING | OPEN_REMINDERS | CREATE_REMINDER | UPDATE_REMINDER | DELETE_REMINDER | SNOOZE_REMINDER | COMPLETE_REMINDER | PIN_SESSION | ARCHIVE_SESSION",
-      "payload": { ... }
-    }
-  ],
-  "pendingInteraction": {
-    "type": "create_session",
-    "data": { "goal": "Mục tiêu bằng tiếng Việt..." }
-  }
+  "reply": "Câu trả lời thân thiện bằng tiếng Việt (dùng • và **in đậm** cho danh sách)",
+  "speech": "Lời đọc to ngắn gọn bằng tiếng Việt",
+  "suggestedReplies": ["Gợi ý 1", "Gợi ý 2"],
+  "actions": [{ "type": "ADD_TASK|UPDATE_TASK|COMPLETE_TASK|COMPLETE_SUBTASK|ADD_FACT|COMPLETE_SESSION", "payload": { ... } }],
+  "appActions": [{ "type": "GO_HOME|OPEN_SESSION|CREATE_SESSION|OPEN_SETTINGS|OPEN_CAMERA|OPEN_REMINDERS|CREATE_REMINDER", "payload": { ... } }],
+  "pendingInteraction": { "type": "create_session", "data": { "goal": "Mục tiêu..." } }
 }
-Lưu ý:
-- Nếu không có actions, hãy để "actions": []
-- Nếu không có appActions, hãy để "appActions": []
-- Nếu đề xuất tạo phiên làm việc mới, hãy điền "pendingInteraction" tương ứng bằng tiếng Việt.
 `;
 
   const systemPrompt = `${baseContextPrompt}\n${jsonInstruction}`;
 
   let lastError: Error | null = null;
+  const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
-  // Xoay tua mô hình nếu gặp lỗi Rate Limit (429), Model Not Found (404), JSON Validation (400), Entity Too Large (413)...
+  // Xoay tua mô hình nếu gặp lỗi Rate Limit (429), Model Not Found (404), JSON Validation (400)...
   for (const currentModel of modelsToTry) {
-    try {
-      console.log(`[GroqProvider] Attempting call with model: ${currentModel}`);
-      
-      const payload: any = {
-        model: currentModel,
-        messages: [
-          { role: 'system', content: systemPrompt },
-          { role: 'user', content: message },
-        ],
-        response_format: { type: 'json_object' },
-        temperature: 0.2,
-      };
+    let retried429 = false;
 
-      let res = await fetch('https://api.groq.com/openai/v1/chat/completions', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${apiKey}`,
-        },
-        body: JSON.stringify(payload),
-      });
-
-      // Nếu gặp lỗi 400 (json_validate_failed), thử lại không dùng response_format
-      if (!res.ok && res.status === 400) {
-        const errText = await res.text();
-        if (errText.includes('json_validate_failed') || errText.includes('JSON')) {
-          console.warn(`[GroqProvider] Model '${currentModel}' failed JSON validation mode. Retrying without response_format...`);
-          delete payload.response_format;
-          res = await fetch('https://api.groq.com/openai/v1/chat/completions', {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-              Authorization: `Bearer ${apiKey}`,
-            },
-            body: JSON.stringify(payload),
-          });
-        } else {
-          console.warn(`[GroqProvider] Model '${currentModel}' failed (400): ${errText}. Rotating to next model...`);
-          lastError = new Error(`Groq API error (400): ${errText}`);
-          continue;
-        }
-      }
-
-      if (!res.ok) {
-        const errText = await res.text();
-        console.warn(`[GroqProvider] Model '${currentModel}' failed (${res.status}): ${errText}. Rotating to next model...`);
-        lastError = new Error(`Groq API error (${res.status}): ${errText}`);
-        continue; // Luân chuyển sang mô hình tiếp theo trong Enum
-      }
-
-      const data = await res.json();
-      const duration = Date.now() - startTime;
-      const choice = data.choices?.[0];
-      const rawContent = choice?.message?.content || '';
-
-      if (!rawContent) {
-        console.warn(`[GroqProvider] Empty response from model '${currentModel}'. Rotating to next model...`);
-        lastError = new Error(`Empty response from Groq model '${currentModel}'`);
-        continue;
-      }
-
-      let reply = '';
-      let speech: string | undefined = undefined;
-      let actions: AgentAction[] = [];
-      let appActions: AppAction[] = [];
-      let pendingInteraction: any = undefined;
-      let suggestedReplies: string[] | undefined = undefined;
-
-      // Parse structured JSON response
+    for (let attempt = 0; attempt < 2; attempt++) {
       try {
-        let cleanJson = rawContent.trim();
-        if (cleanJson.startsWith('```json')) {
-          cleanJson = cleanJson.replace(/^```json\s*/, '').replace(/\s*```$/, '');
-        } else if (cleanJson.startsWith('```')) {
-          cleanJson = cleanJson.replace(/^```\s*/, '').replace(/\s*```$/, '');
-        }
+        console.log(`[GroqProvider] Attempting call with model: ${currentModel} (attempt ${attempt + 1})`);
 
-        const parsed = JSON.parse(cleanJson);
-        reply = parsed.reply || '';
-        speech = parsed.speech;
-        if (Array.isArray(parsed.actions)) actions = parsed.actions;
-        if (Array.isArray(parsed.appActions)) appActions = parsed.appActions;
-        if (Array.isArray(parsed.suggestedReplies)) suggestedReplies = parsed.suggestedReplies;
-        if (parsed.pendingInteraction) {
-          pendingInteraction = {
-            ...parsed.pendingInteraction,
-            createdAt: new Date().toISOString(),
-            expiresAt: Date.now() + 180000,
-          };
-        }
-      } catch (parseErr) {
-        console.warn(`[GroqProvider] Could not parse JSON from model '${currentModel}', falling back to raw text:`, parseErr);
-        reply = rawContent.replace(/\*\*/g, '').trim();
-      }
-
-      const cleanReply = reply ? reply.replace(/\*\*/g, '').trim() : 'Lovira đã ghi nhận.';
-
-      return {
-        reply: cleanReply,
-        speech: (speech || cleanReply).replace(/[*#]/g, '').trim(),
-        actions,
-        appActions: appActions.length > 0 ? appActions : undefined,
-        pendingInteraction,
-        suggestedReplies,
-        meta: {
-          engine: 'groq',
+        const payload: any = {
           model: currentModel,
-          processingTime: duration,
-        },
-      };
-    } catch (err: any) {
-      console.warn(`[GroqProvider] Exception with model '${currentModel}':`, err?.message || err, '. Rotating to next model...');
-      lastError = err instanceof Error ? err : new Error(String(err));
+          messages: [
+            { role: 'system', content: systemPrompt },
+            { role: 'user', content: message },
+          ],
+          response_format: { type: 'json_object' },
+          temperature: 0.2,
+        };
+
+        let res = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${apiKey}`,
+          },
+          body: JSON.stringify(payload),
+        });
+
+        // Xử lý lỗi Rate Limit (429)
+        if (res.status === 429) {
+          const errText = await res.text();
+          console.warn(`[GroqProvider] Model '${currentModel}' hit Rate Limit (429).`);
+          
+          // Trích xuất thời gian chờ từ thông báo lỗi (ví dụ: "Please try again in 1.35s")
+          let delayMs = 1200;
+          const match = errText.match(/try again in (\d+(\.\d+)?)s/i);
+          if (match && match[1]) {
+            delayMs = Math.min(Math.ceil(parseFloat(match[1]) * 1000) + 200, 2500);
+          }
+
+          if (!retried429) {
+            retried429 = true;
+            console.log(`[GroqProvider] Sleeping ${delayMs}ms before retrying '${currentModel}'...`);
+            await sleep(delayMs);
+            continue; // Thử lại mô hình này 1 lần nữa sau khi chờ rate-limit window
+          } else {
+            // Đã thử 2 lần trên mô hình này, chờ ngắn rồi chuyển mô hình kế tiếp
+            await sleep(800);
+            lastError = new Error(`Groq Rate limit exceeded (429) on ${currentModel}`);
+            break;
+          }
+        }
+
+        // Nếu gặp lỗi 400 (json_validate_failed), thử lại không dùng response_format
+        if (!res.ok && res.status === 400) {
+          const errText = await res.text();
+          if (errText.includes('json_validate_failed') || errText.includes('JSON')) {
+            console.warn(`[GroqProvider] Model '${currentModel}' failed JSON validation mode. Retrying without response_format...`);
+            delete payload.response_format;
+            res = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+                Authorization: `Bearer ${apiKey}`,
+              },
+              body: JSON.stringify(payload),
+            });
+          } else {
+            console.warn(`[GroqProvider] Model '${currentModel}' failed (400): ${errText}. Rotating to next model...`);
+            lastError = new Error(`Groq API error (400): ${errText}`);
+            break;
+          }
+        }
+
+        if (!res.ok) {
+          const errText = await res.text();
+          console.warn(`[GroqProvider] Model '${currentModel}' failed (${res.status}): ${errText}. Rotating to next model...`);
+          lastError = new Error(`Groq API error (${res.status}): ${errText}`);
+          break; // Luân chuyển sang mô hình tiếp theo
+        }
+
+        const data = await res.json();
+        const duration = Date.now() - startTime;
+        const choice = data.choices?.[0];
+        const rawContent = choice?.message?.content || '';
+
+        if (!rawContent) {
+          console.warn(`[GroqProvider] Empty response from model '${currentModel}'. Rotating to next model...`);
+          lastError = new Error(`Empty response from Groq model '${currentModel}'`);
+          break;
+        }
+
+        let reply = '';
+        let speech: string | undefined = undefined;
+        let actions: AgentAction[] = [];
+        let appActions: AppAction[] = [];
+        let pendingInteraction: any = undefined;
+        let suggestedReplies: string[] | undefined = undefined;
+
+        // Parse structured JSON response
+        try {
+          let cleanJson = rawContent.trim();
+          if (cleanJson.startsWith('```json')) {
+            cleanJson = cleanJson.replace(/^```json\s*/, '').replace(/\s*```$/, '');
+          } else if (cleanJson.startsWith('```')) {
+            cleanJson = cleanJson.replace(/^```\s*/, '').replace(/\s*```$/, '');
+          }
+
+          const parsed = JSON.parse(cleanJson);
+          reply = parsed.reply || '';
+          speech = parsed.speech;
+          if (Array.isArray(parsed.actions)) actions = parsed.actions;
+          if (Array.isArray(parsed.appActions)) appActions = parsed.appActions;
+          if (Array.isArray(parsed.suggestedReplies)) suggestedReplies = parsed.suggestedReplies;
+          if (parsed.pendingInteraction) {
+            pendingInteraction = {
+              ...parsed.pendingInteraction,
+              createdAt: new Date().toISOString(),
+              expiresAt: Date.now() + 180000,
+            };
+          }
+        } catch (parseErr) {
+          console.warn(`[GroqProvider] Could not parse JSON from model '${currentModel}', falling back to raw text:`, parseErr);
+          reply = rawContent.replace(/\*\*/g, '').trim();
+        }
+
+        const cleanReply = reply ? reply.replace(/\*\*/g, '').trim() : 'Lovira đã ghi nhận.';
+
+        return {
+          reply: cleanReply,
+          speech: (speech || cleanReply).replace(/[*#]/g, '').trim(),
+          actions,
+          appActions: appActions.length > 0 ? appActions : undefined,
+          pendingInteraction,
+          suggestedReplies,
+          meta: {
+            engine: 'groq',
+            model: currentModel,
+            processingTime: duration,
+          },
+        };
+      } catch (err: any) {
+        console.warn(`[GroqProvider] Exception with model '${currentModel}':`, err?.message || err, '. Rotating to next model...');
+        lastError = err instanceof Error ? err : new Error(String(err));
+        break;
+      }
     }
   }
 
-  console.error('[GroqProvider] All Groq models in rotation priority failed:', lastError);
-  throw lastError || new Error('All Groq models failed.');
+  console.warn('[GroqProvider] All Groq models in rotation priority failed or rate limited:', lastError?.message);
+  return null;
 }

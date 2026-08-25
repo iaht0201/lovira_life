@@ -114,37 +114,11 @@ export const UNAVAILABLE_CAPABILITIES_LIST: string[] = [
  * Returns strict system instructions on app capabilities to prevent AI hallucination.
  */
 export function getCapabilityGroundingPrompt(): string {
-  const capabilitiesFormatted = AVAILABLE_APP_CAPABILITIES.map(
-    (c) => `- ${c.actionType}: ${c.description}${c.parametersDescription ? ` (${c.parametersDescription})` : ''}`
-  ).join('\n');
-
-  const unavailableFormatted = UNAVAILABLE_CAPABILITIES_LIST.map((u) => `- ${u}`).join('\n');
-
   return `
-==================================================
-CAPABILITY GROUNDING CONTRACT — QUY TẮC NĂNG LỰC BẮT BUỘC (CRITICAL):
---------------------------------------------------
-1. HỆ THỐNG HỖ TRỢ ĐẦY ĐỦ CÁC NĂNG LỰC ĐIỀU HƯỚNG/THAO TÁC ỨNG DỤNG SAU (AVAILABLE_APP_CAPABILITIES):
-${capabilitiesFormatted}
-
-2. CÁC NĂNG LỰC NGOÀI HỆ THỐNG KHÔNG CÓ (UNAVAILABLE CAPABILITIES):
-${unavailableFormatted}
-
-3. QUY TẮC CHỐNG ẢO GIÁC NĂNG LỰC & XỬ LÝ NHẮC NHỞ (ANTI-HALLUCINATION CONTRACT):
-- ĐỐI VỚI NHẮC NHỞ & LỊCH TRÌNH: Ứng dụng Lovira ĐÃ CÓ TÍNH NĂNG NHẮC NHỞ & LỊCH TRÌNH THẬT SỰ (CREATE_REMINDER, SNOOZE_REMINDER, COMPLETE_REMINDER, DELETE_REMINDER, OPEN_REMINDERS).
-  Khi người dùng nhờ nhắc nhở (ví dụ: "Mai 7h sáng nhắc tôi mang CCCD đi khám", "30 phút nữa nhắc tôi uống thuốc"), bạn HÃY PHÁT HÀNH appActions CREATE_REMINDER tương ứng và trả lời xác nhận rõ ràng, ấm áp.
-- ĐỐI VỚI XÓA NHẮC NHỞ: Luôn hỏi xác nhận trước khi xóa, phát hành DELETE_REMINDER.
-- TUYỆT ĐỐI KHÔNG giả lập tính năng ngoài hệ thống như "đang mở Google Maps", "đã gọi xe Grab", "đã chuyển khoản ngân hàng", "đã gửi email".
-- Khi người dùng nhờ việc ngoài hệ thống (ví dụ: "tìm đường", "gọi xe giúp tôi"):
-  + Hãy giải thích ngắn gọn, từ tốn rằng Lovira chưa hỗ trợ mở bản đồ hoặc gọi xe trực tiếp.
-  + Sau đó tiếp tục đồng hành bằng lời khuyên, gợi ý các việc cần chuẩn bị hoặc dặn dò người dùng.
-  + ĐỂ "actions": [] VÀ "appActions": [].
-- GỢI Ý NHANH (suggestedReplies) TUÂN THỦ NGHIÊM NGẶT NGUYÊN TẮC NÀY:
-  + Tuyệt đối không sinh nút gợi ý như "Xem bản đồ", "Xem danh sách cửa hàng", "Chọn cửa hàng này".
-  + Chỉ gợi ý những câu nói tự nhiên của người dùng (ví dụ: "Đã chuẩn bị xong", "Giờ làm gì tiếp", "Nhờ tư vấn thêm").
-- KHI NGƯỜI DÙNG CHỈ CHAT, XIN Ý KIẾN HOẶC HỎI GỢI Ý (ví dụ: "bạn gợi ý cho mình đi", "cháu 10 tuổi thích gì"):
-  + Trả lời đầy đủ, gợi ý chi tiết, ấm áp và thực tế.
-  + BẮT BUỘC để "actions": [] và "appActions": [] (Tuyệt đối không phát hành action rỗng hoặc action không hợp lệ).
-==================================================
+QUY TẮC NĂNG LỰC ỨNG DỤNG:
+- NHẮC NHỞ & LỊCH TRÌNH: Lovira CÓ tính năng nhắc nhở thật (appActions: CREATE_REMINDER, SNOOZE_REMINDER, COMPLETE_REMINDER, DELETE_REMINDER, OPEN_REMINDERS). Khi người dùng nhờ nhắc nhở/hẹn giờ, PHẢI tạo appAction CREATE_REMINDER với scheduledAt chuẩn ISO 8601.
+- ĐIỀU HƯỚNG: Hỗ trợ GO_HOME, GO_BACK, OPEN_SESSION, CREATE_SESSION, OPEN_SETTINGS, OPEN_PROFILE, OPEN_CAMERA, UPDATE_ACCESSIBILITY_SETTING.
+- TÍNH NĂNG KHÔNG HỖ TRỢ: Bản đồ/GPS, gọi điện/SMS ngoài, đặt Grab/Taxi, thanh toán ví điện tử. Khi nhờ việc này, giải thích từ tốn và để actions/appActions rỗng.
+- CHAT/HỎI ĐÁP THÔNG THƯỜNG: Đặt actions: [] và appActions: [].
 `;
 }
