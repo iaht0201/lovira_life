@@ -159,6 +159,7 @@ function AppContent() {
     voiceStatus,
     setVoiceStatus,
     interimTranscript,
+    audioVolume,
     voiceError,
     setVoiceError,
     speakWithVoiceStatus: originalSpeak,
@@ -539,33 +540,34 @@ function AppContent() {
 
         {/* Toast Notification */}
         {toastMessage && <Toast message={toastMessage} />}
-
-        {/* Global Voice Assistant Listening/Speaking Overlay */}
-        <VoiceAssistantOverlay
-          voiceStatus={voiceStatus}
-          interimTranscript={interimTranscript}
-          voiceError={voiceError}
-          lastResponseText={lastVoiceResponseText}
-          onStopListening={stopListening}
-          onCancel={() => {
-            cancelListening();
-            stopSpeakingAudio();
-            setVoiceError(undefined);
-          }}
-          onRetry={() => {
-            setVoiceError(undefined);
-            startListening((transcript) =>
-              sendInteraction(transcript, {
-                inputMode: 'voice',
-                activeTab: isSessionRoute ? 'session' : activeTab,
-                pageContext: currentGlobalPageContext,
-              })
-            );
-          }}
-          onOpenChat={() => navigate('/chat')}
-          onStopSpeaking={stopSpeakingAudio}
-        />
       </AppShell>
+
+      {/* Global Voice Assistant Listening/Speaking Overlay (Rendered outside AppShell to prevent CSS stacking context clipping) */}
+      <VoiceAssistantOverlay
+        voiceStatus={voiceStatus}
+        interimTranscript={interimTranscript}
+        audioVolume={audioVolume}
+        voiceError={voiceError}
+        lastResponseText={lastVoiceResponseText}
+        onStopListening={stopListening}
+        onCancel={() => {
+          cancelListening();
+          stopSpeakingAudio();
+          setVoiceError(undefined);
+        }}
+        onRetry={() => {
+          setVoiceError(undefined);
+          startListening((transcript) =>
+            sendInteraction(transcript, {
+              inputMode: 'voice',
+              activeTab: isSessionRoute ? 'session' : activeTab,
+              pageContext: currentGlobalPageContext,
+            })
+          );
+        }}
+        onOpenChat={() => navigate('/chat')}
+        onStopSpeaking={stopSpeakingAudio}
+      />
     </>
   );
 }

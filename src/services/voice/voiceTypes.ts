@@ -29,4 +29,5 @@ export interface SpeechRecognitionEvents {
   onFinalResult?: (transcript: string) => void;
   onError?: (errorType: VoiceErrorType, message: string) => void;
   onEnd?: () => void;
+  onVolumeChange?: (volume: number) => void;
 }

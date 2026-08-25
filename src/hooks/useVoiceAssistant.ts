@@ -13,6 +13,7 @@ export function useVoiceAssistant(options: UseVoiceAssistantOptions = {}) {
   const [voiceStatus, setVoiceStatus] = useState<VoiceInteractionState>('idle');
   const [interimTranscript, setInterimTranscript] = useState<string>('');
   const [voiceError, setVoiceError] = useState<string | undefined>(undefined);
+  const [audioVolume, setAudioVolume] = useState<number>(0);
 
   const optionsRef = useRef(options);
   optionsRef.current = options;
@@ -25,6 +26,7 @@ export function useVoiceAssistant(options: UseVoiceAssistantOptions = {}) {
 
     setVoiceStatus('speaking');
     setInterimTranscript('');
+    setAudioVolume(0);
 
     speakText(text, {
       onStart: () => {
@@ -44,30 +46,36 @@ export function useVoiceAssistant(options: UseVoiceAssistantOptions = {}) {
   const stopSpeakingAudio = useCallback(() => {
     stopSpeaking();
     setVoiceStatus('idle');
+    setAudioVolume(0);
   }, []);
 
   const startListening = useCallback((overrideOnFinalResult?: (transcript: string) => void) => {
-    // Play electronic mic start beep
-    sfx.playMicStart();
-
-    // Ensure TTS audio is silenced immediately when mic turns on
+    // 1. Immediately pop up Voice Assistant Overlay UI synchronously on click
     stopSpeaking();
     setVoiceError(undefined);
     setInterimTranscript('');
+    setAudioVolume(0);
     setVoiceStatus('listening');
+    sfx.playMicStart();
 
+    // 2. Start Speech Recognition
     const started = speechRecognitionService.startListening({
       onStart: () => {
         setVoiceStatus('listening');
         setInterimTranscript('');
+      },
+      onVolumeChange: (vol) => {
+        setAudioVolume(vol);
       },
       onInterimResult: (transcript) => {
         setInterimTranscript(transcript);
       },
       onFinalResult: (transcript) => {
         setInterimTranscript('');
+        setAudioVolume(0);
         if (transcript.trim()) {
           sfx.playSuccess();
+          setVoiceStatus('processing');
           const handler = overrideOnFinalResult || optionsRef.current.onSpeechResult;
           if (handler) {
             handler(transcript.trim());
@@ -82,15 +90,12 @@ export function useVoiceAssistant(options: UseVoiceAssistantOptions = {}) {
         setVoiceStatus('error');
         setVoiceError(message);
         setInterimTranscript('');
+        setAudioVolume(0);
       },
       onEnd: () => {
-        setVoiceStatus((prev) => {
-          if (prev === 'listening') {
-            sfx.playMicStop();
-            return 'idle';
-          }
-          return prev;
-        });
+        // DO NOT mutate voiceStatus here!
+        // SpeechRecognition.onend only means the native microphone hardware finished recording.
+        // It must NOT override 'processing' or 'speaking' states driven by the Voice Orchestrator.
       },
     });
 
@@ -118,6 +123,7 @@ export function useVoiceAssistant(options: UseVoiceAssistantOptions = {}) {
     setVoiceStatus,
     interimTranscript,
     setInterimTranscript,
+    audioVolume,
     voiceError,
     setVoiceError,
     speakWithVoiceStatus,

@@ -5,6 +5,7 @@ import { VoiceInteractionState } from '../../types';
 interface VoiceAssistantOverlayProps {
   voiceStatus: VoiceInteractionState;
   interimTranscript?: string;
+  audioVolume?: number;
   voiceError?: string;
   lastResponseText?: string;
   onStopListening: () => void;
@@ -17,6 +18,7 @@ interface VoiceAssistantOverlayProps {
 export const VoiceAssistantOverlay: React.FC<VoiceAssistantOverlayProps> = ({
   voiceStatus,
   interimTranscript = '',
+  audioVolume = 0,
   voiceError,
   lastResponseText,
   onStopListening,
@@ -30,9 +32,9 @@ export const VoiceAssistantOverlay: React.FC<VoiceAssistantOverlayProps> = ({
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-3 sm:p-4 bg-black/60 backdrop-blur-md animate-in fade-in duration-200">
+    <div className="fixed inset-0 z-[9999] flex items-end sm:items-center justify-center p-3 sm:p-4 bg-black/60 backdrop-blur-md animate-in fade-in duration-200">
       <div className="w-full max-w-lg rounded-[24px] bg-lovira-card border border-lovira-subtle shadow-lovira-lg p-5 sm:p-6 flex flex-col items-center text-center relative overflow-hidden animate-in slide-in-from-bottom-4 duration-200">
-        
+
         {/* Top Close Button */}
         <button
           onClick={onCancel}
@@ -61,29 +63,46 @@ export const VoiceAssistantOverlay: React.FC<VoiceAssistantOverlayProps> = ({
               <Mic className="w-10 h-10 text-white z-10 animate-bounce" />
             </div>
 
-            {/* Sound Wave Equalizer Animation */}
-            <div className="flex items-center justify-center gap-1.5 h-8 py-1">
-              <span className="w-1.5 h-6 bg-[#287C78] rounded-full animate-[bounce_0.8s_infinite_100ms]" />
-              <span className="w-1.5 h-8 bg-[#287C78] rounded-full animate-[bounce_0.8s_infinite_300ms]" />
-              <span className="w-1.5 h-5 bg-[#287C78] rounded-full animate-[bounce_0.8s_infinite_200ms]" />
-              <span className="w-1.5 h-9 bg-[#287C78] rounded-full animate-[bounce_0.8s_infinite_400ms]" />
-              <span className="w-1.5 h-6 bg-[#287C78] rounded-full animate-[bounce_0.8s_infinite_150ms]" />
-              <span className="w-1.5 h-8 bg-[#287C78] rounded-full animate-[bounce_0.8s_infinite_250ms]" />
-              <span className="w-1.5 h-5 bg-[#287C78] rounded-full animate-[bounce_0.8s_infinite_350ms]" />
+            {/* Sound Wave Equalizer & Live Volume Level Meter */}
+            <div className="flex flex-col items-center gap-1.5 w-full">
+              <div className="flex items-center justify-center gap-1.5 h-8 py-1">
+                <span className="w-1.5 bg-[#287C78] rounded-full transition-all duration-75" style={{ height: `${Math.max(12, Math.min(32, audioVolume * 0.4 + 10))}px` }} />
+                <span className="w-1.5 bg-[#287C78] rounded-full transition-all duration-75" style={{ height: `${Math.max(16, Math.min(36, audioVolume * 0.6 + 14))}px` }} />
+                <span className="w-1.5 bg-[#287C78] rounded-full transition-all duration-75" style={{ height: `${Math.max(10, Math.min(28, audioVolume * 0.3 + 8))}px` }} />
+                <span className="w-1.5 bg-[#287C78] rounded-full transition-all duration-75" style={{ height: `${Math.max(18, Math.min(40, audioVolume * 0.8 + 16))}px` }} />
+                <span className="w-1.5 bg-[#287C78] rounded-full transition-all duration-75" style={{ height: `${Math.max(12, Math.min(30, audioVolume * 0.5 + 10))}px` }} />
+              </div>
+              <span className="text-[11px] font-bold text-lovira-muted">
+                Âm lượng Micro đầu vào: <span className={audioVolume > 5 ? 'text-[#287C78] dark:text-[#42A39E]' : 'text-amber-500'}>{audioVolume}%</span>
+              </span>
             </div>
 
-            <div className="space-y-1.5 w-full">
+            <div className="space-y-2 w-full">
               <h3 className="text-[17px] font-[800] text-lovira-title">
                 Lovira đang lắng nghe chú...
               </h3>
+              
+              {/* Real-time Voice Recognition Box */}
               {interimTranscript ? (
-                <div className="text-[#287C78] dark:text-[#42A39E] font-[700] text-[15px] bg-lovira-input p-3.5 rounded-[14px] border border-[#287C78]/40 shadow-inner max-h-[120px] overflow-y-auto animate-pulse">
-                  "{interimTranscript}"
+                <div className="p-3.5 rounded-[14px] bg-[#287C78]/10 border-2 border-[#287C78] text-left shadow-md animate-in fade-in duration-150">
+                  <div className="flex items-center gap-1.5 text-[11px] font-bold text-[#287C78] dark:text-[#42A39E] mb-1 uppercase tracking-wider">
+                    <Mic className="w-3.5 h-3.5 animate-pulse" />
+                    <span>Nội dung nhận diện được:</span>
+                  </div>
+                  <p className="text-[#287C78] dark:text-[#42A39E] font-[700] text-[15px] leading-snug">
+                    "{interimTranscript}"
+                  </p>
                 </div>
               ) : (
-                <p className="text-[13px] text-lovira-muted font-[500]">
-                  Chú cứ nói tự nhiên (ví dụ: "Nhắc chú uống thuốc lúc 7h30 sáng")
-                </p>
+                <div className="space-y-1.5">
+                  <div className="p-3 rounded-[14px] bg-lovira-input border border-lovira-subtle text-lovira-muted text-[13px] font-[600] flex items-center justify-center gap-2">
+                    <span className="w-2 h-2 rounded-full bg-[#287C78] animate-ping" />
+                    <span>Đang chờ giọng nói... (Chú hãy nói vào Micro)</span>
+                  </div>
+                  <p className="text-[12px] text-lovira-muted font-[500]">
+                    Ví dụ: "Nhắc chú uống thuốc lúc 7h30 sáng"
+                  </p>
+                </div>
               )}
             </div>
 

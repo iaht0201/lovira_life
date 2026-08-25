@@ -95,8 +95,8 @@ export const RecentSessionItem: React.FC<RecentSessionItemProps> = ({
           <Icon className="w-[20px] h-[20px]" />
         </div>
 
-        {/* Title & Status */}
-        <div className="min-w-0 flex-1">
+        {/* Title, Status & Progress below */}
+        <div className="min-w-0 flex-1 space-y-1.5">
           <div className="flex items-center gap-1.5">
             {session.pinned && (
               <span className="px-1.5 py-0.5 text-[9px] font-black rounded-md bg-amber-500/15 text-amber-600 dark:text-amber-400 border border-amber-500/30 shrink-0">
@@ -107,24 +107,24 @@ export const RecentSessionItem: React.FC<RecentSessionItemProps> = ({
               {session.title}
             </h4>
           </div>
-          <div className="flex items-center gap-2 mt-1">
+
+          <div className="flex flex-wrap items-center gap-2.5 pt-0.5">
             {getStatusBadge()}
+
+            <div className="flex items-center gap-2">
+              <span className="text-[11px] sm:text-[12px] font-[700] text-lovira-muted whitespace-nowrap">
+                {completedCount}/{totalCount} bước
+              </span>
+              <div className="w-[60px] sm:w-[80px] h-[5px] rounded-full bg-[#E5EBEA] dark:bg-[#213331] overflow-hidden">
+                <div
+                  className="h-full rounded-full bg-lovira-purple transition-all duration-300"
+                  style={{ width: `${Math.min(100, Math.round((completedCount / totalCount) * 100))}%` }}
+                />
+              </div>
+            </div>
           </div>
         </div>
       </button>
-
-      {/* Progress Ratio & Mini Progress Bar */}
-      <div className="flex flex-col items-end justify-center gap-1 shrink-0 pl-1">
-        <span className="text-[11px] sm:text-[12px] font-[700] text-lovira-muted whitespace-nowrap">
-          {completedCount}/{totalCount} bước
-        </span>
-        <div className="w-[48px] sm:w-[56px] h-[5px] rounded-full bg-[#E5EBEA] dark:bg-[#213331] overflow-hidden">
-          <div
-            className="h-full rounded-full bg-lovira-purple transition-all duration-300"
-            style={{ width: `${Math.min(100, Math.round((completedCount / totalCount) * 100))}%` }}
-          />
-        </div>
-      </div>
 
       {/* Quick Delete */}
       <button

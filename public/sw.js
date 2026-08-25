@@ -1,4 +1,4 @@
-const CACHE_NAME = 'lovira-life-pwa-v5';
+const CACHE_NAME = 'lovira-life-pwa-v6';
 const STATIC_ASSETS = [
   '/',
   '/index.html',
@@ -9,7 +9,13 @@ const STATIC_ASSETS = [
 self.addEventListener('install', (event) => {
   event.waitUntil(
     caches.open(CACHE_NAME).then((cache) => {
-      return cache.addAll(STATIC_ASSETS);
+      return Promise.all(
+        STATIC_ASSETS.map((asset) =>
+          cache.add(asset).catch(() => {
+            // Ignore missing static assets during dev pre-cache
+          })
+        )
+      );
     })
   );
   self.skipWaiting();
@@ -33,8 +39,12 @@ self.addEventListener('activate', (event) => {
 self.addEventListener('fetch', (event) => {
   const url = new URL(event.request.url);
 
-  // 1. Never cache non-GET requests or backend API endpoints
-  if (event.request.method !== 'GET' || url.pathname.startsWith('/api/')) {
+  // 1. Never cache non-GET requests, non-http(s) schemes (e.g. chrome-extension://), or backend API endpoints
+  if (
+    event.request.method !== 'GET' ||
+    url.pathname.startsWith('/api/') ||
+    (url.protocol !== 'http:' && url.protocol !== 'https:')
+  ) {
     return;
   }
 

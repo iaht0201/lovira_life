@@ -1,3 +1,6 @@
+import dotenv from 'dotenv';
+dotenv.config();
+
 import express from 'express';
 import path from 'path';
 import { fileURLToPath } from 'url';
@@ -18,6 +21,8 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 async function startServer() {
+  dotenv.config();
+  console.log('[Server Init] GROQ_API_KEY present:', !!process.env.GROQ_API_KEY);
   const app = express();
   const PORT = 3000;
 
@@ -26,6 +31,63 @@ async function startServer() {
   // 1. Health Endpoint
   app.get('/api/health', (req, res) => {
     res.json({ status: 'ok', timestamp: new Date().toISOString() });
+  });
+
+  // 1.5 Audio Transcription Endpoint (Groq Whisper AI Fallback for Voice Input)
+  app.post('/api/transcribe', async (req, res) => {
+    try {
+      console.log('[API /api/transcribe] Received audio transcription request...');
+      const groqKey = process.env.GROQ_API_KEY;
+      if (!groqKey) {
+        console.warn('[API /api/transcribe] GROQ_API_KEY is missing');
+        return res.status(400).json({ error: 'Chưa cấu hình GROQ_API_KEY' });
+      }
+
+      const { audioBase64, mimeType } = req.body as { audioBase64: string; mimeType?: string };
+      if (!audioBase64) {
+        return res.status(400).json({ error: 'Thiếu dữ liệu audioBase64' });
+      }
+
+      const audioBuffer = Buffer.from(audioBase64, 'base64');
+      const boundary = '----WebKitFormBoundary' + Math.random().toString(36).substring(2);
+      const filename = 'recording.webm';
+
+      const multipartBuffer = Buffer.concat([
+        Buffer.from(
+          `--${boundary}\r\nContent-Disposition: form-data; name="file"; filename="${filename}"\r\nContent-Type: ${
+            mimeType || 'audio/webm'
+          }\r\n\r\n`
+        ),
+        audioBuffer,
+        Buffer.from(
+          `\r\n--${boundary}\r\nContent-Disposition: form-data; name="model"\r\n\r\nwhisper-large-v3-turbo` +
+            `\r\n--${boundary}\r\nContent-Disposition: form-data; name="language"\r\n\r\nvi` +
+            `\r\n--${boundary}--\r\n`
+        ),
+      ]);
+
+      const whisperRes = await fetch('https://api.groq.com/openai/v1/audio/transcriptions', {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${groqKey}`,
+          'Content-Type': `multipart/form-data; boundary=${boundary}`,
+        },
+        body: multipartBuffer,
+      });
+
+      if (!whisperRes.ok) {
+        const errText = await whisperRes.text();
+        console.warn('[Whisper Transcribe Error]:', whisperRes.status, errText);
+        return res.status(500).json({ error: 'Lỗi chuyển đổi giọng nói sang chữ từ Whisper API' });
+      }
+
+      const data = (await whisperRes.json()) as { text?: string };
+      console.log('[Whisper Transcribe Success]:', data.text);
+      return res.json({ text: data.text || '' });
+    } catch (err: any) {
+      console.error('[Transcribe API Exception]:', err);
+      return res.status(500).json({ error: err.message || 'Lỗi xử lý âm thanh' });
+    }
   });
 
   // 2. Chat Endpoint with Groq, Gemini & Function Calling
