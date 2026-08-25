@@ -4,6 +4,7 @@ import { normalizeVietnameseText, stripVietnameseAccents } from './VietnameseNor
 import { reminderService } from '../reminderService';
 import { SCENARIO_REGISTRY, ScenarioRegistryEntry } from '../scenarioRegistry';
 import { deduceHonorifics } from '../conversationStyle';
+import { fetchCurrentWeatherReport } from '../weatherService';
 
 export type FastIntentSource = 'exact' | 'alias' | 'pattern' | 'context' | 'utility';
 
@@ -67,18 +68,27 @@ export async function routeFastIntent(
   // LAYER A: Certain Local Navigation & App Controls (Confidence 1.0)
   // -------------------------------------------------------------
 
-  // A1. Camera & Scanner (Explicit camera open commands only)
+  // A1. Camera & Scanner (Explicit camera open commands)
   const isCameraCommand =
-    (normalized.includes('mở camera') ||
+    (normalized === 'chụp ảnh' ||
+      normalized === 'chụp hình' ||
+      normalized === 'mở camera' ||
+      normalized === 'mở máy ảnh' ||
+      normalized === 'mở cam' ||
+      normalized === 'bật camera' ||
+      normalized === 'bật máy ảnh' ||
+      normalized === 'máy ảnh' ||
+      normalized === 'camera' ||
+      normalized.includes('mở camera') ||
       normalized.includes('mở máy ảnh') ||
       normalized.includes('mở cam') ||
       normalized.includes('bật camera') ||
       normalized.includes('bật máy ảnh') ||
-      normalized.includes('chụp ảnh cho chú') ||
-      normalized === 'máy ảnh' ||
-      normalized === 'camera' ||
+      normalized.includes('chụp ảnh') ||
+      normalized.includes('chụp hình') ||
       unaccented.includes('mo camera') ||
-      unaccented.includes('bat camera')) &&
+      unaccented.includes('chup anh') ||
+      unaccented.includes('chup hinh')) &&
     !normalized.includes('xong') &&
     !normalized.includes('rồi');
 
@@ -428,7 +438,7 @@ export async function routeFastIntent(
     };
   }
 
-  // B6. Weather Query -> Pass to AI/Provider for actual data (No hardcoded fake forecast)
+  // B6. Weather Query -> Direct API call via WeatherService (Zero LLM)
   if (
     normalized.includes('thời tiết') ||
     normalized.includes('trời có mưa') ||
@@ -436,11 +446,15 @@ export async function routeFastIntent(
     normalized.includes('trời hôm nay thế nào') ||
     unaccented.includes('thoi tiet')
   ) {
+    const weatherResult = await fetchCurrentWeatherReport({ addressing, me, da });
     return {
-      handled: false,
-      confidence: 0.3,
-      needsAI: true,
-      reason: 'weather_requires_ai_or_provider',
+      handled: true,
+      confidence: 0.98,
+      source: 'utility',
+      utilityQuery: 'GET_WEATHER',
+      reply: weatherResult.reply,
+      speech: weatherResult.speech,
+      suggestedReplies: weatherResult.suggestedReplies,
     };
   }
 
@@ -499,16 +513,13 @@ function matchScenarioTemplate(
   normalized: string,
   unaccented: string
 ): ScenarioRegistryEntry | null {
-  const isCreationIntent =
-    normalized.includes('đi') ||
-    normalized.includes('làm') ||
-    normalized.includes('mua') ||
-    normalized.includes('chuẩn bị') ||
-    normalized.includes('sửa') ||
-    normalized.includes('bảo hành') ||
-    normalized.includes('tạo');
+  // Requires explicit action intent verbs (not arbitrary substrings like 'đi' or 'làm')
+  const creationIntentRegex =
+    /\b(đi|muốn đi|sắp đi|chuẩn bị|cần làm|muốn làm|hướng dẫn làm|cần mua|muốn mua|cần sửa|đi sửa|bảo hành|tạo phiên|tạo hướng dẫn|muốn tạo|cần tạo|hướng dẫn)\b/i;
 
-  if (!isCreationIntent) return null;
+  if (!creationIntentRegex.test(normalized) && !creationIntentRegex.test(unaccented)) {
+    return null;
+  }
 
   const entries = Object.values(SCENARIO_REGISTRY);
   for (const entry of entries) {

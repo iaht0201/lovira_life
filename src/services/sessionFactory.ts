@@ -123,6 +123,21 @@ export function createLifeSessionFromPlan(
   return session;
 }
 
+function familyToLegacyType(family: ScenarioFamily): ScenarioType {
+  switch (family) {
+    case 'healthcare':
+      return 'medical';
+    case 'administrative':
+      return 'administrative';
+    case 'shopping':
+      return 'shopping';
+    case 'documents':
+      return 'document';
+    default:
+      return 'custom';
+  }
+}
+
 /**
  * Creates an instant, local LifeSession directly from a SCENARIO_REGISTRY template without calling AI.
  */
@@ -161,21 +176,12 @@ export function createLifeSessionFromScenario(
     };
   });
 
-  const facts: ImportantFact[] = (entry.suggestedRequirements || []).map((f, i) => ({
-    id: `fact-${i + 1}`,
-    type: f.type,
-    title: f.title,
-    value: f.value,
-    createdAt: now,
-    updatedAt: now,
-  }));
-
   const cleanLabel = entry.label.replace(/^[\p{Extended_Pictographic}\u{1F300}-\u{1F9FF}\u{2600}-\u{26FF}\u{2700}-\u{27BF}\s]+/gu, '');
 
   const session: LifeSession = {
     id: newId,
     title: cleanLabel,
-    scenarioType: (scenarioKey as ScenarioType) || 'custom',
+    scenarioType: familyToLegacyType(scenarioKey),
     scenarioFamily: scenarioKey,
     modules: entry.defaultModules,
     status: 'active',
@@ -183,7 +189,7 @@ export function createLifeSessionFromScenario(
     createdAt: now,
     updatedAt: now,
     currentStepId: tasks[0]?.id || 'task-1',
-    importantFacts: facts,
+    importantFacts: [],
     tasks,
     resources: [],
     messages: [],
