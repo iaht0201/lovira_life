@@ -13,27 +13,107 @@ export class SpeechRecognitionService {
   private currentTranscript = '';
   private events: SpeechRecognitionEvents = {};
 
-  constructor() {
-    this.initRecognition();
-  }
-
   public isSupported(): boolean {
     if (typeof window === 'undefined') return false;
     const win = window as IWindowWithSpeech;
     return !!(win.SpeechRecognition || win.webkitSpeechRecognition);
   }
 
-  private initRecognition() {
-    if (!this.isSupported()) return;
+  private resetSilenceTimer() {
+    this.clearSilenceTimer();
+    // 1200ms silence after user stops speaking -> auto finalize
+    this.silenceTimer = setTimeout(() => {
+      if (this.isListening && !this.isSubmitted && this.currentTranscript.trim()) {
+        this.submitFinal(this.currentTranscript.trim());
+      }
+    }, 1200);
+  }
+
+  private clearSilenceTimer() {
+    if (this.silenceTimer) {
+      clearTimeout(this.silenceTimer);
+      this.silenceTimer = null;
+    }
+  }
+
+  private submitFinal(text: string) {
+    if (this.isSubmitted) return;
+    this.isSubmitted = true;
+    this.clearSilenceTimer();
+    this.isListening = false;
+    if (this.recognition) {
+      try {
+        this.recognition.stop();
+      } catch (e) {
+        // Ignore
+      }
+    }
+    this.events.onFinalResult?.(text);
+  }
+
+  private mapError(errCode: string): { type: VoiceErrorType; message: string } {
+    switch (errCode) {
+      case 'not-allowed':
+      case 'permission-denied':
+        return {
+          type: 'not-allowed',
+          message: 'Lovira chưa được cấp quyền dùng micro. Chú/bạn vui lòng cấp quyền micro trên trình duyệt hoặc tiếp tục nhắn qua khung Chat nhé.',
+        };
+      case 'no-speech':
+        return {
+          type: 'no-speech',
+          message: 'Lovira chưa nghe thấy câu nói nào. Chú/bạn thử bấm "Thử lại bằng giọng nói" và nói to hơn chút nhé.',
+        };
+      case 'audio-capture':
+        return {
+          type: 'audio-capture',
+          message: 'Không tìm thấy thiết bị micro. Chú/bạn vui lòng kiểm tra micro của thiết bị.',
+        };
+      case 'network':
+        return {
+          type: 'network',
+          message: 'Lỗi kết nối mạng khi nhận dạng giọng nói. Bạn thử lại nhé.',
+        };
+      case 'aborted':
+        return {
+          type: 'aborted',
+          message: 'Đã dừng thu âm.',
+        };
+      default:
+        return {
+          type: 'unknown',
+          message: 'Lovira chưa nghe rõ. Chú/bạn vui lòng bấm "Thử lại" hoặc nhập câu hỏi bằng tin nhắn nhé!',
+        };
+    }
+  }
+
+  public startListening(events: SpeechRecognitionEvents): boolean {
+    if (!this.isSupported()) {
+      events.onError?.(
+        'unsupported-browser',
+        'Trình duyệt này chưa hỗ trợ nhận dạng giọng nói. Bạn vẫn có thể dùng Chat để tương tác với Lovira nhé.'
+      );
+      return false;
+    }
+
+    // Clean up any ongoing recognition instance first
+    this.cancelListeningSilent();
 
     try {
       const win = window as IWindowWithSpeech;
       const SpeechRecognitionClass = win.SpeechRecognition || win.webkitSpeechRecognition;
+      
       this.recognition = new SpeechRecognitionClass();
       this.recognition.lang = 'vi-VN';
       this.recognition.interimResults = true;
-      this.recognition.continuous = false;
+      this.recognition.continuous = true;
       this.recognition.maxAlternatives = 1;
+
+      this.events = events;
+      this.isListening = false;
+      this.isSubmitted = false;
+      this.currentTranscript = '';
+      let hasError = false;
 
       this.recognition.onstart = () => {
         this.isListening = true;
@@ -75,15 +155,15 @@ export class SpeechRecognitionService {
       this.recognition.onerror = (event: any) => {
         this.clearSilenceTimer();
         const error = event.error || 'unknown';
-        const { type, message } = this.mapError(error);
         
-        // If aborted intentionally by user or system, don't trigger intrusive error
+        // If aborted intentionally by user or system, do nothing
         if (error === 'aborted') {
           this.isListening = false;
-          this.events.onEnd?.();
           return;
         }
 
+        hasError = true;
+        const { type, message } = this.mapError(error);
         this.isListening = false;
         this.events.onError?.(type, message);
       };
@@ -93,122 +173,24 @@ export class SpeechRecognitionService {
         const wasListening = this.isListening;
         this.isListening = false;
 
+        if (hasError) {
+          return;
+        }
+
         // If there is pending transcript not yet submitted, submit it now
         if (wasListening && !this.isSubmitted && this.currentTranscript.trim()) {
           this.submitFinal(this.currentTranscript.trim());
-        } else {
+        } else if (!this.isSubmitted) {
           this.events.onEnd?.();
         }
       };
-    } catch (e) {
-      console.warn('Failed to initialize SpeechRecognition:', e);
-      this.recognition = null;
-    }
-  }
 
-  private resetSilenceTimer() {
-    this.clearSilenceTimer();
-    // 900ms silence after user stops speaking -> auto finalize
-    this.silenceTimer = setTimeout(() => {
-      if (this.isListening && !this.isSubmitted && this.currentTranscript.trim()) {
-        this.submitFinal(this.currentTranscript.trim());
-      }
-    }, 900);
-  }
-
-  private clearSilenceTimer() {
-    if (this.silenceTimer) {
-      clearTimeout(this.silenceTimer);
-      this.silenceTimer = null;
-    }
-  }
-
-  private submitFinal(text: string) {
-    if (this.isSubmitted) return;
-    this.isSubmitted = true;
-    this.clearSilenceTimer();
-    this.isListening = false;
-    if (this.recognition) {
-      try {
-        this.recognition.stop();
-      } catch (e) {
-        // Ignore
-      }
-    }
-    this.events.onFinalResult?.(text);
-  }
-
-  private mapError(errCode: string): { type: VoiceErrorType; message: string } {
-    switch (errCode) {
-      case 'not-allowed':
-      case 'permission-denied':
-        return {
-          type: 'not-allowed',
-          message: 'Lovira chưa được cấp quyền dùng micro. Bạn có thể cấp quyền micro trong trình duyệt hoặc tiếp tục nhập bằng bàn phím.',
-        };
-      case 'no-speech':
-        return {
-          type: 'no-speech',
-          message: 'Lovira chưa nghe thấy nội dung. Bạn thử bấm và nói lại nhé.',
-        };
-      case 'audio-capture':
-        return {
-          type: 'audio-capture',
-          message: 'Không tìm thấy thiết bị micro. Bạn vui lòng kiểm tra micro của thiết bị.',
-        };
-      case 'network':
-        return {
-          type: 'network',
-          message: 'Lỗi kết nối mạng khi nhận dạng giọng nói. Bạn thử lại nhé.',
-        };
-      case 'aborted':
-        return {
-          type: 'aborted',
-          message: 'Đã dừng thu âm.',
-        };
-      default:
-        return {
-          type: 'unknown',
-          message: 'Chưa nhận dạng được giọng nói. Bạn thử lại hoặc nhập câu hỏi bằng bàn phím nhé!',
-        };
-    }
-  }
-
-  public startListening(events: SpeechRecognitionEvents): boolean {
-    if (!this.isSupported()) {
-      events.onError?.(
-        'unsupported-browser',
-        'Trình duyệt này chưa hỗ trợ nhận dạng giọng nói. Bạn vẫn có thể dùng Chat để tương tác với Lovira nhé.'
-      );
-      return false;
-    }
-
-    if (!this.recognition) {
-      this.initRecognition();
-    }
-
-    if (!this.recognition) {
-      events.onError?.('unknown', 'Không thể khởi động dịch vụ giọng nói.');
-      return false;
-    }
-
-    try {
-      this.events = events;
-      this.isSubmitted = false;
-      this.currentTranscript = '';
       this.recognition.start();
       return true;
     } catch (e: any) {
-      // If already started, stop and restart
-      try {
-        this.recognition.stop();
-        this.recognition.start();
-        return true;
-      } catch (err) {
-        console.warn('SpeechRecognition start failed:', err);
-        events.onError?.('unknown', 'Không thể bật micro lúc này. Bạn thử lại nhé!');
-        return false;
-      }
+      console.warn('Failed to start SpeechRecognition:', e);
+      events.onError?.('unknown', 'Không thể kích hoạt micro lúc này. Bạn thử gõ tin nhắn cho Lovira nhé!');
+      return false;
     }
   }
 
@@ -220,14 +202,7 @@ export class SpeechRecognitionService {
     if (!this.isSubmitted && this.currentTranscript.trim()) {
       this.submitFinal(this.currentTranscript.trim());
     } else {
-      this.isListening = false;
-      if (this.recognition) {
-        try {
-          this.recognition.stop();
-        } catch (e) {
-          // Ignore
-        }
-      }
+      this.cancelListening();
     }
   }
 
@@ -236,6 +211,27 @@ export class SpeechRecognitionService {
    */
   public stopListening() {
     this.finishListening();
+  }
+
+  /**
+   * Internal silent cancel without triggering callbacks
+   */
+  private cancelListeningSilent() {
+    this.clearSilenceTimer();
+    this.isListening = false;
+    this.isSubmitted = true;
+    if (this.recognition) {
+      try {
+        this.recognition.onstart = null;
+        this.recognition.onresult = null;
+        this.recognition.onerror = null;
+        this.recognition.onend = null;
+        this.recognition.abort();
+      } catch (e) {
+        // Ignore
+      }
+      this.recognition = null;
+    }
   }
 
   /**

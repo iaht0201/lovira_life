@@ -65,7 +65,7 @@ export const DesktopSidebar: React.FC<DesktopSidebarProps> = ({
 
   return (
     <aside
-      className={`hidden md:flex flex-col h-screen sticky top-0 bg-lovira-sidebar shrink-0 z-30 select-none transition-all duration-300 ${
+      className={`hidden lg:flex flex-col h-screen sticky top-0 bg-lovira-sidebar shrink-0 z-30 select-none transition-all duration-300 ${
         isCollapsed ? 'w-[74px]' : 'w-[230px]'
       }`}
       aria-label="Sidebar điều hướng"

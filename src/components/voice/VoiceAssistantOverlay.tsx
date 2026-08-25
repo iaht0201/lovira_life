@@ -46,33 +46,45 @@ export const VoiceAssistantOverlay: React.FC<VoiceAssistantOverlayProps> = ({
         {/* 1. Listening Mode */}
         {voiceStatus === 'listening' && (
           <div className="flex flex-col items-center w-full py-3 space-y-4">
-            <div className="relative flex items-center justify-center w-[84px] h-[84px] rounded-full bg-gradient-to-tr from-[#287C78] to-[#1F625F] text-white shadow-lg animate-pulse">
-              <span className="absolute inset-0 rounded-full bg-[#287C78]/30 animate-ping" />
+            {/* Live Recording Badge */}
+            <div className="flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-rose-500/15 border border-rose-500/30 text-rose-600 dark:text-rose-400 text-xs font-bold animate-pulse">
+              <span className="relative flex h-2.5 w-2.5">
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-rose-400 opacity-75"></span>
+                <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-rose-500"></span>
+              </span>
+              <span>BẬT MICRO • ĐANG LẮNG NGHE</span>
+            </div>
+
+            <div className="relative flex items-center justify-center w-[88px] h-[88px] rounded-full bg-gradient-to-tr from-[#287C78] to-[#1F625F] text-white shadow-xl">
+              <span className="absolute -inset-2 rounded-full border-2 border-[#287C78]/50 animate-ping" />
+              <span className="absolute -inset-4 rounded-full border border-[#287C78]/30 animate-pulse" />
               <Mic className="w-10 h-10 text-white z-10 animate-bounce" />
             </div>
 
-            {/* Sound Wave Animation */}
-            <div className="flex items-center justify-center gap-1.5 h-6">
-              <span className="w-1.5 h-6 bg-[#287C78] rounded-full animate-[bounce_1s_infinite_100ms]" />
-              <span className="w-1.5 h-8 bg-[#287C78] rounded-full animate-[bounce_1s_infinite_300ms]" />
-              <span className="w-1.5 h-5 bg-[#287C78] rounded-full animate-[bounce_1s_infinite_200ms]" />
-              <span className="w-1.5 h-7 bg-[#287C78] rounded-full animate-[bounce_1s_infinite_400ms]" />
-              <span className="w-1.5 h-4 bg-[#287C78] rounded-full animate-[bounce_1s_infinite_150ms]" />
+            {/* Sound Wave Equalizer Animation */}
+            <div className="flex items-center justify-center gap-1.5 h-8 py-1">
+              <span className="w-1.5 h-6 bg-[#287C78] rounded-full animate-[bounce_0.8s_infinite_100ms]" />
+              <span className="w-1.5 h-8 bg-[#287C78] rounded-full animate-[bounce_0.8s_infinite_300ms]" />
+              <span className="w-1.5 h-5 bg-[#287C78] rounded-full animate-[bounce_0.8s_infinite_200ms]" />
+              <span className="w-1.5 h-9 bg-[#287C78] rounded-full animate-[bounce_0.8s_infinite_400ms]" />
+              <span className="w-1.5 h-6 bg-[#287C78] rounded-full animate-[bounce_0.8s_infinite_150ms]" />
+              <span className="w-1.5 h-8 bg-[#287C78] rounded-full animate-[bounce_0.8s_infinite_250ms]" />
+              <span className="w-1.5 h-5 bg-[#287C78] rounded-full animate-[bounce_0.8s_infinite_350ms]" />
             </div>
 
-            <div className="space-y-1">
+            <div className="space-y-1.5 w-full">
               <h3 className="text-[17px] font-[800] text-lovira-title">
                 Lovira đang lắng nghe chú...
               </h3>
-              <p className="text-[13px] text-lovira-muted font-[500]">
-                {interimTranscript ? (
-                  <span className="text-[#287C78] dark:text-[#42A39E] font-[700] text-[15px] block bg-lovira-input p-3 rounded-[12px] border border-[#287C78]/30 max-h-[100px] overflow-y-auto">
-                    "{interimTranscript}"
-                  </span>
-                ) : (
-                  'Chú cứ nói tự nhiên (ví dụ: "Nhắc chú uống thuốc lúc 7h30 sáng")'
-                )}
-              </p>
+              {interimTranscript ? (
+                <div className="text-[#287C78] dark:text-[#42A39E] font-[700] text-[15px] bg-lovira-input p-3.5 rounded-[14px] border border-[#287C78]/40 shadow-inner max-h-[120px] overflow-y-auto animate-pulse">
+                  "{interimTranscript}"
+                </div>
+              ) : (
+                <p className="text-[13px] text-lovira-muted font-[500]">
+                  Chú cứ nói tự nhiên (ví dụ: "Nhắc chú uống thuốc lúc 7h30 sáng")
+                </p>
+              )}
             </div>
 
             <div className="flex items-center gap-3 w-full pt-2">

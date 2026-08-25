@@ -61,7 +61,7 @@ export const MobileBottomNav: React.FC<MobileBottomNavProps> = ({
 
   return (
     <nav
-      className="md:hidden fixed bottom-0 left-0 right-0 z-40 bg-lovira-topbar backdrop-blur-md border-t border-lovira-subtle h-[calc(66px+env(safe-area-inset-bottom,0px))] pb-[env(safe-area-inset-bottom,0px)] px-2 flex items-center justify-around shadow-lg select-none"
+      className="lg:hidden fixed bottom-0 left-0 right-0 z-40 bg-lovira-topbar backdrop-blur-md border-t border-lovira-subtle h-[calc(66px+env(safe-area-inset-bottom,0px))] pb-[env(safe-area-inset-bottom,0px)] px-2 flex items-center justify-around shadow-lg select-none"
       aria-label="Điều hướng di động"
     >
       {/* 1. Trang chủ */}

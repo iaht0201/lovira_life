@@ -100,7 +100,7 @@ export const MobileSidebarDrawer: React.FC<MobileSidebarDrawerProps> = ({
   };
 
   return (
-    <div className="fixed inset-0 z-50 md:hidden flex">
+    <div className="fixed inset-0 z-50 lg:hidden flex">
       {/* Backdrop */}
       <div
         className="fixed inset-0 bg-black/60 transition-opacity animate-in fade-in"

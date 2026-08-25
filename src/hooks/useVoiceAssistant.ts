@@ -2,6 +2,7 @@ import { useState, useCallback, useRef } from 'react';
 import { VoiceInteractionState } from '../types';
 import { speechRecognitionService } from '../services/voice/speechRecognitionService';
 import { speakText, stopSpeaking } from '../services/ttsService';
+import { sfx } from '../utils/sfx';
 
 interface UseVoiceAssistantOptions {
   onSpeechResult?: (text: string) => void;
@@ -46,6 +47,9 @@ export function useVoiceAssistant(options: UseVoiceAssistantOptions = {}) {
   }, []);
 
   const startListening = useCallback((overrideOnFinalResult?: (transcript: string) => void) => {
+    // Play electronic mic start beep
+    sfx.playMicStart();
+
     // Ensure TTS audio is silenced immediately when mic turns on
     stopSpeaking();
     setVoiceError(undefined);
@@ -63,35 +67,47 @@ export function useVoiceAssistant(options: UseVoiceAssistantOptions = {}) {
       onFinalResult: (transcript) => {
         setInterimTranscript('');
         if (transcript.trim()) {
+          sfx.playSuccess();
           const handler = overrideOnFinalResult || optionsRef.current.onSpeechResult;
           if (handler) {
             handler(transcript.trim());
           }
         } else {
+          sfx.playMicStop();
           setVoiceStatus('idle');
         }
       },
       onError: (_errType, message) => {
+        sfx.playMicStop();
         setVoiceStatus('error');
         setVoiceError(message);
         setInterimTranscript('');
       },
       onEnd: () => {
-        setVoiceStatus((prev) => (prev === 'listening' ? 'idle' : prev));
+        setVoiceStatus((prev) => {
+          if (prev === 'listening') {
+            sfx.playMicStop();
+            return 'idle';
+          }
+          return prev;
+        });
       },
     });
 
     if (!started) {
+      sfx.playMicStop();
       setVoiceStatus('error');
-      setVoiceError('Trình duyệt chưa hỗ trợ nhận diện giọng nói tiếng Việt.');
+      setVoiceError('Trình duyệt chưa hỗ trợ nhận diện giọng nói hoặc micro chưa mở. Chú có thể gõ bằng tin nhắn nhé.');
     }
   }, []);
 
   const stopListening = useCallback(() => {
+    sfx.playMicStop();
     speechRecognitionService.finishListening();
   }, []);
 
   const cancelListening = useCallback(() => {
+    sfx.playMicStop();
     speechRecognitionService.cancelListening();
     setVoiceStatus('idle');
     setInterimTranscript('');

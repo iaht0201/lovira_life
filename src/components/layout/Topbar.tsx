@@ -98,8 +98,8 @@ export const Topbar: React.FC<TopbarProps> = ({
 
   return (
     <header className="h-[48px] sm:h-[64px] bg-lovira-topbar backdrop-blur-md px-2.5 sm:px-6 md:px-8 flex items-center justify-between sticky top-0 z-30 shrink-0 transition-colors shadow-2xs">
-      {/* Mobile Hamburger Menu & Brand Name */}
-      <div className="md:hidden flex items-center gap-2">
+      {/* Mobile Hamburger Menu & Brand Name (< 1024px) */}
+      <div className="lg:hidden flex items-center gap-2">
         <button
           onClick={onOpenMobileMenu}
           className="w-[34px] h-[34px] sm:w-[38px] sm:h-[38px] rounded-[10px] sm:rounded-[12px] bg-lovira-card hover:bg-lovira-card-hover text-lovira-title flex items-center justify-center transition-colors cursor-pointer shadow-2xs"
