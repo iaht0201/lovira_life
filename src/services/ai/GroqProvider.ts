@@ -9,25 +9,54 @@ import {
 } from '../../types';
 import { buildSessionContextPrompt } from './SessionContextBuilder';
 
-// Enum cho toàn bộ các mô hình Groq được hỗ trợ
+// Enum cho toàn bộ các mô hình Groq chính thức được hỗ trợ
 export enum GroqModel {
-  GPT_OSS_20B = 'openai/gpt-oss-20b',
-  QWEN_3_6_27B = 'qwen/qwen3.6-27b',
-  COMPOUND = 'groq/compound',
-  COMPOUND_MINI = 'groq/compound-mini',
-  GPT_OSS_120B = 'openai/gpt-oss-120b',
+  LLAMA_3_1_8B = 'llama-3.1-8b-instant',
+  LLAMA_3_3_70B = 'llama-3.3-70b-versatile',
+  MIXTRAL_8X7B = 'mixtral-8x7b-32768',
+  GEMMA2_9B = 'gemma2-9b-it',
+  DEEPSEEK_70B = 'deepseek-r1-distill-llama-70b',
+  // Backward compatibility legacy aliases
+  GPT_OSS_20B = 'llama-3.1-8b-instant',
+  QWEN_3_6_27B = 'llama-3.3-70b-versatile',
+  COMPOUND = 'llama-3.3-70b-versatile',
+  COMPOUND_MINI = 'llama-3.1-8b-instant',
+  GPT_OSS_120B = 'llama-3.3-70b-versatile',
 }
 
-// Thứ tự xoay tua ưu tiên khi một mô hình gặp lỗi 429 / Rate Limit / 404
+// Thứ tự xoay tua ưu tiên khi một mô hình gặp lỗi 429 / Rate Limit / 404 / 413
 export const GROQ_ROTATION_PRIORITY: GroqModel[] = [
-  GroqModel.GPT_OSS_20B,
-  GroqModel.QWEN_3_6_27B,
-  GroqModel.COMPOUND,
-  GroqModel.COMPOUND_MINI,
-  GroqModel.GPT_OSS_120B,
+  GroqModel.LLAMA_3_1_8B,
+  GroqModel.LLAMA_3_3_70B,
+  GroqModel.MIXTRAL_8X7B,
+  GroqModel.GEMMA2_9B,
 ];
 
 export const ALLOWED_GROQ_MODELS = Object.values(GroqModel);
+
+export function normalizeGroqModel(modelInput?: string): GroqModel {
+  if (!modelInput) return GroqModel.LLAMA_3_1_8B;
+  
+  if (Object.values(GroqModel).includes(modelInput as GroqModel)) {
+    // If it's a legacy string like 'openai/gpt-oss-20b' or 'groq/compound', map it
+    if (modelInput === 'openai/gpt-oss-20b' || modelInput === 'groq/compound-mini') {
+      return GroqModel.LLAMA_3_1_8B;
+    }
+    if (modelInput === 'qwen/qwen3.6-27b' || modelInput === 'groq/compound' || modelInput === 'openai/gpt-oss-120b') {
+      return GroqModel.LLAMA_3_3_70B;
+    }
+    return modelInput as GroqModel;
+  }
+
+  const lower = modelInput.toLowerCase();
+  if (lower.includes('70b') || lower.includes('compound') || lower.includes('qwen') || lower.includes('120b')) {
+    return GroqModel.LLAMA_3_3_70B;
+  }
+  if (lower.includes('mixtral')) return GroqModel.MIXTRAL_8X7B;
+  if (lower.includes('gemma')) return GroqModel.GEMMA2_9B;
+
+  return GroqModel.LLAMA_3_1_8B;
+}
 
 export interface GroqRequestOptions {
   message: string;
@@ -45,10 +74,8 @@ export async function callGroqAgent(
   const { message, session, userProfile, modelOverride, inputMode, appContext } = options;
   const startTime = Date.now();
 
-  // Xác định mô hình mong muốn ban đầu (hoặc mặc định)
-  const preferredModel = (modelOverride && Object.values(GroqModel).includes(modelOverride as GroqModel))
-    ? (modelOverride as GroqModel)
-    : GroqModel.GPT_OSS_20B;
+  // Xác định mô hình mong muốn ban đầu và chuẩn hóa sang mô hình Groq chính thức
+  const preferredModel = normalizeGroqModel(modelOverride);
 
   // Tạo danh sách các mô hình thử nghiệm xoay tua (Đảm bảo thử preferredModel trước, sau đó xoay tua)
   const modelsToTry = Array.from(new Set([preferredModel, ...GROQ_ROTATION_PRIORITY]));
@@ -97,26 +124,50 @@ Lưu ý:
 
   let lastError: Error | null = null;
 
-  // Xoay tua mô hình nếu gặp lỗi Rate Limit (429), Model Not Found (404), Server Error (5xx)...
+  // Xoay tua mô hình nếu gặp lỗi Rate Limit (429), Model Not Found (404), JSON Validation (400), Entity Too Large (413)...
   for (const currentModel of modelsToTry) {
     try {
       console.log(`[GroqProvider] Attempting call with model: ${currentModel}`);
-      const res = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+      
+      const payload: any = {
+        model: currentModel,
+        messages: [
+          { role: 'system', content: systemPrompt },
+          { role: 'user', content: message },
+        ],
+        response_format: { type: 'json_object' },
+        temperature: 0.2,
+      };
+
+      let res = await fetch('https://api.groq.com/openai/v1/chat/completions', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
           Authorization: `Bearer ${apiKey}`,
         },
-        body: JSON.stringify({
-          model: currentModel,
-          messages: [
-            { role: 'system', content: systemPrompt },
-            { role: 'user', content: message },
-          ],
-          response_format: { type: 'json_object' },
-          temperature: 0.2,
-        }),
+        body: JSON.stringify(payload),
       });
+
+      // Nếu gặp lỗi 400 (json_validate_failed), thử lại không dùng response_format
+      if (!res.ok && res.status === 400) {
+        const errText = await res.text();
+        if (errText.includes('json_validate_failed') || errText.includes('JSON')) {
+          console.warn(`[GroqProvider] Model '${currentModel}' failed JSON validation mode. Retrying without response_format...`);
+          delete payload.response_format;
+          res = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              Authorization: `Bearer ${apiKey}`,
+            },
+            body: JSON.stringify(payload),
+          });
+        } else {
+          console.warn(`[GroqProvider] Model '${currentModel}' failed (400): ${errText}. Rotating to next model...`);
+          lastError = new Error(`Groq API error (400): ${errText}`);
+          continue;
+        }
+      }
 
       if (!res.ok) {
         const errText = await res.text();

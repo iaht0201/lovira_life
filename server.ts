@@ -118,13 +118,17 @@ async function startServer() {
       // 2. Try Groq Provider if GROQ_API_KEY is available and provider is not forced to gemini
       const groqKey = process.env.GROQ_API_KEY;
       if (groqKey && provider !== 'gemini' && !isDemoMode) {
-        const selectedModel = selectGroqModel(message, session);
-        const groqRes = await callGroqAgent(
-          { message, session, userProfile, modelOverride: selectedModel, inputMode, appContext },
-          groqKey
-        );
-        if (groqRes) {
-          return res.json(groqRes);
+        try {
+          const selectedModel = selectGroqModel(message, session);
+          const groqRes = await callGroqAgent(
+            { message, session, userProfile, modelOverride: selectedModel, inputMode, appContext },
+            groqKey
+          );
+          if (groqRes) {
+            return res.json(groqRes);
+          }
+        } catch (groqErr) {
+          console.warn('[Server Chat] Groq agent failed, falling back to Gemini Provider:', groqErr);
         }
       }
 
@@ -217,7 +221,7 @@ async function startServer() {
               Authorization: `Bearer ${groqKey}`,
             },
             body: JSON.stringify({
-              model: 'groq/compound-mini',
+              model: 'llama-3.1-8b-instant',
               messages: [{ role: 'user', content: clarificationPrompt }],
               temperature: 0.1,
             }),
@@ -275,7 +279,7 @@ async function startServer() {
               Authorization: `Bearer ${groqKey}`,
             },
             body: JSON.stringify({
-              model: 'openai/gpt-oss-20b',
+              model: 'llama-3.1-8b-instant',
               messages: [
                 {
                   role: 'system',

@@ -17,6 +17,8 @@ import {
   Flame,
   Download,
   Trash2,
+  ChevronLeft,
+  ChevronRight,
 } from 'lucide-react';
 import { DetailedReminderModal } from './DetailedReminderModal';
 import { ReminderCalendarView } from './ReminderCalendarView';
@@ -55,6 +57,56 @@ export const RemindersPage: React.FC<RemindersPageProps> = ({
     if (typeof Notification !== 'undefined') return Notification.permission;
     return 'default';
   });
+
+  // Scroll controls for filter chips bar
+  const filterBarRef = useRef<HTMLDivElement | null>(null);
+  const [showLeftScroll, setShowLeftScroll] = useState(false);
+  const [showRightScroll, setShowRightScroll] = useState(false);
+  const [isDraggingFilter, setIsDraggingFilter] = useState(false);
+  const [startX, setStartX] = useState(0);
+  const [scrollLeftPos, setScrollLeftPos] = useState(0);
+
+  const checkFilterScroll = () => {
+    if (filterBarRef.current) {
+      const { scrollLeft, scrollWidth, clientWidth } = filterBarRef.current;
+      setShowLeftScroll(scrollLeft > 4);
+      setShowRightScroll(scrollLeft < scrollWidth - clientWidth - 4);
+    }
+  };
+
+  useEffect(() => {
+    checkFilterScroll();
+    window.addEventListener('resize', checkFilterScroll);
+    return () => window.removeEventListener('resize', checkFilterScroll);
+  }, [reminders, selectedCategory, activeTab]);
+
+  const scrollFilterBar = (direction: 'left' | 'right') => {
+    if (filterBarRef.current) {
+      const amount = direction === 'left' ? -220 : 220;
+      filterBarRef.current.scrollBy({ left: amount, behavior: 'smooth' });
+      setTimeout(checkFilterScroll, 250);
+    }
+  };
+
+  const handleFilterMouseDown = (e: React.MouseEvent<HTMLDivElement>) => {
+    if (!filterBarRef.current) return;
+    setIsDraggingFilter(true);
+    setStartX(e.pageX - filterBarRef.current.offsetLeft);
+    setScrollLeftPos(filterBarRef.current.scrollLeft);
+  };
+
+  const handleFilterMouseLeaveOrUp = () => {
+    setIsDraggingFilter(false);
+  };
+
+  const handleFilterMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
+    if (!isDraggingFilter || !filterBarRef.current) return;
+    e.preventDefault();
+    const x = e.pageX - filterBarRef.current.offsetLeft;
+    const walk = (x - startX) * 1.5;
+    filterBarRef.current.scrollLeft = scrollLeftPos - walk;
+    checkFilterScroll();
+  };
 
   // Accessibility Refs for Modal Focus
   const cancelBtnRef = useRef<HTMLButtonElement | null>(null);
@@ -211,52 +263,52 @@ export const RemindersPage: React.FC<RemindersPageProps> = ({
   }, [reminders]);
 
   return (
-    <div className="max-w-4xl mx-auto space-y-6">
+    <div className="w-full min-w-0 max-w-4xl mx-auto space-y-4 sm:space-y-6">
       {/* Top Header Card */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-6 rounded-[26px] bg-gradient-to-r from-lovira-card via-lovira-subtle to-lovira-card border border-lovira shadow-2xs">
-        <div className="flex items-center gap-3.5">
-          <div className="w-12 h-12 rounded-2xl bg-amber-500/15 text-amber-600 dark:text-amber-400 flex items-center justify-center shrink-0 shadow-sm">
-            <Bell className="w-6 h-6" />
+      <div className="w-full min-w-0 flex flex-col sm:flex-row sm:items-center justify-between gap-3.5 p-3.5 sm:p-6 rounded-[20px] sm:rounded-[26px] bg-gradient-to-r from-lovira-card via-lovira-subtle to-lovira-card border border-lovira shadow-2xs">
+        <div className="flex items-center gap-3 min-w-0 flex-1">
+          <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-xl sm:rounded-2xl bg-amber-500/15 text-amber-600 dark:text-amber-400 flex items-center justify-center shrink-0 shadow-sm">
+            <Bell className="w-5 h-5 sm:w-6 sm:h-6" />
           </div>
-          <div>
-            <h2 className="text-xl sm:text-2xl font-[800] text-lovira-title">
+          <div className="min-w-0 flex-1">
+            <h2 className="text-base sm:text-2xl font-[800] text-lovira-title truncate">
               Lịch & Nhắc nhở của tôi
             </h2>
-            <p className="text-xs sm:text-sm font-[500] text-lovira-muted mt-0.5">
+            <p className="text-xs sm:text-sm font-[500] text-lovira-muted mt-0.5 line-clamp-1 sm:line-clamp-none">
               Theo dõi lịch uống thuốc, tái khám và kế hoạch cuộc sống
             </p>
           </div>
         </div>
 
-        <div className="flex items-center gap-2 flex-wrap">
+        <div className="flex items-center gap-2 w-full sm:w-auto shrink-0 pt-1 sm:pt-0">
           {notificationStatus !== 'granted' && (
             <button
               onClick={handleRequestNotification}
-              className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-bold bg-amber-500/10 text-amber-700 dark:text-amber-400 hover:bg-amber-500/20 border border-amber-500/30 transition-all cursor-pointer"
+              className="flex-1 sm:flex-none inline-flex items-center justify-center gap-1.5 px-3 py-2 rounded-xl text-xs font-bold bg-amber-500/10 text-amber-700 dark:text-amber-400 hover:bg-amber-500/20 border border-amber-500/30 transition-all cursor-pointer whitespace-nowrap"
             >
-              <Volume2 className="w-4 h-4" />
-              <span>Bật chuông báo</span>
+              <Volume2 className="w-4 h-4 shrink-0" />
+              <span>Bật chuông</span>
             </button>
           )}
 
           <button
             onClick={() => handleOpenCreateModal()}
-            className="inline-flex items-center justify-center gap-1.5 px-4 py-2.5 rounded-xl bg-[#287C78] hover:bg-[#1F625F] text-white font-[800] text-xs sm:text-sm transition-all shadow-xs cursor-pointer active:scale-95 shrink-0"
+            className="flex-1 sm:flex-none inline-flex items-center justify-center gap-1.5 px-3.5 py-2 sm:py-2.5 rounded-xl bg-[#287C78] hover:bg-[#1F625F] text-white font-[800] text-xs sm:text-sm transition-all shadow-xs cursor-pointer active:scale-95 shrink-0 whitespace-nowrap"
           >
-            <Plus className="w-4 h-4" />
+            <Plus className="w-4 h-4 shrink-0" />
             <span>Thêm nhắc nhở</span>
           </button>
         </div>
       </div>
 
       {/* Tab Switcher: [ Sắp tới ] [ Lịch ] */}
-      <div className="flex items-center gap-2 border-b border-gray-200 dark:border-gray-800 pb-2">
+      <div className="flex items-center gap-2 border-b border-gray-200 dark:border-gray-800 pb-2 overflow-x-auto no-scrollbar w-full min-w-0">
         <button
           onClick={() => {
             setActiveTab('upcoming');
             sfx.playTap();
           }}
-          className={`flex items-center gap-2 px-4 py-2 text-xs sm:text-sm font-[800] rounded-xl transition-all cursor-pointer ${
+          className={`flex items-center gap-2 px-3.5 sm:px-4 py-2 text-xs sm:text-sm font-[800] rounded-xl transition-all cursor-pointer whitespace-nowrap shrink-0 ${
             activeTab === 'upcoming'
               ? 'bg-[#287C78] text-white shadow-xs'
               : 'text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800'
@@ -280,7 +332,7 @@ export const RemindersPage: React.FC<RemindersPageProps> = ({
             setActiveTab('calendar');
             sfx.playTap();
           }}
-          className={`flex items-center gap-2 px-4 py-2 text-xs sm:text-sm font-[800] rounded-xl transition-all cursor-pointer ${
+          className={`flex items-center gap-2 px-3.5 sm:px-4 py-2 text-xs sm:text-sm font-[800] rounded-xl transition-all cursor-pointer whitespace-nowrap shrink-0 ${
             activeTab === 'calendar'
               ? 'bg-[#287C78] text-white shadow-xs'
               : 'text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800'
@@ -293,102 +345,145 @@ export const RemindersPage: React.FC<RemindersPageProps> = ({
 
       {/* TAB 1: UPCOMING VIEW */}
       {activeTab === 'upcoming' && (
-        <div className="space-y-6 animate-in fade-in duration-150">
+        <div className="w-full min-w-0 space-y-4 sm:space-y-6 animate-in fade-in duration-150">
           {/* Search & Filter bar */}
-          <div className="space-y-3">
+          <div className="space-y-2.5 sm:space-y-3 w-full min-w-0">
             {/* Search input */}
-            <div className="relative">
+            <div className="relative w-full">
               <Search className="w-4 h-4 absolute left-3.5 top-3 text-gray-400 pointer-events-none" />
               <input
                 type="text"
                 placeholder="Tìm kiếm nhắc nhở theo tên thuốc, địa điểm, ghi chú..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full pl-10 pr-4 py-2.5 text-xs sm:text-sm bg-white dark:bg-[#182424] border border-gray-200 dark:border-gray-800 rounded-2xl outline-none focus:border-[#287C78] text-gray-900 dark:text-white transition-all shadow-2xs"
+                className="w-full pl-10 pr-4 py-2.5 text-xs sm:text-sm bg-white dark:bg-[#182424] border border-gray-200 dark:border-gray-800 rounded-2xl outline-none focus:border-[#287C78] text-gray-900 dark:text-white transition-all shadow-2xs placeholder:truncate placeholder:text-gray-400 dark:placeholder:text-gray-500"
               />
             </div>
 
-            {/* Filter Chips */}
-            <div className="flex items-center gap-1.5 overflow-x-auto pb-1 no-scrollbar">
-              <button
-                onClick={() => setSelectedCategory('all')}
-                className={`px-3 py-1.5 rounded-xl text-xs font-bold whitespace-nowrap transition-all cursor-pointer border ${
-                  selectedCategory === 'all'
-                    ? 'bg-[#287C78] text-white border-[#287C78]'
-                    : 'bg-white dark:bg-[#182424] border-gray-200 dark:border-gray-800 text-gray-600 dark:text-gray-400'
-                }`}
-              >
-                Tất cả ({counts.all})
-              </button>
+            {/* Filter Chips Container with Scroll Controls */}
+            <div className="relative group/filter w-full min-w-0">
+              {/* Left Scroll Button (Desktop) */}
+              {showLeftScroll && (
+                <button
+                  type="button"
+                  onClick={() => scrollFilterBar('left')}
+                  className="hidden sm:flex absolute -left-2 top-1/2 -translate-y-1/2 z-10 w-7 h-7 rounded-full bg-white dark:bg-[#182424] border border-gray-200 dark:border-gray-700 shadow-md items-center justify-center text-gray-700 dark:text-gray-200 hover:scale-110 active:scale-95 transition-all cursor-pointer"
+                  title="Cuộn sang trái"
+                >
+                  <ChevronLeft className="w-4 h-4" />
+                </button>
+              )}
 
-              <button
-                onClick={() => setSelectedCategory('medication')}
-                className={`flex items-center gap-1 px-3 py-1.5 rounded-xl text-xs font-bold whitespace-nowrap transition-all cursor-pointer border ${
-                  selectedCategory === 'medication'
-                    ? 'bg-[#FF701A] text-white border-[#FF701A]'
-                    : 'bg-white dark:bg-[#182424] border-gray-200 dark:border-gray-800 text-gray-600 dark:text-gray-400'
-                }`}
-              >
-                <Pill className="w-3.5 h-3.5" />
-                <span>Thuốc uống ({counts.medication})</span>
-              </button>
+              {/* Right Scroll Button (Desktop) */}
+              {showRightScroll && (
+                <button
+                  type="button"
+                  onClick={() => scrollFilterBar('right')}
+                  className="hidden sm:flex absolute -right-2 top-1/2 -translate-y-1/2 z-10 w-7 h-7 rounded-full bg-white dark:bg-[#182424] border border-gray-200 dark:border-gray-700 shadow-md items-center justify-center text-gray-700 dark:text-gray-200 hover:scale-110 active:scale-95 transition-all cursor-pointer"
+                  title="Cuộn sang phải"
+                >
+                  <ChevronRight className="w-4 h-4" />
+                </button>
+              )}
 
-              <button
-                onClick={() => setSelectedCategory('appointment')}
-                className={`flex items-center gap-1 px-3 py-1.5 rounded-xl text-xs font-bold whitespace-nowrap transition-all cursor-pointer border ${
-                  selectedCategory === 'appointment'
-                    ? 'bg-[#287C78] text-white border-[#287C78]'
-                    : 'bg-white dark:bg-[#182424] border-gray-200 dark:border-gray-800 text-gray-600 dark:text-gray-400'
+              {/* Scrollable Filter Bar */}
+              <div
+                ref={filterBarRef}
+                onScroll={checkFilterScroll}
+                onWheel={(e) => {
+                  if (e.deltaY !== 0 && filterBarRef.current) {
+                    filterBarRef.current.scrollLeft += e.deltaY;
+                    checkFilterScroll();
+                  }
+                }}
+                onMouseDown={handleFilterMouseDown}
+                onMouseLeave={handleFilterMouseLeaveOrUp}
+                onMouseUp={handleFilterMouseLeaveOrUp}
+                onMouseMove={handleFilterMouseMove}
+                className={`flex items-center gap-1.5 overflow-x-auto pb-1.5 pt-0.5 no-scrollbar touch-pan-x w-full min-w-0 scroll-smooth select-none ${
+                  isDraggingFilter ? 'cursor-grabbing' : 'cursor-grab'
                 }`}
               >
-                <CalendarIcon className="w-3.5 h-3.5" />
-                <span>Lịch khám ({counts.appointment})</span>
-              </button>
+                <button
+                  onClick={() => setSelectedCategory('all')}
+                  className={`px-3 py-1.5 rounded-xl text-xs font-bold whitespace-nowrap transition-all cursor-pointer border shrink-0 ${
+                    selectedCategory === 'all'
+                      ? 'bg-[#287C78] text-white border-[#287C78]'
+                      : 'bg-white dark:bg-[#182424] border-gray-200 dark:border-gray-800 text-gray-600 dark:text-gray-400'
+                  }`}
+                >
+                  Tất cả ({counts.all})
+                </button>
 
-              <button
-                onClick={() => setSelectedCategory('family')}
-                className={`flex items-center gap-1 px-3 py-1.5 rounded-xl text-xs font-bold whitespace-nowrap transition-all cursor-pointer border ${
-                  selectedCategory === 'family'
-                    ? 'bg-[#E76F91] text-white border-[#E76F91]'
-                    : 'bg-white dark:bg-[#182424] border-gray-200 dark:border-gray-800 text-gray-600 dark:text-gray-400'
-                }`}
-              >
-                <Users className="w-3.5 h-3.5" />
-                <span>Gia đình ({counts.family})</span>
-              </button>
+                <button
+                  onClick={() => setSelectedCategory('medication')}
+                  className={`flex items-center gap-1 px-3 py-1.5 rounded-xl text-xs font-bold whitespace-nowrap transition-all cursor-pointer border shrink-0 ${
+                    selectedCategory === 'medication'
+                      ? 'bg-[#FF701A] text-white border-[#FF701A]'
+                      : 'bg-white dark:bg-[#182424] border-gray-200 dark:border-gray-800 text-gray-600 dark:text-gray-400'
+                  }`}
+                >
+                  <Pill className="w-3.5 h-3.5" />
+                  <span>Thuốc uống ({counts.medication})</span>
+                </button>
 
-              <button
-                onClick={() => setSelectedCategory('high_priority')}
-                className={`flex items-center gap-1 px-3 py-1.5 rounded-xl text-xs font-bold whitespace-nowrap transition-all cursor-pointer border ${
-                  selectedCategory === 'high_priority'
-                    ? 'bg-amber-500 text-white border-amber-500'
-                    : 'bg-white dark:bg-[#182424] border-gray-200 dark:border-gray-800 text-gray-600 dark:text-gray-400'
-                }`}
-              >
-                <Flame className="w-3.5 h-3.5" />
-                <span>Ưu tiên cao ({counts.high_priority})</span>
-              </button>
+                <button
+                  onClick={() => setSelectedCategory('appointment')}
+                  className={`flex items-center gap-1 px-3 py-1.5 rounded-xl text-xs font-bold whitespace-nowrap transition-all cursor-pointer border shrink-0 ${
+                    selectedCategory === 'appointment'
+                      ? 'bg-[#287C78] text-white border-[#287C78]'
+                      : 'bg-white dark:bg-[#182424] border-gray-200 dark:border-gray-800 text-gray-600 dark:text-gray-400'
+                  }`}
+                >
+                  <CalendarIcon className="w-3.5 h-3.5" />
+                  <span>Lịch khám ({counts.appointment})</span>
+                </button>
 
-              <button
-                onClick={() => setSelectedCategory('completed')}
-                className={`flex items-center gap-1 px-3 py-1.5 rounded-xl text-xs font-bold whitespace-nowrap transition-all cursor-pointer border ${
-                  selectedCategory === 'completed'
-                    ? 'bg-emerald-600 text-white border-emerald-600'
-                    : 'bg-white dark:bg-[#182424] border-gray-200 dark:border-gray-800 text-gray-600 dark:text-gray-400'
-                }`}
-              >
-                <CheckCircle2 className="w-3.5 h-3.5" />
-                <span>Đã xong ({counts.completed})</span>
-              </button>
+                <button
+                  onClick={() => setSelectedCategory('family')}
+                  className={`flex items-center gap-1 px-3 py-1.5 rounded-xl text-xs font-bold whitespace-nowrap transition-all cursor-pointer border shrink-0 ${
+                    selectedCategory === 'family'
+                      ? 'bg-[#E76F91] text-white border-[#E76F91]'
+                      : 'bg-white dark:bg-[#182424] border-gray-200 dark:border-gray-800 text-gray-600 dark:text-gray-400'
+                  }`}
+                >
+                  <Users className="w-3.5 h-3.5" />
+                  <span>Gia đình ({counts.family})</span>
+                </button>
+
+                <button
+                  onClick={() => setSelectedCategory('high_priority')}
+                  className={`flex items-center gap-1 px-3 py-1.5 rounded-xl text-xs font-bold whitespace-nowrap transition-all cursor-pointer border shrink-0 ${
+                    selectedCategory === 'high_priority'
+                      ? 'bg-amber-500 text-white border-amber-500'
+                      : 'bg-white dark:bg-[#182424] border-gray-200 dark:border-gray-800 text-gray-600 dark:text-gray-400'
+                  }`}
+                >
+                  <Flame className="w-3.5 h-3.5" />
+                  <span>Ưu tiên cao ({counts.high_priority})</span>
+                </button>
+
+                <button
+                  onClick={() => setSelectedCategory('completed')}
+                  className={`flex items-center gap-1 px-3 py-1.5 rounded-xl text-xs font-bold whitespace-nowrap transition-all cursor-pointer border shrink-0 ${
+                    selectedCategory === 'completed'
+                      ? 'bg-emerald-600 text-white border-emerald-600'
+                      : 'bg-white dark:bg-[#182424] border-gray-200 dark:border-gray-800 text-gray-600 dark:text-gray-400'
+                  }`}
+                >
+                  <CheckCircle2 className="w-3.5 h-3.5" />
+                  <span>Đã xong ({counts.completed})</span>
+                </button>
+              </div>
             </div>
           </div>
 
           {/* Group: HÔM NAY (Today) */}
           {groupedActive.today.length > 0 && (
-            <div className="space-y-3">
-              <div className="flex items-center justify-between">
+            <div className="space-y-2.5">
+              <div className="flex items-center justify-between select-none">
                 <h4 className="text-xs sm:text-sm font-black uppercase tracking-wider text-amber-600 dark:text-amber-400 flex items-center gap-2">
-                  <span className="w-2.5 h-2.5 rounded-full bg-amber-500 animate-pulse" />
+                  <span className="w-2.5 h-2.5 rounded-full bg-amber-500 animate-pulse shrink-0" />
                   <span>Hôm nay &bull; {groupedActive.today.length} việc cần làm</span>
                 </h4>
               </div>
@@ -411,9 +506,9 @@ export const RemindersPage: React.FC<RemindersPageProps> = ({
 
           {/* Group: NGÀY MAI (Tomorrow) */}
           {groupedActive.tomorrow.length > 0 && (
-            <div className="space-y-3">
-              <h4 className="text-xs sm:text-sm font-black uppercase tracking-wider text-[#287C78] dark:text-[#42A39E] flex items-center gap-2">
-                <span className="w-2.5 h-2.5 rounded-full bg-[#287C78]" />
+            <div className="space-y-2.5">
+              <h4 className="text-xs sm:text-sm font-black uppercase tracking-wider text-[#287C78] dark:text-[#42A39E] flex items-center gap-2 select-none">
+                <span className="w-2.5 h-2.5 rounded-full bg-[#287C78] shrink-0" />
                 <span>Ngày mai &bull; {groupedActive.tomorrow.length} việc</span>
               </h4>
 
@@ -435,9 +530,9 @@ export const RemindersPage: React.FC<RemindersPageProps> = ({
 
           {/* Group: SẮP TỚI TRONG TUẦN & TƯƠNG LAI */}
           {(groupedActive.thisWeek.length > 0 || groupedActive.later.length > 0) && (
-            <div className="space-y-3">
-              <h4 className="text-xs sm:text-sm font-black uppercase tracking-wider text-gray-500 dark:text-gray-400 flex items-center gap-2">
-                <span className="w-2.5 h-2.5 rounded-full bg-gray-400" />
+            <div className="space-y-2.5">
+              <h4 className="text-xs sm:text-sm font-black uppercase tracking-wider text-gray-500 dark:text-gray-400 flex items-center gap-2 select-none">
+                <span className="w-2.5 h-2.5 rounded-full bg-gray-400 shrink-0" />
                 <span>
                   Sắp tới &bull; {groupedActive.thisWeek.length + groupedActive.later.length} việc
                 </span>

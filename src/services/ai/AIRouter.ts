@@ -13,7 +13,7 @@ export function selectGroqModel(message: string, session?: LifeSession | null): 
     text.includes('ưu tiên') ||
     (text.length > 150 && (text.includes('và') || text.includes('hoặc')))
   ) {
-    return GroqModel.GPT_OSS_120B;
+    return GroqModel.LLAMA_3_3_70B;
   }
 
   // 2. Complex natural language interpretation / dialect / ambiguous phrasing
@@ -24,16 +24,16 @@ export function selectGroqModel(message: string, session?: LifeSession | null): 
     text.includes('bước vừa rồi') ||
     text.includes('chuyển tôi sang')
   ) {
-    return GroqModel.QWEN_3_6_27B;
+    return GroqModel.LLAMA_3_3_70B;
   }
 
   // 3. Fast lightweight responses for short commands or simple prompts
   if (text.length < 15) {
-    return GroqModel.COMPOUND_MINI;
+    return GroqModel.LLAMA_3_1_8B;
   }
 
   // 4. Default fast text model
-  return GroqModel.GPT_OSS_20B;
+  return GroqModel.LLAMA_3_1_8B;
 }
 
 

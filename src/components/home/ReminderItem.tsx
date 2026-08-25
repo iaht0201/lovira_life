@@ -121,36 +121,37 @@ export const ReminderItem: React.FC<ReminderItemProps> = ({
 
   return (
     <div
-      className={`group relative flex items-start gap-2.5 sm:gap-3.5 p-3 sm:p-4 rounded-[18px] sm:rounded-[20px] bg-white dark:bg-[#182424] border border-gray-200 dark:border-gray-800 hover:border-[#287C78] transition-all shadow-2xs ${
+      className={`group relative flex items-start gap-2.5 sm:gap-3.5 p-3 sm:p-4 rounded-[18px] sm:rounded-[20px] bg-white dark:bg-[#182424] border border-gray-200 dark:border-gray-800 hover:border-[#287C78] transition-all shadow-2xs w-full min-w-0 ${
         completed ? 'opacity-60 bg-gray-50 dark:bg-[#141C1C]' : ''
       }`}
     >
-      {/* Complete Checkbox Button */}
+      {/* Interactive Category & Completion Check Icon */}
       <button
         type="button"
         onClick={handleToggle}
-        className="mt-0.5 text-gray-400 hover:text-[#287C78] dark:hover:text-[#42A39E] transition-colors cursor-pointer shrink-0"
+        className={`w-9 h-9 sm:w-10 sm:h-10 rounded-xl sm:rounded-[14px] ${
+          completed
+            ? 'bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border-emerald-500/30'
+            : `${bg} ${text} ${border}`
+        } border flex items-center justify-center shrink-0 shadow-2xs transition-all active:scale-95 cursor-pointer relative group/icon`}
+        title={completed ? 'Đánh dấu chưa xong' : 'Đánh dấu xong'}
         aria-label={completed ? 'Đánh dấu chưa xong' : 'Đánh dấu xong'}
       >
         {completed ? (
-          <CheckCircle2 className="w-5 h-5 text-emerald-500 fill-emerald-100 dark:fill-emerald-950" />
+          <CheckCircle2 className="w-5 h-5 sm:w-5 sm:h-5 text-emerald-600 dark:text-emerald-400" />
         ) : (
-          <Circle className="w-5 h-5 hover:scale-110 transition-transform" />
+          <>
+            <Icon className="w-4 h-4 sm:w-5 sm:h-5 transition-opacity group-hover/icon:opacity-20" />
+            <CheckCircle2 className="w-4 h-4 sm:w-5 sm:h-5 absolute opacity-0 group-hover/icon:opacity-100 transition-opacity text-[#287C78] dark:text-[#42A39E]" />
+          </>
         )}
       </button>
-
-      {/* Category Icon */}
-      <div
-        className={`w-9 h-9 sm:w-10 sm:h-10 rounded-xl sm:rounded-[14px] ${bg} ${text} ${border} border flex items-center justify-center shrink-0 shadow-2xs`}
-      >
-        <Icon className="w-4 h-4 sm:w-5 sm:h-5" />
-      </div>
 
       {/* Info Body */}
       <div className="flex-1 min-w-0">
         <div className="flex items-center gap-1.5 sm:gap-2 flex-wrap">
           <h4
-            className={`text-[13px] sm:text-base font-[800] leading-snug line-clamp-2 ${
+            className={`text-[14px] sm:text-[15px] font-[700] leading-snug line-clamp-2 ${
               completed
                 ? 'line-through text-gray-400 dark:text-gray-500'
                 : 'text-gray-900 dark:text-white'
@@ -166,25 +167,25 @@ export const ReminderItem: React.FC<ReminderItemProps> = ({
           )}
         </div>
 
-        <div className="flex items-center gap-1.5 sm:gap-2 mt-0.5 sm:mt-1 text-[11px] sm:text-xs text-gray-500 dark:text-gray-400 flex-wrap">
-          <span className="flex items-center gap-1 font-semibold text-[#287C78] dark:text-[#42A39E]">
+        <div className="flex flex-col sm:flex-row sm:items-center gap-0.5 sm:gap-2 mt-1 text-[11px] sm:text-xs text-gray-500 dark:text-gray-400">
+          <span className="flex items-center gap-1 font-semibold text-[#287C78] dark:text-[#42A39E] shrink-0">
             <Clock className="w-3 h-3 sm:w-3.5 sm:h-3.5" />
             {displayTime}
           </span>
 
           {fullReminder?.notes && (
-            <span className="text-gray-600 dark:text-gray-400 line-clamp-1">
-              &bull; {fullReminder.notes}
+            <span className="text-gray-600 dark:text-gray-400 line-clamp-1 truncate">
+              • {fullReminder.notes}
             </span>
           )}
         </div>
 
         {/* Linked Session Badge */}
         {fullReminder?.sessionId && (
-          <div className="mt-2">
+          <div className="mt-1.5">
             <button
               onClick={() => onOpenSession && onOpenSession(fullReminder.sessionId!)}
-              className="inline-flex items-center gap-1 text-[11px] font-bold text-[#287C78] dark:text-[#42A39E] bg-[#287C78]/10 hover:bg-[#287C78]/20 px-2.5 py-1 rounded-lg transition-colors cursor-pointer"
+              className="inline-flex items-center gap-1 text-[11px] font-bold text-[#287C78] dark:text-[#42A39E] bg-[#287C78]/10 hover:bg-[#287C78]/20 px-2 py-0.5 rounded-lg transition-colors cursor-pointer"
             >
               <ExternalLink className="w-3 h-3" />
               <span>Xem phiên liên quan</span>
@@ -332,3 +333,4 @@ export const ReminderItem: React.FC<ReminderItemProps> = ({
     </div>
   );
 };
+
