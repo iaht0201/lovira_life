@@ -3,6 +3,7 @@ dotenv.config();
 
 import express from 'express';
 import path from 'path';
+import fs from 'fs';
 import { EdgeTTS } from '@andresaya/edge-tts';
 
 import { LifeSession, AgentAction } from './types.js';
@@ -480,9 +481,35 @@ QUY TẮC NGÔN NGỮ BẮT BUỘC:
     }
   });
 
-  // 6. Static asset directories
+  // 6. Static and Dynamic Asset Handling from Base64
   const publicPath = path.join(process.cwd(), 'public');
   const assetsImagesPath = path.join(process.cwd(), 'assets/images');
+
+  // Dynamic brand image handler from Base64 text files (immune to AI Studio binary corruption)
+  app.get('/brand/:file', (req, res, next) => {
+    const file = req.params.file.toLowerCase();
+    let txtFile = '';
+    if (file.includes('logo')) txtFile = 'logo.txt';
+    else if (file.includes('avatar')) txtFile = 'avatar.txt';
+    else if (file.includes('banner')) txtFile = 'banner.txt';
+
+    if (txtFile) {
+      const fullPath = path.join(publicPath, txtFile);
+      if (fs.existsSync(fullPath)) {
+        try {
+          const raw = fs.readFileSync(fullPath, 'utf8').trim();
+          const b64 = raw.replace(/^data:image\/[a-zA-Z0-9+-]+;base64,/, '');
+          const buffer = Buffer.from(b64, 'base64');
+          res.setHeader('Content-Type', 'image/png');
+          res.setHeader('Cache-Control', 'public, max-age=86400');
+          return res.send(buffer);
+        } catch (e) {
+          console.warn('[Brand Image Route Error]:', e);
+        }
+      }
+    }
+    next();
+  });
 
   app.use('/brand', express.static(path.join(publicPath, 'brand')));
   app.use('/images', express.static(path.join(publicPath, 'images')));
