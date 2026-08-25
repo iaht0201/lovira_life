@@ -33,6 +33,7 @@ import { validateAndGroundAIResponse } from '../services/interaction/CapabilityR
 import { cloudSyncService } from '../services/firebase/cloudSyncService';
 import { LoviraAuthUser, CloudSyncSettings } from '../services/firebase/firebaseTypes';
 import { parseVietnameseReminderText } from '../utils/dateTimeResolver';
+import { routeFastIntent } from '../services/interaction/FastIntentRouter';
 
 export interface InteractionOptions {
   inputMode?: InteractionInputMode;
@@ -870,7 +871,73 @@ export function useSessionManager({
       }
     }
 
-    // B. Main Interaction Flow (Works across all pages: Home, Chat, Reminders, Settings)
+    // A3. Fast Intent Router (Hybrid Local-First Deterministic Pipeline)
+    const fastRoute = await routeFastIntent(trimmedText, {
+      session: activeSession,
+      userProfile,
+      activeTab,
+      page: isSessionContext ? 'session' : (pageContext?.page || activeTab || 'dashboard'),
+      hasActiveSession: !!activeSession,
+    });
+
+    if (fastRoute.handled) {
+      let replyText = fastRoute.reply || 'Dạ, con đã thực hiện xong thao tác rồi ạ.';
+      let speechText = fastRoute.speech || replyText;
+
+      // Handle AppAction if provided by Fast Router
+      if (fastRoute.appAction) {
+        const execRes = await executeValidatedAppAction(fastRoute.appAction, appContext, runtimeContext);
+        if (!execRes.executed && execRes.reason) {
+          replyText = execRes.reason;
+          speechText = replyText;
+        }
+      }
+
+      // Handle AgentActions if provided by Fast Router
+      let sessionToSave = activeSession;
+      if (fastRoute.agentActions && fastRoute.agentActions.length > 0 && sessionToSave) {
+        const batchTrigger = inputMode === 'voice' ? 'voice' : 'chat';
+        const batchRes = applyAgentActionBatch(sessionToSave, fastRoute.agentActions, batchTrigger);
+        sessionToSave = batchRes.newState;
+      }
+
+      // Record messages in active session if present
+      if (sessionToSave && isSessionContext) {
+        const now = new Date().toISOString();
+        const userMsg = {
+          id: `msg-${Date.now()}`,
+          sender: 'user' as const,
+          text: trimmedText,
+          timestamp: now,
+          inputMode,
+        };
+        const loviraMsg = {
+          id: `msg-${Date.now() + 1}`,
+          sender: 'lovira' as const,
+          text: replyText,
+          timestamp: new Date().toISOString(),
+          suggestedReplies: fastRoute.suggestedReplies,
+        };
+        const updatedSession = {
+          ...sessionToSave,
+          messages: [...sessionToSave.messages, userMsg, loviraMsg],
+          updatedAt: now,
+        };
+        setActiveSession(updatedSession);
+        saveUpdatedSession(updatedSession);
+      }
+
+      showToast(replyText);
+      if (inputMode === 'voice' || accessibilitySettings.speakResponse) {
+        speakWithVoiceStatus(speechText);
+      } else {
+        setVoiceStatus('idle');
+      }
+      setIsLoading(false);
+      return;
+    }
+
+    // B. Main Interaction Flow (Fallback to AI Chat when Fast Router returns handled = false)
     const sessionToUse =
       activeSession ||
       (sessionsList.length > 0 ? storageService.getSession(sessionsList[0].id) : null);

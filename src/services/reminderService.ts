@@ -681,6 +681,35 @@ class ReminderService {
     document.body.removeChild(a);
     URL.revokeObjectURL(url);
   }
+
+  /**
+   * Get active reminders scheduled specifically for a given date
+   */
+  getRemindersForDate(targetDate: Date = new Date()): Reminder[] {
+    const list = this.getReminders();
+    const startOfDay = new Date(targetDate.getFullYear(), targetDate.getMonth(), targetDate.getDate(), 0, 0, 0, 0).getTime();
+    const endOfDay = startOfDay + 86400000 - 1;
+
+    return list
+      .filter((r) => {
+        if (r.status !== 'active') return false;
+        const rTime = new Date(r.scheduledAt).getTime();
+        if (isNaN(rTime)) return false;
+
+        // Exact day match
+        if (rTime >= startOfDay && rTime <= endOfDay) return true;
+
+        // Recurring match
+        if (r.repeat === 'daily' && rTime <= endOfDay) return true;
+
+        const rDate = new Date(r.scheduledAt);
+        if (r.repeat === 'weekly' && rDate.getDay() === targetDate.getDay() && rTime <= endOfDay) return true;
+        if (r.repeat === 'monthly' && rDate.getDate() === targetDate.getDate() && rTime <= endOfDay) return true;
+
+        return false;
+      })
+      .sort((a, b) => new Date(a.scheduledAt).getTime() - new Date(b.scheduledAt).getTime());
+  }
 }
 
 export const reminderService = new ReminderService();
