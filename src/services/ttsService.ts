@@ -43,6 +43,7 @@ export function checkVietnameseVoiceSupport(): 'available' | 'unavailable' | 'pe
 }
 
 let activeAudio: HTMLAudioElement | null = null;
+let activeBlobUrl: string | null = null;
 let speakingActive = false;
 
 export function isSpeaking(): boolean {
@@ -66,6 +67,15 @@ export function stopSpeaking(): void {
       // ignore
     }
     activeAudio = null;
+  }
+
+  if (activeBlobUrl) {
+    try {
+      URL.revokeObjectURL(activeBlobUrl);
+    } catch {
+      // ignore
+    }
+    activeBlobUrl = null;
   }
 
   if (typeof window !== 'undefined' && 'speechSynthesis' in window) {
@@ -107,7 +117,9 @@ export function speakText(
   speakingActive = true;
   options.onStart?.();
 
-  // Try Edge TTS API Endpoint first
+  console.log(`[TTS] Requesting Edge-TTS for: "${cleanText.substring(0, 50)}..." (Voice: ${selectedVoice})`);
+
+  // 1. Try Edge TTS API Endpoint first
   fetch('/api/tts', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
@@ -121,28 +133,57 @@ export function speakText(
       if (!res.ok) throw new Error(`Edge TTS HTTP error: ${res.status}`);
       return res.json();
     })
-    .then((data: { audioBase64?: string }) => {
+    .then((data: { audioBase64?: string; voice?: string; engine?: string }) => {
       if (!data.audioBase64) throw new Error('Missing audioBase64 from Edge TTS response');
 
-      const audio = new Audio(data.audioBase64);
+      console.log(`[TTS] Edge-TTS audio received (${data.engine || 'EdgeTTS'}), playing audio...`);
+
+      // Convert Base64 data URL to Blob for seamless browser audio playback
+      const base64Data = data.audioBase64.replace(/^data:audio\/\w+;base64,/, '');
+      const binaryString = atob(base64Data);
+      const bytes = new Uint8Array(binaryString.length);
+      for (let i = 0; i < binaryString.length; i++) {
+        bytes[i] = binaryString.charCodeAt(i);
+      }
+      const audioBlob = new Blob([bytes], { type: 'audio/mpeg' });
+      const blobUrl = URL.createObjectURL(audioBlob);
+      activeBlobUrl = blobUrl;
+
+      const audio = new Audio(blobUrl);
       activeAudio = audio;
 
       audio.onended = () => {
+        console.log('[TTS] Audio playback completed.');
         speakingActive = false;
         activeAudio = null;
+        if (activeBlobUrl) {
+          URL.revokeObjectURL(activeBlobUrl);
+          activeBlobUrl = null;
+        }
         options.onEnd?.();
       };
 
       audio.onerror = (e) => {
-        console.warn('[Edge TTS Playback Error], falling back to WebSpeech:', e);
+        console.warn('[TTS] Audio Playback Error, falling back to WebSpeech:', e);
+        speakingActive = false;
         activeAudio = null;
+        if (activeBlobUrl) {
+          URL.revokeObjectURL(activeBlobUrl);
+          activeBlobUrl = null;
+        }
         speakWebSpeechFallback(cleanText, options);
       };
 
-      return audio.play();
+      const playPromise = audio.play();
+      if (playPromise !== undefined) {
+        playPromise.catch((playErr) => {
+          console.warn('[TTS] Autoplay/Audio play error, falling back to WebSpeech:', playErr);
+          speakWebSpeechFallback(cleanText, options);
+        });
+      }
     })
     .catch((err) => {
-      console.warn('[Edge TTS Service Failure], falling back to WebSpeech:', err);
+      console.warn('[TTS] Edge TTS Service Failure, falling back to WebSpeech:', err);
       speakWebSpeechFallback(cleanText, options);
     });
 
@@ -166,6 +207,11 @@ function speakWebSpeechFallback(cleanText: string, options: SpeakOptions): void 
     const voices = window.speechSynthesis.getVoices();
     const viVoice = voices.find((v) => v.lang.toLowerCase().startsWith('vi'));
     if (viVoice) utterance.voice = viVoice;
+
+    utterance.onstart = () => {
+      speakingActive = true;
+      options.onStart?.();
+    };
 
     utterance.onend = () => {
       speakingActive = false;
