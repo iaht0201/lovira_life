@@ -11,7 +11,7 @@ import { parseLocalIntent } from './src/services/localIntentEngine.js';
 import { generateFallbackCustomSessionPlan } from './src/services/fallbackPlanner.js';
 import { deduceHonorifics } from './src/services/conversationStyle.js';
 import { buildClarificationPrompt } from './src/services/ai/prompts/clarificationPrompt.js';
-import { callGroqAgent } from './src/services/ai/GroqProvider.js';
+import { callGroqAgent, GroqModel } from './src/services/ai/GroqProvider.js';
 import { selectGroqModel } from './src/services/ai/AIRouter.js';
 import { routeScenario } from './src/services/scenarioRouter.js';
 import { normalizeGeneratedLifePlan, validateGeneratedLifePlan } from './src/services/planValidator.js';
@@ -221,7 +221,7 @@ async function startServer() {
               Authorization: `Bearer ${groqKey}`,
             },
             body: JSON.stringify({
-              model: 'llama-3.1-8b-instant',
+              model: GroqModel.GPT_OSS_20B,
               messages: [{ role: 'user', content: clarificationPrompt }],
               temperature: 0.1,
             }),
@@ -279,7 +279,7 @@ async function startServer() {
               Authorization: `Bearer ${groqKey}`,
             },
             body: JSON.stringify({
-              model: 'llama-3.1-8b-instant',
+              model: GroqModel.GPT_OSS_20B,
               messages: [
                 {
                   role: 'system',

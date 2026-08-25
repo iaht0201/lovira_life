@@ -11,51 +11,58 @@ import { buildSessionContextPrompt } from './SessionContextBuilder';
 
 // Enum cho toàn bộ các mô hình Groq chính thức được hỗ trợ
 export enum GroqModel {
-  LLAMA_3_1_8B = 'llama-3.1-8b-instant',
-  LLAMA_3_3_70B = 'llama-3.3-70b-versatile',
-  MIXTRAL_8X7B = 'mixtral-8x7b-32768',
-  GEMMA2_9B = 'gemma2-9b-it',
-  DEEPSEEK_70B = 'deepseek-r1-distill-llama-70b',
-  // Backward compatibility legacy aliases
-  GPT_OSS_20B = 'llama-3.1-8b-instant',
-  QWEN_3_6_27B = 'llama-3.3-70b-versatile',
-  COMPOUND = 'llama-3.3-70b-versatile',
-  COMPOUND_MINI = 'llama-3.1-8b-instant',
-  GPT_OSS_120B = 'llama-3.3-70b-versatile',
+  GPT_OSS_20B = 'openai/gpt-oss-20b',
+  GPT_OSS_120B = 'openai/gpt-oss-120b',
+  QWEN_3_6_27B = 'qwen/qwen3.6-27b',
+  COMPOUND_MINI = 'groq/compound-mini',
+  COMPOUND = 'groq/compound',
+  // Legacy aliases mapped to active models
+  LLAMA_3_1_8B = 'openai/gpt-oss-20b',
+  LLAMA_3_3_70B = 'openai/gpt-oss-120b',
+  MIXTRAL_8X7B = 'qwen/qwen3.6-27b',
+  GEMMA2_9B = 'groq/compound-mini',
+  DEEPSEEK_70B = 'openai/gpt-oss-120b',
 }
 
 // Thứ tự xoay tua ưu tiên khi một mô hình gặp lỗi 429 / Rate Limit / 404 / 413
 export const GROQ_ROTATION_PRIORITY: GroqModel[] = [
-  GroqModel.LLAMA_3_1_8B,
-  GroqModel.LLAMA_3_3_70B,
-  GroqModel.MIXTRAL_8X7B,
-  GroqModel.GEMMA2_9B,
+  GroqModel.GPT_OSS_20B,
+  GroqModel.GPT_OSS_120B,
+  GroqModel.QWEN_3_6_27B,
+  GroqModel.COMPOUND_MINI,
+  GroqModel.COMPOUND,
 ];
 
 export const ALLOWED_GROQ_MODELS = Object.values(GroqModel);
 
 export function normalizeGroqModel(modelInput?: string): GroqModel {
-  if (!modelInput) return GroqModel.LLAMA_3_1_8B;
-  
+  if (!modelInput) return GroqModel.GPT_OSS_20B;
+
+  if (modelInput === 'llama-3.1-8b-instant' || modelInput === 'openai/gpt-oss-20b' || modelInput === 'groq/compound-mini') {
+    return GroqModel.GPT_OSS_20B;
+  }
+  if (modelInput === 'llama-3.3-70b-versatile' || modelInput === 'openai/gpt-oss-120b' || modelInput === 'groq/compound') {
+    return GroqModel.GPT_OSS_120B;
+  }
+  if (modelInput === 'mixtral-8x7b-32768' || modelInput === 'qwen/qwen3.6-27b') {
+    return GroqModel.QWEN_3_6_27B;
+  }
+  if (modelInput === 'gemma2-9b-it') {
+    return GroqModel.COMPOUND_MINI;
+  }
+
   if (Object.values(GroqModel).includes(modelInput as GroqModel)) {
-    // If it's a legacy string like 'openai/gpt-oss-20b' or 'groq/compound', map it
-    if (modelInput === 'openai/gpt-oss-20b' || modelInput === 'groq/compound-mini') {
-      return GroqModel.LLAMA_3_1_8B;
-    }
-    if (modelInput === 'qwen/qwen3.6-27b' || modelInput === 'groq/compound' || modelInput === 'openai/gpt-oss-120b') {
-      return GroqModel.LLAMA_3_3_70B;
-    }
     return modelInput as GroqModel;
   }
 
   const lower = modelInput.toLowerCase();
-  if (lower.includes('70b') || lower.includes('compound') || lower.includes('qwen') || lower.includes('120b')) {
-    return GroqModel.LLAMA_3_3_70B;
+  if (lower.includes('70b') || lower.includes('compound') || lower.includes('120b')) {
+    return GroqModel.GPT_OSS_120B;
   }
-  if (lower.includes('mixtral')) return GroqModel.MIXTRAL_8X7B;
-  if (lower.includes('gemma')) return GroqModel.GEMMA2_9B;
+  if (lower.includes('qwen') || lower.includes('mixtral')) return GroqModel.QWEN_3_6_27B;
+  if (lower.includes('mini') || lower.includes('gemma')) return GroqModel.COMPOUND_MINI;
 
-  return GroqModel.LLAMA_3_1_8B;
+  return GroqModel.GPT_OSS_20B;
 }
 
 export interface GroqRequestOptions {
