@@ -69,30 +69,52 @@ export async function routeFastIntent(
   // -------------------------------------------------------------
 
   // A1. Camera & Scanner (Explicit camera open commands)
-  const isCameraCommand =
-    (normalized === 'chụp ảnh' ||
-      normalized === 'chụp hình' ||
-      normalized === 'mở camera' ||
-      normalized === 'mở máy ảnh' ||
-      normalized === 'mở cam' ||
-      normalized === 'bật camera' ||
-      normalized === 'bật máy ảnh' ||
-      normalized === 'máy ảnh' ||
-      normalized === 'camera' ||
-      normalized.includes('mở camera') ||
-      normalized.includes('mở máy ảnh') ||
-      normalized.includes('mở cam') ||
-      normalized.includes('bật camera') ||
-      normalized.includes('bật máy ảnh') ||
-      normalized.includes('chụp ảnh') ||
-      normalized.includes('chụp hình') ||
-      unaccented.includes('mo camera') ||
-      unaccented.includes('chup anh') ||
-      unaccented.includes('chup hinh')) &&
-    !normalized.includes('xong') &&
-    !normalized.includes('rồi');
+  const isCameraPhrase =
+    normalized === 'chụp ảnh' ||
+    normalized === 'chụp hình' ||
+    normalized === 'mở camera' ||
+    normalized === 'mở máy ảnh' ||
+    normalized === 'mở cam' ||
+    normalized === 'bật camera' ||
+    normalized === 'bật máy ảnh' ||
+    normalized === 'máy ảnh' ||
+    normalized === 'camera' ||
+    normalized.includes('mở camera') ||
+    normalized.includes('mở máy ảnh') ||
+    normalized.includes('mở cam') ||
+    normalized.includes('bật camera') ||
+    normalized.includes('bật máy ảnh') ||
+    normalized.includes('chụp ảnh') ||
+    normalized.includes('chụp hình') ||
+    unaccented.includes('mo camera') ||
+    unaccented.includes('chup anh') ||
+    unaccented.includes('chup hinh');
 
-  if (isCameraCommand) {
+  const hasNegativeCameraIntent =
+    normalized.includes('không muốn') ||
+    normalized.includes('không cần') ||
+    normalized.includes('không chụp') ||
+    normalized.includes('không mở') ||
+    normalized.includes('không bật') ||
+    normalized.includes('không được') ||
+    normalized.includes('bị lỗi') ||
+    normalized.includes('bị hỏng') ||
+    normalized.includes('bị hư') ||
+    unaccented.includes('khong muon') ||
+    unaccented.includes('khong can') ||
+    unaccented.includes('khong chup') ||
+    unaccented.includes('khong mo') ||
+    unaccented.includes('bi loi') ||
+    unaccented.includes('bi hong');
+
+  const isOutcomeStatement =
+    normalized.includes('xong') ||
+    normalized.includes('rồi') ||
+    normalized.includes('chưa') ||
+    unaccented.includes('xong') ||
+    unaccented.includes('roi');
+
+  if (isCameraPhrase && !hasNegativeCameraIntent && !isOutcomeStatement) {
     return {
       handled: true,
       confidence: 1.0,
@@ -446,7 +468,12 @@ export async function routeFastIntent(
     normalized.includes('trời hôm nay thế nào') ||
     unaccented.includes('thoi tiet')
   ) {
-    const weatherResult = await fetchCurrentWeatherReport({ addressing, me, da });
+    const weatherResult = await fetchCurrentWeatherReport({
+      addressing,
+      me,
+      da,
+      rawText: trimmedText,
+    });
     return {
       handled: true,
       confidence: 0.98,
@@ -513,13 +540,36 @@ function matchScenarioTemplate(
   normalized: string,
   unaccented: string
 ): ScenarioRegistryEntry | null {
-  // Requires explicit action intent verbs (not arbitrary substrings like 'đi' or 'làm')
-  const creationIntentRegex =
-    /\b(đi|muốn đi|sắp đi|chuẩn bị|cần làm|muốn làm|hướng dẫn làm|cần mua|muốn mua|cần sửa|đi sửa|bảo hành|tạo phiên|tạo hướng dẫn|muốn tạo|cần tạo|hướng dẫn)\b/i;
+  const creationPhrases = [
+    'đi',
+    'muốn đi',
+    'sắp đi',
+    'chuẩn bị',
+    'cần làm',
+    'muốn làm',
+    'hướng dẫn làm',
+    'cần mua',
+    'muốn mua',
+    'cần sửa',
+    'đi sửa',
+    'bảo hành',
+    'tạo phiên',
+    'tạo hướng dẫn',
+    'muốn tạo',
+    'cần tạo',
+    'hướng dẫn',
+  ];
 
-  if (!creationIntentRegex.test(normalized) && !creationIntentRegex.test(unaccented)) {
-    return null;
-  }
+  const paddedNorm = ` ${normalized.trim()} `;
+  const paddedUnaccented = ` ${unaccented.trim()} `;
+
+  const hasCreationIntent = creationPhrases.some(
+    (p) =>
+      paddedNorm.includes(` ${p} `) ||
+      paddedUnaccented.includes(` ${stripVietnameseAccents(p)} `)
+  );
+
+  if (!hasCreationIntent) return null;
 
   const entries = Object.values(SCENARIO_REGISTRY);
   for (const entry of entries) {
