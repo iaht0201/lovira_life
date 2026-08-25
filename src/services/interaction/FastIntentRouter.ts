@@ -29,6 +29,7 @@ export interface FastIntentResult {
   suggestedReplies?: string[];
   needsAI?: boolean;
   needsClarification?: boolean;
+  clarificationActionType?: string;
   clarificationQuestion?: string;
   clarificationCandidates?: string[];
   reason?: string;
@@ -464,7 +465,7 @@ export async function routeFastIntent(
   if (
     normalized.includes('thời tiết') ||
     normalized.includes('trời có mưa') ||
-    normalized.includes('nhiệt độ hôm nay') ||
+    normalized.includes('nhiệt độ') ||
     normalized.includes('trời hôm nay thế nào') ||
     unaccented.includes('thoi tiet')
   ) {
@@ -474,6 +475,20 @@ export async function routeFastIntent(
       da,
       rawText: trimmedText,
     });
+
+    if (weatherResult.needsClarification) {
+      return {
+        handled: true,
+        confidence: 0.98,
+        source: 'utility',
+        utilityQuery: 'GET_WEATHER',
+        needsClarification: true,
+        clarificationActionType: 'GET_WEATHER',
+        clarificationQuestion: weatherResult.reply,
+        suggestedReplies: weatherResult.suggestedReplies,
+      };
+    }
+
     return {
       handled: true,
       confidence: 0.98,

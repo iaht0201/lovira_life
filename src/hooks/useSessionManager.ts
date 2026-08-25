@@ -687,7 +687,8 @@ export function useSessionManager({
 
     // A. Check Pending Interaction FIRST
     if (pendingInteraction) {
-      const pendingRes = resolvePendingInteraction(trimmedText, pendingInteraction);
+      const honorifics = deduceHonorifics(userProfile, trimmedText);
+      const pendingRes = await resolvePendingInteraction(trimmedText, pendingInteraction, honorifics);
       if (pendingRes.clearPending) {
         setPendingInteraction(null);
       }

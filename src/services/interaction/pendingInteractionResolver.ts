@@ -1,6 +1,7 @@
 import { PendingInteraction } from './interactionTypes';
 import { AppAction } from './appActionTypes';
 import { parseClarifiedTime } from '../../utils/dateTimeResolver';
+import { fetchCurrentWeatherReport } from '../weatherService';
 
 const AFFIRMATIVE_REGEX =
   /^(có|ừ|uh|u|ok|oke|okie|được|tạo đi|tạo giúp|tạo luôn|đồng ý|nhất trí|tạo giúp chú|tạo giúp bác|tạo giúp tôi|tạo giúp cô|làm đi|tiến hành đi|mở đi|mở giúp|xóa|xóa đi|xóa giúp|xóa luôn|chắc chắn|đồng ý xóa|ừ xóa đi|ok xóa)$/i;
@@ -15,10 +16,11 @@ export interface PendingResolution {
   clearPending: boolean;
 }
 
-export function resolvePendingInteraction(
+export async function resolvePendingInteraction(
   userText: string,
-  pending: PendingInteraction | null
-): PendingResolution {
+  pending: PendingInteraction | null,
+  opts?: { addressing?: string; me?: string; da?: string }
+): Promise<PendingResolution> {
   if (!pending) {
     return { resolved: false, clearPending: false };
   }
@@ -80,7 +82,30 @@ export function resolvePendingInteraction(
     if (NEGATIVE_REGEX.test(trimmed)) {
       return {
         resolved: true,
-        reply: 'Dạ vâng, con đã hủy thao tác rồi ạ.',
+        reply: 'Dạ vâng, con đã hủy rồi ạ.',
+        clearPending: true,
+      };
+    }
+
+    if (pending.data.actionType === 'GET_WEATHER') {
+      const weatherResult = await fetchCurrentWeatherReport({
+        rawText: trimmed,
+        addressing: opts?.addressing,
+        me: opts?.me,
+        da: opts?.da,
+      });
+
+      if (weatherResult.needsClarification) {
+        return {
+          resolved: true,
+          reply: weatherResult.reply,
+          clearPending: false,
+        };
+      }
+
+      return {
+        resolved: true,
+        reply: weatherResult.reply,
         clearPending: true,
       };
     }
@@ -155,4 +180,3 @@ export function resolvePendingInteraction(
 
   return { resolved: false, clearPending: false };
 }
-

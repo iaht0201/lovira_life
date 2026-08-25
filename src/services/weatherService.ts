@@ -1,10 +1,12 @@
 /**
  * Weather Service for deterministic, real-data weather reporting.
  * Uses Open-Meteo API without invoking LLM tokens.
- * Supports explicit city detection, daily precipitation probabilities, and location clarification.
+ * Supports explicit city detection, daily precipitation probabilities, Open-Meteo Geocoding, and location clarification.
  */
 
-interface WeatherReportOptions {
+import { stripVietnameseAccents } from './interaction/VietnameseNormalizer';
+
+export interface WeatherReportOptions {
   addressing?: string;
   me?: string;
   da?: string;
@@ -14,48 +16,97 @@ interface WeatherReportOptions {
   rawText?: string;
 }
 
+export interface WeatherReportResult {
+  handled: boolean;
+  needsClarification?: boolean;
+  clarificationActionType?: string;
+  reply: string;
+  speech: string;
+  suggestedReplies: string[];
+}
+
+export function normalizeLocationText(text: string): string {
+  if (!text) return '';
+  return stripVietnameseAccents(text)
+    .toLowerCase()
+    .replace(/[.,\-_/]/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
 const VIETNAM_CITIES: Record<string, { name: string; lat: number; lon: number }> = {
-  'hà nội': { name: 'Hà Nội', lat: 21.0285, lon: 105.8542 },
   'ha noi': { name: 'Hà Nội', lat: 21.0285, lon: 105.8542 },
-  'hồ chí minh': { name: 'TP. Hồ Chí Minh', lat: 10.8231, lon: 106.6297 },
-  'ho chi minh': { name: 'TP. Hồ Chí Minh', lat: 10.8231, lon: 106.6297 },
-  'sài gòn': { name: 'TP. Hồ Chí Minh', lat: 10.8231, lon: 106.6297 },
-  'sai gon': { name: 'TP. Hồ Chí Minh', lat: 10.8231, lon: 106.6297 },
+  'tp hcm': { name: 'TP. Hồ Chí Minh', lat: 10.8231, lon: 106.6297 },
   'tphcm': { name: 'TP. Hồ Chí Minh', lat: 10.8231, lon: 106.6297 },
-  'đà nẵng': { name: 'Đà Nẵng', lat: 16.0544, lon: 108.2022 },
+  'hcm': { name: 'TP. Hồ Chí Minh', lat: 10.8231, lon: 106.6297 },
+  'sai gon': { name: 'TP. Hồ Chí Minh', lat: 10.8231, lon: 106.6297 },
+  'ho chi minh': { name: 'TP. Hồ Chí Minh', lat: 10.8231, lon: 106.6297 },
   'da nang': { name: 'Đà Nẵng', lat: 16.0544, lon: 108.2022 },
-  'hải phòng': { name: 'Hải Phòng', lat: 20.8449, lon: 106.6881 },
   'hai phong': { name: 'Hải Phòng', lat: 20.8449, lon: 106.6881 },
-  'cần thơ': { name: 'Cần Thơ', lat: 10.0452, lon: 105.7469 },
   'can tho': { name: 'Cần Thơ', lat: 10.0452, lon: 105.7469 },
   'nha trang': { name: 'Nha Trang', lat: 12.2388, lon: 109.1967 },
-  'đà lạt': { name: 'Đà Lạt', lat: 11.9404, lon: 108.4583 },
   'da lat': { name: 'Đà Lạt', lat: 11.9404, lon: 108.4583 },
-  'huế': { name: 'Huế', lat: 16.4637, lon: 107.5909 },
-  'vũng tàu': { name: 'Vũng Tàu', lat: 10.3460, lon: 107.0843 },
-  'quy nhơn': { name: 'Quy Nhơn', lat: 13.7820, lon: 109.2194 },
-  'hạ long': { name: 'Hạ Long', lat: 20.9599, lon: 107.0425 },
-  'quảng ninh': { name: 'Quảng Ninh', lat: 20.9599, lon: 107.0425 },
-  'bình dương': { name: 'Bình Dương', lat: 10.9805, lon: 106.6519 },
-  'đồng nai': { name: 'Đồng Nai', lat: 10.9575, lon: 106.8427 },
-  'thanh hóa': { name: 'Thanh Hóa', lat: 19.8073, lon: 105.7764 },
-  'nghệ an': { name: 'Nghệ An', lat: 18.6734, lon: 105.6813 },
+  'hue': { name: 'Huế', lat: 16.4637, lon: 107.5909 },
+  'vung tau': { name: 'Vũng Tàu', lat: 10.3460, lon: 107.0843 },
+  'quy nhon': { name: 'Quy Nhơn', lat: 13.7820, lon: 109.2194 },
+  'ha long': { name: 'Hạ Long', lat: 20.9599, lon: 107.0425 },
+  'quang ninh': { name: 'Quảng Ninh', lat: 20.9599, lon: 107.0425 },
+  'binh duong': { name: 'Bình Dương', lat: 10.9805, lon: 106.6519 },
+  'dong nai': { name: 'Đồng Nai', lat: 10.9575, lon: 106.8427 },
+  'thanh hoa': { name: 'Thanh Hóa', lat: 19.8073, lon: 105.7764 },
+  'nghe an': { name: 'Nghệ An', lat: 18.6734, lon: 105.6813 },
   'vinh': { name: 'Vinh', lat: 18.6734, lon: 105.6813 },
-  'nam định': { name: 'Nam Định', lat: 20.4200, lon: 106.1683 },
-  'thái bình': { name: 'Thái Bình', lat: 20.4464, lon: 106.3365 },
-  'ninh bình': { name: 'Ninh Bình', lat: 20.2506, lon: 105.9745 },
-  'phú quốc': { name: 'Phú Quốc', lat: 10.2289, lon: 103.9572 },
-  'đắk lắk': { name: 'Đắk Lắk', lat: 12.6667, lon: 108.0500 },
-  'buôn ma thuột': { name: 'Buôn Ma Thuột', lat: 12.6667, lon: 108.0500 },
+  'nam dinh': { name: 'Nam Định', lat: 20.4200, lon: 106.1683 },
+  'thai binh': { name: 'Thái Bình', lat: 20.4464, lon: 106.3365 },
+  'ninh binh': { name: 'Ninh Bình', lat: 20.2506, lon: 105.9745 },
+  'phu quoc': { name: 'Phú Quốc', lat: 10.2289, lon: 103.9572 },
+  'dak lak': { name: 'Đắk Lắk', lat: 12.6667, lon: 108.0500 },
+  'buon ma thuot': { name: 'Buôn Ma Thuột', lat: 12.6667, lon: 108.0500 },
+  'hoi an': { name: 'Hội An', lat: 15.8801, lon: 108.3380 },
+  'tam ky': { name: 'Tam Kỳ', lat: 15.5681, lon: 108.4808 },
+  'quang nam': { name: 'Quảng Nam', lat: 15.5681, lon: 108.4808 },
+  'pleiku': { name: 'Pleiku', lat: 13.9833, lon: 108.0000 },
 };
 
 function extractCityFromText(text?: string): { name: string; lat: number; lon: number } | null {
   if (!text) return null;
-  const lower = text.toLowerCase();
+  const norm = normalizeLocationText(text);
+  const padded = ` ${norm} `;
   for (const [key, cityInfo] of Object.entries(VIETNAM_CITIES)) {
-    if (lower.includes(key)) {
+    if (padded.includes(` ${key} `) || norm === key) {
       return cityInfo;
     }
+  }
+  return null;
+}
+
+async function geocodeCityOpenMeteo(rawText?: string): Promise<{ name: string; lat: number; lon: number } | null> {
+  if (!rawText) return null;
+  const norm = normalizeLocationText(rawText);
+  // Clean text from common weather queries
+  const clean = norm
+    .replace(/\b(thoi tiet|mua|nang|hom nay|bay gio|du bao|nhiet do|co mua khong|nhu the nao|o|tai|tinh|thanh pho|du|o|khong|may do)\b/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+
+  if (!clean || clean.length < 2) return null;
+
+  try {
+    const url = `https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(clean)}&count=1&language=vi&format=json`;
+    const res = await fetch(url);
+    if (res.ok) {
+      const data = await res.json();
+      if (data.results && data.results.length > 0) {
+        const item = data.results[0];
+        return {
+          name: item.name || clean,
+          lat: item.latitude,
+          lon: item.longitude,
+        };
+      }
+    }
+  } catch (err) {
+    console.warn('[Weather Geocoding Warning]:', err);
   }
   return null;
 }
@@ -73,18 +124,16 @@ export function getWeatherConditionText(code: number): { text: string; icon: str
 
 export async function fetchCurrentWeatherReport(
   opts: WeatherReportOptions = {}
-): Promise<{
-  handled: boolean;
-  reply: string;
-  speech: string;
-  suggestedReplies: string[];
-}> {
+): Promise<WeatherReportResult> {
   const addressing = opts.addressing || 'chú';
   const me = opts.me || 'con';
   const da = opts.da || 'Dạ';
 
-  // 1. Try extracting city from user's raw query text
-  const extractedCity = extractCityFromText(opts.rawText);
+  // 1. Try extracting city from static alias or geocoding API
+  let extractedCity = extractCityFromText(opts.rawText);
+  if (!extractedCity && opts.rawText) {
+    extractedCity = await geocodeCityOpenMeteo(opts.rawText);
+  }
 
   let lat = opts.lat;
   let lon = opts.lon;
@@ -96,16 +145,20 @@ export async function fetchCurrentWeatherReport(
     cityName = extractedCity.name;
   }
 
-  // 2. If no city in query AND no location explicitly passed, ask for location clarification instead of defaulting to Hanoi
-  if (lat === undefined || lon === undefined || !cityName) {
+  // 2. If no lat/lon, ask for location clarification instead of defaulting to Hanoi
+  if (lat === undefined || lon === undefined) {
     const askReply = `${da}, ${addressing} muốn xem thời tiết ở đâu hay tỉnh thành phố nào ạ?`;
     return {
       handled: true,
+      needsClarification: true,
+      clarificationActionType: 'GET_WEATHER',
       reply: askReply,
       speech: askReply,
       suggestedReplies: ['Thời tiết Hà Nội', 'Thời tiết TP.HCM', 'Thời tiết Đà Nẵng'],
     };
   }
+
+  cityName ||= 'vị trí hiện tại';
 
   const isRainQuery =
     opts.rawText &&
@@ -127,7 +180,6 @@ export async function fetchCurrentWeatherReport(
         const temp = Math.round(current.temperature_2m);
         const code = current.weather_code ?? 0;
         const condition = getWeatherConditionText(code);
-        const humidity = current.relative_humidity_2m;
 
         const maxTemp = daily?.temperature_2m_max?.[0] ? Math.round(daily.temperature_2m_max[0]) : temp;
         const minTemp = daily?.temperature_2m_min?.[0] ? Math.round(daily.temperature_2m_min[0]) : temp;
