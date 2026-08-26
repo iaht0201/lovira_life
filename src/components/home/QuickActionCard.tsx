@@ -54,7 +54,7 @@ export const QuickActionCard: React.FC<QuickActionCardProps> = ({
 
       {/* Content */}
       <div className="mt-3">
-        <h3 className="text-[15px] sm:text-[16px] font-[700] text-lovira-title group-hover:text-lovira-purple transition-colors leading-tight">
+        <h3 className="text-[15px] sm:text-[16px] font-[700] text-lovira-title group-hover:text-[#287C78] dark:group-hover:text-[#42A39E] transition-colors leading-tight">
           {title}
         </h3>
         <p className="text-[12px] sm:text-[13px] text-lovira-muted leading-snug mt-1 line-clamp-2">

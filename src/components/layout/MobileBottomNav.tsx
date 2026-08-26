@@ -1,5 +1,5 @@
 import React from 'react';
-import { LayoutDashboard, MessageSquare, Mic, CheckSquare, Settings, Sparkles, Volume2, AlertCircle } from 'lucide-react';
+import { LayoutDashboard, MessageSquare, Eye, Mic, CheckSquare, Settings, Sparkles, Volume2, AlertCircle } from 'lucide-react';
 import { NavTab } from './DesktopSidebar';
 import { VoiceInteractionState } from '../../types';
 
@@ -69,7 +69,7 @@ export const MobileBottomNav: React.FC<MobileBottomNavProps> = ({
         onClick={() => onTabChange('dashboard')}
         aria-current={activeTab === 'dashboard' ? 'page' : undefined}
         className={`flex flex-col items-center justify-center min-w-[56px] min-h-[48px] px-1 py-1 rounded-[12px] text-[11px] font-[600] transition-colors cursor-pointer ${
-          activeTab === 'dashboard' ? 'text-lovira-purple font-[700]' : 'text-lovira-muted'
+          activeTab === 'dashboard' ? 'text-[#287C78] dark:text-[#42A39E] font-[700]' : 'text-lovira-muted'
         }`}
       >
         <LayoutDashboard className="w-[22px] h-[22px] mb-0.5" />
@@ -80,12 +80,24 @@ export const MobileBottomNav: React.FC<MobileBottomNavProps> = ({
       <button
         onClick={() => onTabChange('chat')}
         aria-current={activeTab === 'chat' ? 'page' : undefined}
-        className={`flex flex-col items-center justify-center min-w-[56px] min-h-[48px] px-1 py-1 rounded-[12px] text-[11px] font-[600] transition-colors cursor-pointer ${
-          activeTab === 'chat' ? 'text-lovira-purple font-[700]' : 'text-lovira-muted'
+        className={`flex flex-col items-center justify-center min-w-[50px] min-h-[48px] px-1 py-1 rounded-[12px] text-[11px] font-[600] transition-colors cursor-pointer ${
+          activeTab === 'chat' ? 'text-[#287C78] dark:text-[#42A39E] font-[700]' : 'text-lovira-muted'
         }`}
       >
         <MessageSquare className="w-[22px] h-[22px] mb-0.5" />
-        <span className="truncate">Trò chuyện</span>
+        <span className="truncate">Chat</span>
+      </button>
+
+      {/* 2.5 Nhìn giúp tôi */}
+      <button
+        onClick={() => onTabChange('vision')}
+        aria-current={activeTab === 'vision' ? 'page' : undefined}
+        className={`flex flex-col items-center justify-center min-w-[50px] min-h-[48px] px-1 py-1 rounded-[12px] text-[11px] font-[600] transition-colors cursor-pointer ${
+          activeTab === 'vision' ? 'text-[#287C78] dark:text-[#42A39E] font-[700]' : 'text-lovira-muted'
+        }`}
+      >
+        <Eye className="w-[22px] h-[22px] mb-0.5" />
+        <span className="truncate">Nhìn giúp</span>
       </button>
 
       {/* 3. Floating Center Voice Button */}
@@ -108,7 +120,7 @@ export const MobileBottomNav: React.FC<MobileBottomNavProps> = ({
         onClick={() => onTabChange('tasks')}
         aria-current={activeTab === 'tasks' ? 'page' : undefined}
         className={`flex flex-col items-center justify-center min-w-[56px] min-h-[48px] px-1 py-1 rounded-[12px] text-[11px] font-[600] transition-colors cursor-pointer ${
-          activeTab === 'tasks' ? 'text-lovira-purple font-[700]' : 'text-lovira-muted'
+          activeTab === 'tasks' ? 'text-[#287C78] dark:text-[#42A39E] font-[700]' : 'text-lovira-muted'
         }`}
       >
         <CheckSquare className="w-[22px] h-[22px] mb-0.5" />
@@ -120,7 +132,7 @@ export const MobileBottomNav: React.FC<MobileBottomNavProps> = ({
         onClick={() => onTabChange('settings')}
         aria-current={activeTab === 'settings' ? 'page' : undefined}
         className={`flex flex-col items-center justify-center min-w-[56px] min-h-[48px] px-1 py-1 rounded-[12px] text-[11px] font-[600] transition-colors cursor-pointer ${
-          activeTab === 'settings' ? 'text-lovira-purple font-[700]' : 'text-lovira-muted'
+          activeTab === 'settings' ? 'text-[#287C78] dark:text-[#42A39E] font-[700]' : 'text-lovira-muted'
         }`}
       >
         <Settings className="w-[22px] h-[22px] mb-0.5" />

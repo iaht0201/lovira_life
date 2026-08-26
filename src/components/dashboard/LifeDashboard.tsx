@@ -141,7 +141,7 @@ export const LifeDashboard: React.FC<LifeDashboardProps> = ({
           onClick={onOpenCamera}
           className="flex items-center gap-4 p-4 rounded-2xl bg-surface border border-default hover:border-primary hover:bg-surface-raised transition-all text-left shadow-2xs group min-h-[72px]"
         >
-          <div className="w-12 h-12 rounded-xl bg-amber-500/10 text-amber-600 dark:text-amber-400 flex items-center justify-center shrink-0 group-hover:scale-105 transition-transform">
+          <div className="w-12 h-12 rounded-xl bg-[#E4F0EF] dark:bg-[#203A39] text-[#287C78] dark:text-[#42A39E] flex items-center justify-center shrink-0 group-hover:scale-105 transition-transform">
             <Camera className="w-6 h-6" aria-hidden="true" />
           </div>
           <div>
@@ -184,7 +184,7 @@ export const LifeDashboard: React.FC<LifeDashboardProps> = ({
           onClick={() => setShowCustomModal(true)}
           className="flex items-center gap-4 p-4 rounded-2xl bg-surface border border-default hover:border-primary hover:bg-surface-raised transition-all text-left shadow-2xs group min-h-[72px]"
         >
-          <div className="w-12 h-12 rounded-xl bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 flex items-center justify-center shrink-0 group-hover:scale-105 transition-transform">
+          <div className="w-12 h-12 rounded-xl bg-[#E4F0EF] dark:bg-[#203A39] text-[#287C78] dark:text-[#42A39E] flex items-center justify-center shrink-0 group-hover:scale-105 transition-transform">
             <Sparkles className="w-6 h-6" aria-hidden="true" />
           </div>
           <div>

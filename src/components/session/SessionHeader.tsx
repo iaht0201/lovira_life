@@ -42,7 +42,7 @@ export const SessionHeader: React.FC<SessionHeaderProps> = ({
             </span>
           )}
           {session.status === 'completed' && (
-            <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-blue-500/10 text-blue-700 dark:text-blue-400 border border-blue-500/30">
+            <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-[#E4F0EF] dark:bg-[#203A39] text-[#287C78] dark:text-[#42A39E] border border-[#287C78]/30">
               <CheckCircle2 className="w-3.5 h-3.5" aria-hidden="true" />
               Hoàn thành
             </span>

@@ -11,7 +11,14 @@ export * from './services/interaction/appActionTypes.js';
 
 export type SessionStatus = 'draft' | 'active' | 'paused' | 'completed' | 'archived';
 
-export type ScenarioType = 'medical' | 'administrative' | 'shopping' | 'document' | 'custom';
+export type ScenarioType = 'medical' | 'administrative' | 'shopping' | 'document' | 'vision' | 'custom';
+
+export interface VisionResult {
+  summary: string;
+  details: string[];
+  detectedText: string[];
+  possibleHazards?: string[];
+}
 
 export type ScenarioFamily =
   | 'healthcare'

@@ -102,7 +102,7 @@ export const AccessibilityToolbar: React.FC<AccessibilityToolbarProps> = ({ sett
             </>
           ) : (
             <>
-              <Moon className="w-4 h-4 text-indigo-600" aria-hidden="true" />
+              <Moon className="w-4 h-4 text-[#287C78] dark:text-[#42A39E]" aria-hidden="true" />
               <span>Giao diện tối</span>
             </>
           )}
@@ -139,7 +139,7 @@ export const AccessibilityToolbar: React.FC<AccessibilityToolbarProps> = ({ sett
           aria-label="Mở khung Ngôn ngữ Ký hiệu VSL"
           className={`flex items-center gap-1.5 min-h-[44px] px-3 py-1.5 rounded-lg font-medium transition-all ${
             settings.vslEnabled
-              ? 'bg-indigo-600 text-white'
+              ? 'bg-[#287C78] text-white font-bold'
               : 'bg-surface-raised border border-default hover:border-primary'
           }`}
         >

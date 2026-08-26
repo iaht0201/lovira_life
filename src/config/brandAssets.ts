@@ -7,6 +7,7 @@ import { APP_IMAGES } from '../assets/images';
 export const BRAND_IMAGES = {
   logo: APP_IMAGES.logo,
   logoIcon: APP_IMAGES.logoIcon,
+  logoFull: APP_IMAGES.logoFull,
   avatar: APP_IMAGES.avatar,
   banner: APP_IMAGES.banner,
   logoClient: APP_IMAGES.logoClient,

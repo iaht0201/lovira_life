@@ -145,7 +145,7 @@ export const SettingsPage: React.FC<SettingsPageProps> = ({
   return (
     <div className="space-y-6 pb-16 animate-in fade-in duration-200 max-w-4xl mx-auto">
       {/* Header Banner */}
-      <div className="p-6 sm:p-8 rounded-[24px] bg-lovira-badge-purple border border-lovira-purple/30 shadow-lovira relative overflow-hidden">
+      <div className="p-6 sm:p-8 rounded-[24px] bg-[#E4F0EF] dark:bg-[#203A39] border border-[#287C78]/30 shadow-lovira relative overflow-hidden">
         <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 relative z-10">
           <div className="space-y-1">
             <h2 className="text-[22px] sm:text-[26px] font-[800] text-lovira-title tracking-tight">
@@ -166,7 +166,7 @@ export const SettingsPage: React.FC<SettingsPageProps> = ({
       <section className="p-6 rounded-[22px] bg-lovira-card border border-lovira shadow-2xs space-y-4">
         <div className="flex items-center justify-between border-b border-lovira-subtle pb-3.5">
           <div className="flex items-center gap-2.5">
-            <div className="w-[36px] h-[36px] rounded-[12px] bg-lovira-badge-purple text-lovira-purple flex items-center justify-center font-[700]">
+            <div className="w-[36px] h-[36px] rounded-[12px] bg-[#E4F0EF] dark:bg-[#203A39] text-[#287C78] dark:text-[#42A39E] flex items-center justify-center font-[700]">
               <User className="w-[18px] h-[18px]" />
             </div>
             <div>
@@ -181,7 +181,7 @@ export const SettingsPage: React.FC<SettingsPageProps> = ({
 
           <button
             onClick={onOpenProfileSetup}
-            className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-[12px] bg-lovira-badge-purple hover:bg-lovira-purple hover:text-white text-lovira-purple font-[700] text-[12px] transition-all cursor-pointer"
+            className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-[12px] bg-[#E4F0EF] dark:bg-[#203A39] hover:bg-[#287C78] hover:text-white text-[#287C78] dark:text-[#42A39E] font-[700] text-[12px] transition-all cursor-pointer"
           >
             <Edit3 className="w-[14px] h-[14px]" />
             <span>{userProfile ? 'Chỉnh sửa hồ sơ' : 'Thêm hồ sơ ngay'}</span>
@@ -234,7 +234,7 @@ export const SettingsPage: React.FC<SettingsPageProps> = ({
             <div className="p-4 rounded-[16px] border border-lovira bg-lovira-input flex items-center justify-between">
               <div className="space-y-0.5">
                 <div className="flex items-center gap-1.5 font-[700] text-[13px] text-lovira-title">
-                  <Cloud className="w-[16px] h-[16px] text-indigo-500" />
+                  <Cloud className="w-[16px] h-[16px] text-[#287C78] dark:text-[#42A39E]" />
                   <span>Đồng bộ thông tin cá nhân lên đám mây</span>
                 </div>
                 <p className="text-[11px] font-[500] text-lovira-muted">
@@ -246,7 +246,7 @@ export const SettingsPage: React.FC<SettingsPageProps> = ({
                 type="button"
                 onClick={handleToggleHealthSync}
                 className={`w-12 h-6 rounded-full p-1 transition-colors shrink-0 cursor-pointer ${
-                  userProfile.syncHealthToCloud ? 'bg-lovira-purple' : 'bg-gray-400'
+                  userProfile.syncHealthToCloud ? 'bg-[#287C78]' : 'bg-gray-400'
                 }`}
               >
                 <div
@@ -264,7 +264,7 @@ export const SettingsPage: React.FC<SettingsPageProps> = ({
             </p>
             <button
               onClick={onOpenProfileSetup}
-              className="px-4 py-2 rounded-[12px] bg-lovira-purple text-white text-[12px] font-[700] shadow-xs hover:opacity-90 transition-opacity cursor-pointer"
+              className="px-4 py-2 rounded-[12px] bg-[#287C78] text-white text-[12px] font-[700] shadow-xs hover:opacity-90 transition-opacity cursor-pointer"
             >
               Thiết lập hồ sơ cá nhân
             </button>
@@ -275,7 +275,7 @@ export const SettingsPage: React.FC<SettingsPageProps> = ({
       {/* 2. ACCESSIBILITY SECTION */}
       <section className="p-6 rounded-[22px] bg-lovira-card border border-lovira shadow-2xs space-y-5">
         <div className="flex items-center gap-2.5 border-b border-lovira-subtle pb-3.5">
-          <div className="w-[36px] h-[36px] rounded-[12px] bg-lovira-badge-purple text-lovira-purple flex items-center justify-center font-[700]">
+          <div className="w-[36px] h-[36px] rounded-[12px] bg-[#E4F0EF] dark:bg-[#203A39] text-[#287C78] dark:text-[#42A39E] flex items-center justify-center font-[700]">
             <Type className="w-[18px] h-[18px]" />
           </div>
           <div>
@@ -298,8 +298,8 @@ export const SettingsPage: React.FC<SettingsPageProps> = ({
                 onClick={() => onUpdateAccessibility({ ...accessibility, fontScale: item.scale })}
                 className={`p-3 rounded-[14px] border text-[12px] font-[700] transition-all cursor-pointer ${
                   accessibility.fontScale === item.scale
-                    ? 'bg-lovira-purple text-white border-lovira-purple shadow-2xs'
-                    : 'bg-lovira-input border-lovira hover:border-lovira-purple text-lovira-title'
+                    ? 'bg-[#287C78] text-white border-[#287C78] shadow-2xs'
+                    : 'bg-lovira-input border-lovira hover:border-[#287C78] text-lovira-title'
                 }`}
               >
                 {item.label}
@@ -340,7 +340,7 @@ export const SettingsPage: React.FC<SettingsPageProps> = ({
               onClick={() => onUpdateAccessibility({ ...accessibility, theme: accessibility.theme === 'dark' ? 'light' : 'dark' })}
               className="p-2.5 rounded-[12px] bg-lovira-card border border-lovira text-lovira-title font-[700] text-[12px] flex items-center gap-1.5 cursor-pointer hover:bg-lovira-card-hover transition-colors"
             >
-              {accessibility.theme === 'dark' ? <Moon className="w-[16px] h-[16px] text-amber-400" /> : <Sun className="w-[16px] h-[16px] text-indigo-600" />}
+              {accessibility.theme === 'dark' ? <Moon className="w-[16px] h-[16px] text-amber-400" /> : <Sun className="w-[16px] h-[16px] text-[#287C78] dark:text-[#42A39E]" />}
             </button>
           </div>
         </div>
@@ -379,8 +379,8 @@ export const SettingsPage: React.FC<SettingsPageProps> = ({
               onClick={() => handleSelectEngine('native')}
               className={`p-4 rounded-[16px] border text-left transition-all cursor-pointer relative ${
                 ttsEngine === 'native'
-                  ? 'bg-lovira-badge-purple border-lovira-purple ring-2 ring-lovira-purple/20'
-                  : 'bg-lovira-input border-lovira hover:border-lovira-purple/50'
+                  ? 'bg-[#E4F0EF] dark:bg-[#203A39] border-[#287C78] ring-2 ring-[#287C78]/20'
+                  : 'bg-lovira-input border-lovira hover:border-[#287C78]/50'
               }`}
             >
               <div className="flex items-center justify-between mb-1">
@@ -395,7 +395,7 @@ export const SettingsPage: React.FC<SettingsPageProps> = ({
                 Sử dụng bộ trợ năng âm thanh tích hợp sẵn của máy (TalkBack, VoiceOver, Android TTS). Hoạt động hoàn toàn offline, không phụ thuộc mạng.
               </p>
               {ttsEngine === 'native' && (
-                <div className="mt-2.5 text-[11px] font-[700] text-lovira-purple flex items-center gap-1">
+                <div className="mt-2.5 text-[11px] font-[700] text-[#287C78] dark:text-[#42A39E] flex items-center gap-1">
                   <CheckCircle2 className="w-[14px] h-[14px]" />
                   <span>Đang ưu tiên sử dụng</span>
                 </div>
@@ -407,15 +407,15 @@ export const SettingsPage: React.FC<SettingsPageProps> = ({
               onClick={() => handleSelectEngine('edge')}
               className={`p-4 rounded-[16px] border text-left transition-all cursor-pointer relative ${
                 ttsEngine === 'edge'
-                  ? 'bg-lovira-badge-purple border-lovira-purple ring-2 ring-lovira-purple/20'
-                  : 'bg-lovira-input border-lovira hover:border-lovira-purple/50'
+                  ? 'bg-[#E4F0EF] dark:bg-[#203A39] border-[#287C78] ring-2 ring-[#287C78]/20'
+                  : 'bg-lovira-input border-lovira hover:border-[#287C78]/50'
               }`}
             >
               <div className="flex items-center justify-between mb-1">
                 <span className="text-[14px] font-[800] text-lovira-title">
                   ☁️ Giọng đọc AI Cloud (Edge TTS)
                 </span>
-                <span className="text-[10px] font-[800] px-2 py-0.5 rounded-full bg-indigo-100 text-indigo-700 dark:bg-indigo-950/50 dark:text-indigo-300">
+                <span className="text-[10px] font-[800] px-2 py-0.5 rounded-full bg-[#E4F0EF] text-[#287C78] dark:bg-[#203A39] dark:text-[#42A39E]">
                   Neural AI
                 </span>
               </div>
@@ -423,7 +423,7 @@ export const SettingsPage: React.FC<SettingsPageProps> = ({
                 Giọng đọc AI ngữ điệu tự nhiên, truyền cảm như người thật. Tự động chuyển về giọng máy nếu mất kết nối mạng.
               </p>
               {ttsEngine === 'edge' && (
-                <div className="mt-2.5 text-[11px] font-[700] text-lovira-purple flex items-center gap-1">
+                <div className="mt-2.5 text-[11px] font-[700] text-[#287C78] dark:text-[#42A39E] flex items-center gap-1">
                   <CheckCircle2 className="w-[14px] h-[14px]" />
                   <span>Đang ưu tiên sử dụng</span>
                 </div>
@@ -448,8 +448,8 @@ export const SettingsPage: React.FC<SettingsPageProps> = ({
                     onClick={() => handleSelectTtsVoice(v.id)}
                     className={`p-3.5 rounded-[14px] border text-left transition-all cursor-pointer relative overflow-hidden ${
                       isSelected
-                        ? 'bg-lovira-badge-purple border-lovira-purple ring-1 ring-lovira-purple'
-                        : 'bg-lovira-input border-lovira hover:border-lovira-purple/50'
+                        ? 'bg-[#E4F0EF] dark:bg-[#203A39] border-[#287C78] ring-1 ring-[#287C78]'
+                        : 'bg-lovira-input border-lovira hover:border-[#287C78]/50'
                     }`}
                   >
                     <div className="flex items-center justify-between mb-1">
@@ -460,7 +460,7 @@ export const SettingsPage: React.FC<SettingsPageProps> = ({
                         className={`text-[10px] font-[800] px-2 py-0.5 rounded-full ${
                           v.gender === 'Nữ'
                             ? 'bg-pink-100 text-pink-700 dark:bg-pink-950/50 dark:text-pink-300'
-                            : 'bg-blue-100 text-blue-700 dark:bg-blue-950/50 dark:text-blue-300'
+                            : 'bg-[#E4F0EF] text-[#287C78] dark:bg-[#203A39] dark:text-[#42A39E]'
                         }`}
                       >
                         Giọng {v.gender}
@@ -495,7 +495,7 @@ export const SettingsPage: React.FC<SettingsPageProps> = ({
       {/* 4. GEMINI API KEY SECTION */}
       <section className="p-6 rounded-[22px] bg-lovira-card border border-lovira shadow-2xs space-y-4">
         <div className="flex items-center gap-2.5 border-b border-lovira-subtle pb-3.5">
-          <div className="w-[36px] h-[36px] rounded-[12px] bg-lovira-badge-purple text-lovira-purple flex items-center justify-center font-[700]">
+          <div className="w-[36px] h-[36px] rounded-[12px] bg-[#E4F0EF] dark:bg-[#203A39] text-[#287C78] dark:text-[#42A39E] flex items-center justify-center font-[700]">
             <Key className="w-[18px] h-[18px]" />
           </div>
           <div>
@@ -519,7 +519,7 @@ export const SettingsPage: React.FC<SettingsPageProps> = ({
                 value={apiKeyInput}
                 onChange={(e) => setApiKeyInput(e.target.value)}
                 placeholder="Nhập Gemini API Key (AIzaSy...)..."
-                className="w-full p-3 pr-10 rounded-[12px] border border-lovira bg-lovira-input text-lovira-title text-[12px] font-mono focus:outline-none focus:border-lovira-purple"
+                className="w-full p-3 pr-10 rounded-[12px] border border-lovira bg-lovira-input text-lovira-title text-[12px] font-mono focus:outline-none focus:border-[#287C78]"
               />
               <Key className="w-[16px] h-[16px] absolute right-3 top-3.5 text-lovira-muted pointer-events-none" />
             </div>
@@ -537,7 +537,7 @@ export const SettingsPage: React.FC<SettingsPageProps> = ({
           <div className="pt-1">
             <button
               type="submit"
-              className="min-h-[42px] px-6 py-2 rounded-[12px] bg-lovira-purple text-white font-[700] text-[12px] shadow-xs hover:opacity-90 transition-opacity cursor-pointer flex items-center gap-2"
+              className="min-h-[42px] px-6 py-2 rounded-[12px] bg-[#287C78] text-white font-[700] text-[12px] shadow-xs hover:opacity-90 transition-opacity cursor-pointer flex items-center gap-2"
             >
               <ShieldCheck className="w-4 h-4" />
               <span>Lưu khóa Gemini API Key</span>

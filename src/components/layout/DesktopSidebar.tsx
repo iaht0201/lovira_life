@@ -4,6 +4,7 @@ import { useAuth } from '../../context/AuthContext';
 import {
   LayoutDashboard,
   MessageSquare,
+  Eye,
   CheckSquare,
   History,
   Bell,
@@ -19,6 +20,7 @@ import {
 export type NavTab =
   | 'dashboard'
   | 'chat'
+  | 'vision'
   | 'tasks'
   | 'history'
   | 'reminders'
@@ -56,6 +58,7 @@ export const DesktopSidebar: React.FC<DesktopSidebarProps> = ({
   const navItems = [
     { id: 'dashboard' as NavTab, label: 'Trang chủ', icon: LayoutDashboard },
     { id: 'chat' as NavTab, label: 'Trò chuyện', icon: MessageSquare },
+    { id: 'vision' as NavTab, label: 'Nhìn giúp tôi', icon: Eye },
     { id: 'tasks' as NavTab, label: 'Việc cần làm', icon: CheckSquare },
     { id: 'history' as NavTab, label: 'Lịch sử', icon: History },
     { id: 'reminders' as NavTab, label: 'Nhắc nhở', icon: Bell },
@@ -183,7 +186,7 @@ export const DesktopSidebar: React.FC<DesktopSidebarProps> = ({
                 onClick={() => onTabChange('profile')}
                 className="flex items-center gap-2.5 min-w-0 text-left hover:opacity-90 transition-opacity cursor-pointer flex-1"
               >
-                <div className="w-[38px] h-[38px] rounded-full bg-lovira-badge-purple flex items-center justify-center shrink-0 overflow-hidden">
+                <div className="w-[38px] h-[38px] rounded-full bg-[#E4F0EF] dark:bg-[#203A39] flex items-center justify-center shrink-0 overflow-hidden">
                   {isAuthenticated && user?.photoURL ? (
                     <img
                       src={user.photoURL}
@@ -211,7 +214,7 @@ export const DesktopSidebar: React.FC<DesktopSidebarProps> = ({
 
               <button
                 onClick={() => onTabChange('profile')}
-                className="w-[28px] h-[28px] rounded-full bg-lovira-input hover:bg-lovira-sidebar-active text-lovira-purple flex items-center justify-center text-[13px] font-bold shrink-0 transition-colors cursor-pointer"
+                className="w-[28px] h-[28px] rounded-full bg-lovira-input hover:bg-lovira-sidebar-active text-[#287C78] dark:text-[#42A39E] flex items-center justify-center text-[13px] font-bold shrink-0 transition-colors cursor-pointer"
                 title="Xem hồ sơ & tài khoản"
                 aria-label="Xem hồ sơ & tài khoản"
               >

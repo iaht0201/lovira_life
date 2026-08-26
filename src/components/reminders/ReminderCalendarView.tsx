@@ -432,15 +432,15 @@ export const ReminderCalendarView: React.FC<ReminderCalendarViewProps> = ({
               <div
                 key={s.id}
                 onClick={() => onOpenSession && onOpenSession(s.id)}
-                className="p-3.5 rounded-2xl border border-blue-200 dark:border-blue-900/50 bg-blue-50/50 dark:bg-blue-950/20 hover:border-blue-400 transition-all flex items-center justify-between gap-3 cursor-pointer"
+                className="p-3.5 rounded-2xl border border-[#287C78]/30 bg-[#E4F0EF]/60 dark:bg-[#203A39]/30 hover:border-[#287C78] transition-all flex items-center justify-between gap-3 cursor-pointer"
               >
                 <div className="flex items-center gap-3 min-w-0">
-                  <div className="w-8 h-8 rounded-xl bg-blue-500/10 text-blue-500 flex items-center justify-center shrink-0">
+                  <div className="w-8 h-8 rounded-xl bg-[#E4F0EF] dark:bg-[#203A39] text-[#287C78] dark:text-[#42A39E] flex items-center justify-center shrink-0">
                     <Layers className="w-4 h-4" />
                   </div>
                   <div className="min-w-0">
                     <div className="flex items-center gap-2">
-                      <span className="text-[10px] font-black uppercase text-blue-600 dark:text-blue-400">
+                      <span className="text-[10px] font-black uppercase text-[#287C78] dark:text-[#42A39E]">
                         Phiên hỗ trợ &bull; {s.status}
                       </span>
                     </div>
@@ -450,7 +450,7 @@ export const ReminderCalendarView: React.FC<ReminderCalendarViewProps> = ({
                   </div>
                 </div>
 
-                <span className="text-xs font-bold text-blue-600 dark:text-blue-400 shrink-0">
+                <span className="text-xs font-bold text-[#287C78] dark:text-[#42A39E] shrink-0">
                   Mở &rarr;
                 </span>
               </div>

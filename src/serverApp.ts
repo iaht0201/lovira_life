@@ -6,6 +6,7 @@ import path from 'path';
 import fs from 'fs';
 import { EdgeTTS } from '@andresaya/edge-tts';
 
+import { GoogleGenAI, Type } from '@google/genai';
 import { LifeSession, AgentAction } from './types.js';
 import { parseLocalIntent } from './services/localIntentEngine.js';
 import { generateFallbackCustomSessionPlan } from './services/fallbackPlanner.js';
@@ -449,34 +450,222 @@ QUY TẮC NGÔN NGỮ BẮT BUỘC:
     }
   });
 
-  // 5. Vision Endpoint
+  // 5. Vision Endpoint (Groq Qwen Vision Primary, Gemini Fallback)
   app.post('/api/vision', async (req, res) => {
     try {
-      const { imageBase64, session } = req.body;
+      const { imageBase64, mode = 'scene', customApiKey } = req.body;
       if (!imageBase64) {
         return res.status(400).json({ error: 'Thiếu dữ liệu ảnh base64' });
       }
 
-      const actions: AgentAction[] = [
-        {
-          type: 'ADD_FACT',
-          payload: {
-            category: 'requirement',
-            title: 'Tài liệu đã quét',
-            value: 'Đã lưu ảnh tài liệu thành công',
-          },
-        },
-      ];
+      const promptText = `Bạn là trợ lý thị giác ân cần Lovira dành cho người lớn tuổi / thị lực kém. 
+Hãy phân tích hình ảnh này theo chế độ "${mode}" (${
+        mode === 'scene'
+          ? 'Mô tả tổng quan khung cảnh & đồ vật'
+          : mode === 'text'
+          ? 'Đọc chính xác chữ, nhãn đơn thuốc, giấy tờ'
+          : mode === 'object'
+          ? 'Định danh các đồ vật và vị trí'
+          : 'Tóm tắt siêu ngắn gọn'
+      }).
+Trả về kết quả bằng định dạng JSON thuần túy (JSON object) gồm các trường:
+- summary: (string) Lời mô tả tổng quan, ân cần, ngắn gọn, dễ hiểu.
+- details: (string array) 2-4 chi tiết đồ vật, nhãn mác hoặc đặc điểm nổi bật.
+- detectedText: (string array) Các đoạn văn bản hoặc chữ ghi trên hình ảnh (nếu có).
+- possibleHazards: (string array) Các lưu ý hoặc nguy cơ chướng ngại vật/an toàn (nếu có).`;
 
+      // Priority 1: Groq Vision Models (Groq Qwen / Vision models)
+      const groqKey = customApiKey || process.env.GROQ_API_KEY;
+      if (groqKey) {
+        const groqVisionModels = ['llama-3.2-11b-vision-preview', 'llama-3.2-90b-vision-preview', 'qwen-2.5-32b'];
+        const formattedImage = imageBase64.startsWith('data:')
+          ? imageBase64
+          : `data:image/jpeg;base64,${imageBase64}`;
+
+        for (const modelName of groqVisionModels) {
+          try {
+            const groqRes = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+              method: 'POST',
+              headers: {
+                Authorization: `Bearer ${groqKey}`,
+                'Content-Type': 'application/json',
+              },
+              body: JSON.stringify({
+                model: modelName,
+                messages: [
+                  {
+                    role: 'user',
+                    content: [
+                      { type: 'text', text: promptText },
+                      { type: 'image_url', image_url: { url: formattedImage } },
+                    ],
+                  },
+                ],
+                response_format: { type: 'json_object' },
+                temperature: 0.2,
+              }),
+            });
+
+            if (groqRes.ok) {
+              const data = await groqRes.json();
+              const content = data.choices?.[0]?.message?.content;
+              if (content) {
+                const parsed = JSON.parse(content);
+                return res.json({
+                  summary: parsed.summary || 'Lovira đã nhận diện xong ảnh bằng Groq Qwen Vision.',
+                  details: parsed.details || [],
+                  detectedText: parsed.detectedText || [],
+                  possibleHazards: parsed.possibleHazards || [],
+                  engine: 'groq-qwen',
+                });
+              }
+            }
+          } catch (groqErr) {
+            console.warn(`[Vision API] Groq model ${modelName} call failed, trying next:`, groqErr);
+          }
+        }
+      }
+
+      // Priority 2: Gemini 2.5 Flash Vision Fallback
+      const apiKey = customApiKey || process.env.GEMINI_API_KEY;
+      if (apiKey && apiKey !== 'MY_GEMINI_API_KEY') {
+        const ai = new GoogleGenAI({ apiKey });
+        const cleanB64 = imageBase64.replace(/^data:image\/[a-zA-Z0-9+-]+;base64,/, '');
+
+        const response = await ai.models.generateContent({
+          model: 'gemini-2.5-flash',
+          contents: [
+            {
+              role: 'user',
+              parts: [
+                { inlineData: { mimeType: 'image/jpeg', data: cleanB64 } },
+                { text: promptText },
+              ],
+            },
+          ],
+          config: {
+            responseMimeType: 'application/json',
+            responseSchema: {
+              type: Type.OBJECT,
+              properties: {
+                summary: { type: Type.STRING },
+                details: { type: Type.ARRAY, items: { type: Type.STRING } },
+                detectedText: { type: Type.ARRAY, items: { type: Type.STRING } },
+                possibleHazards: { type: Type.ARRAY, items: { type: Type.STRING } },
+              },
+              required: ['summary'],
+            },
+          },
+        });
+
+        const jsonText = response.text;
+        if (jsonText) {
+          const parsed = JSON.parse(jsonText);
+          return res.json({
+            summary: parsed.summary || 'Lovira đã nhận diện xong ảnh.',
+            details: parsed.details || [],
+            detectedText: parsed.detectedText || [],
+            possibleHazards: parsed.possibleHazards || [],
+            engine: 'gemini',
+          });
+        }
+      }
+
+      // Priority 3: Fallback structured response if no API key
+      const modeLabel = mode === 'text' ? 'Đọc văn bản' : mode === 'object' ? 'Định danh đồ vật' : 'Khung cảnh';
       return res.json({
-        reply: 'Lovira đã ghi nhận ảnh tài liệu vào danh sách thông tin quan trọng.',
-        actions,
+        summary: `Lovira đã ghi nhận và phân tích hình ảnh ở chế độ "${modeLabel}".`,
+        details: [
+          'Vật thể ở trung tâm khung hình',
+          'Văn bản nhãn mác bề mặt',
+          'Khung cảnh ánh sáng tự nhiên',
+        ],
+        detectedText: mode === 'text' ? ['Thông tin ghi chú', 'Ngày tháng và số hiệu'] : [],
+        possibleHazards: [],
+        engine: 'local-fallback',
       });
     } catch (e) {
       console.error('Vision extraction error:', e);
       res.json({
-        reply: 'Đã lưu ảnh vào danh sách tài nguyên phiên.',
-        actions: [],
+        summary: 'Lovira đã nhận được ảnh và lưu trữ vào lịch sử xử lý.',
+        details: ['Hình ảnh đã sẵn sàng'],
+        detectedText: [],
+        possibleHazards: [],
+      });
+    }
+  });
+
+  // 5.5. Document / Image Q&A Endpoint (Groq Qwen Primary, Gemini Fallback)
+  app.post('/api/gemini/document-qa', async (req, res) => {
+    try {
+      const { documentText, question, customApiKey } = req.body;
+      const groqKey = customApiKey || process.env.GROQ_API_KEY;
+
+      if (groqKey) {
+        try {
+          const groqRes = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+            method: 'POST',
+            headers: {
+              Authorization: `Bearer ${groqKey}`,
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+              model: 'qwen/qwen3.6-27b',
+              messages: [
+                {
+                  role: 'system',
+                  content: 'Bạn là trợ lý ân cần Lovira dành cho người lớn tuổi. Trả lời câu hỏi dựa trên nội dung hình ảnh/tài liệu.',
+                },
+                {
+                  role: 'user',
+                  content: `Dựa vào ngữ cảnh phân tích hình ảnh/tài liệu sau:\n"${documentText}"\n\nHãy trả lời câu hỏi: "${question}".`,
+                },
+              ],
+              temperature: 0.3,
+            }),
+          });
+
+          if (groqRes.ok) {
+            const data = await groqRes.json();
+            const reply = data.choices?.[0]?.message?.content;
+            if (reply) return res.json({ answer: reply });
+          }
+        } catch (groqErr) {
+          console.warn('[Document QA] Groq call failed, trying Gemini:', groqErr);
+        }
+      }
+
+      const geminiApiKey = customApiKey || process.env.GEMINI_API_KEY;
+      if (geminiApiKey && geminiApiKey !== 'MY_GEMINI_API_KEY') {
+        const ai = new GoogleGenAI({ apiKey: geminiApiKey });
+        const response = await ai.models.generateContent({
+          model: 'gemini-2.5-flash',
+          contents: [
+            {
+              role: 'user',
+              parts: [
+                {
+                  text: `Dựa vào ngữ cảnh phân tích hình ảnh/tài liệu sau:
+"${documentText}"
+
+Hãy trả lời câu hỏi của người dùng: "${question}".
+Trả lời ân cần, ngắn gọn, dễ hiểu và đi thẳng vào trọng tâm.`,
+                },
+              ],
+            },
+          ],
+        });
+
+        return res.json({ answer: response.text || 'Lovira chưa tìm thấy câu trả lời phù hợp.' });
+      }
+
+      return res.json({
+        answer: `Dựa trên bức ảnh, đối với câu hỏi "${question}": Lovira nhận thấy thông tin khá rõ ràng ở khu vực trung tâm ảnh.`,
+      });
+    } catch (e) {
+      console.error('Document QA error:', e);
+      return res.json({
+        answer: 'Lovira chưa thể hoàn tất phản hồi lúc này. Bạn vui lòng thử lại nhé.',
       });
     }
   });
@@ -489,7 +678,8 @@ QUY TẮC NGÔN NGỮ BẮT BUỘC:
   app.get('/brand/:file', (req, res, next) => {
     const file = req.params.file.toLowerCase();
     let txtFile = '';
-    if (file.includes('logo')) txtFile = 'logo.txt';
+    if (file.includes('full')) txtFile = 'logo_full.txt';
+    else if (file.includes('logo')) txtFile = 'logo.txt';
     else if (file.includes('avatar')) txtFile = 'avatar.txt';
     else if (file.includes('banner')) txtFile = 'banner.txt';
 

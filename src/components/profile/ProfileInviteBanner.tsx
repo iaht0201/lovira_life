@@ -11,7 +11,7 @@ export const ProfileInviteBanner: React.FC<ProfileInviteBannerProps> = ({
   onDismiss,
 }) => {
   return (
-    <div className="relative overflow-hidden p-4 rounded-2xl bg-gradient-to-r from-primary/15 via-primary/10 to-indigo-500/10 border border-primary/30 shadow-sm animate-fade-in my-3">
+    <div className="relative overflow-hidden p-4 rounded-2xl bg-gradient-to-r from-primary/15 via-primary/10 to-primary/5 border border-primary/30 shadow-sm animate-fade-in my-3">
       <div className="flex items-start justify-between gap-3">
         <div className="flex items-start gap-3">
           <div className="p-2.5 rounded-xl bg-primary text-white shadow-xs shrink-0 mt-0.5">

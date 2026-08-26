@@ -59,6 +59,7 @@ export const MobileSidebarDrawer: React.FC<MobileSidebarDrawerProps> = ({
   const navItems = [
     { id: 'dashboard' as NavTab, label: 'Trang chủ', icon: LayoutDashboard },
     { id: 'chat' as NavTab, label: 'Trò chuyện', icon: MessageSquare },
+    { id: 'vision' as NavTab, label: 'Nhìn giúp tôi', icon: Eye },
     { id: 'tasks' as NavTab, label: 'Việc cần làm', icon: CheckSquare },
     { id: 'history' as NavTab, label: 'Lịch sử', icon: History },
     { id: 'reminders' as NavTab, label: 'Nhắc nhở', icon: Bell },
@@ -128,7 +129,7 @@ export const MobileSidebarDrawer: React.FC<MobileSidebarDrawerProps> = ({
           {/* 1. User Profile Mini Card */}
           <div className="p-3 rounded-[16px] bg-lovira-card border border-lovira flex items-center justify-between">
             <div className="flex items-center gap-3 min-w-0">
-              <div className="w-[42px] h-[42px] rounded-full bg-lovira-badge-purple border border-lovira-purple flex items-center justify-center shrink-0 overflow-hidden">
+              <div className="w-[42px] h-[42px] rounded-full bg-[#E4F0EF] dark:bg-[#203A39] border border-[#287C78]/30 flex items-center justify-center shrink-0 overflow-hidden">
                 {isAuthenticated && user?.photoURL ? (
                   <img
                     src={user.photoURL}
@@ -155,7 +156,7 @@ export const MobileSidebarDrawer: React.FC<MobileSidebarDrawerProps> = ({
             </div>
             <button
               onClick={() => handleSelectTab('profile')}
-              className="px-2.5 py-1.5 rounded-[10px] bg-lovira-input hover:bg-lovira-sidebar-active text-lovira-purple border border-lovira text-[12px] font-bold shrink-0 transition-colors cursor-pointer"
+              className="px-2.5 py-1.5 rounded-[10px] bg-lovira-input hover:bg-lovira-sidebar-active text-[#287C78] dark:text-[#42A39E] border border-lovira text-[12px] font-bold shrink-0 transition-colors cursor-pointer"
             >
               Hồ sơ
             </button>
@@ -175,13 +176,13 @@ export const MobileSidebarDrawer: React.FC<MobileSidebarDrawerProps> = ({
                   onClick={() => handleSelectTab(item.id)}
                   className={`w-full flex items-center gap-3 h-[44px] px-3.5 rounded-[12px] text-[14px] font-[600] transition-all cursor-pointer ${
                     isActive
-                      ? 'bg-lovira-sidebar-active text-lovira-purple font-[700] border-l-4 border-lovira-purple'
+                      ? 'bg-lovira-sidebar-active text-[#287C78] dark:text-[#42A39E] font-[700] border-l-4 border-[#287C78]'
                       : 'text-lovira-muted hover:bg-lovira-card-hover hover:text-lovira-title'
                   }`}
                 >
                   <Icon
                     className={`w-[19px] h-[19px] shrink-0 ${
-                      isActive ? 'text-lovira-purple' : 'text-lovira-muted'
+                      isActive ? 'text-[#287C78] dark:text-[#42A39E]' : 'text-lovira-muted'
                     }`}
                   />
                   <span className="truncate">{item.label}</span>
@@ -196,7 +197,7 @@ export const MobileSidebarDrawer: React.FC<MobileSidebarDrawerProps> = ({
                   onCreateSession();
                   onClose();
                 }}
-                className="w-full flex items-center justify-center gap-2 h-[42px] px-4 rounded-[12px] bg-lovira-badge-purple text-lovira-purple border border-lovira-purple font-[700] text-[13px] hover:opacity-90 transition-all shadow-xs cursor-pointer"
+                className="w-full flex items-center justify-center gap-2 h-[42px] px-4 rounded-[12px] bg-[#287C78] text-white font-[700] text-[13px] hover:bg-[#1F625F] transition-all shadow-xs cursor-pointer"
               >
                 <Plus className="w-[18px] h-[18px]" />
                 <span>Tạo phiên mới</span>
@@ -207,7 +208,7 @@ export const MobileSidebarDrawer: React.FC<MobileSidebarDrawerProps> = ({
           {/* 3. Quick Interactive Adjustments (Điều chỉnh tương tác nhanh) */}
           {accessibility && onUpdateAccessibility && (
             <div className="pt-4 border-t border-lovira-subtle space-y-3">
-              <div className="flex items-center gap-1.5 px-2 text-[11px] font-[800] text-lovira-purple uppercase tracking-wider">
+              <div className="flex items-center gap-1.5 px-2 text-[11px] font-[800] text-[#287C78] dark:text-[#42A39E] uppercase tracking-wider">
                 <SlidersHorizontal className="w-[14px] h-[14px]" />
                 <span>Điều chỉnh tương tác nhanh</span>
               </div>
@@ -225,7 +226,7 @@ export const MobileSidebarDrawer: React.FC<MobileSidebarDrawerProps> = ({
                     </>
                   ) : (
                     <>
-                      <Moon className="w-[15px] h-[15px] text-indigo-600" />
+                      <Moon className="w-[15px] h-[15px] text-[#287C78] dark:text-[#42A39E]" />
                       <span>Tối</span>
                     </>
                   )}
@@ -248,7 +249,7 @@ export const MobileSidebarDrawer: React.FC<MobileSidebarDrawerProps> = ({
               <div className="space-y-1.5 p-2.5 rounded-[14px] bg-lovira-card border border-lovira">
                 <div className="flex items-center justify-between text-[11px] font-[700] text-lovira-muted">
                   <span>Cỡ chữ hiển thị</span>
-                  <span className="text-lovira-purple font-[800]">
+                  <span className="text-[#287C78] dark:text-[#42A39E] font-[800]">
                     {Math.round(accessibility.fontScale * 100)}%
                   </span>
                 </div>
@@ -262,7 +263,7 @@ export const MobileSidebarDrawer: React.FC<MobileSidebarDrawerProps> = ({
                         onClick={() => handleFontChange(scale)}
                         className={`py-1.5 rounded-[8px] text-[11px] font-[800] text-center transition-all cursor-pointer ${
                           isSelected
-                            ? 'bg-lovira-purple text-white shadow-2xs'
+                            ? 'bg-[#287C78] text-white shadow-2xs'
                             : 'bg-lovira-input text-lovira-muted hover:text-lovira-title border border-lovira'
                         }`}
                       >
@@ -280,7 +281,7 @@ export const MobileSidebarDrawer: React.FC<MobileSidebarDrawerProps> = ({
                   className="w-full px-3 py-2.5 rounded-[12px] text-[12px] font-[600] flex items-center justify-between bg-lovira-card hover:bg-lovira-card-hover border border-lovira text-lovira-title transition-all cursor-pointer"
                 >
                   <span className="flex items-center gap-2">
-                    <Volume2 className="w-[16px] h-[16px] text-lovira-purple" />
+                    <Volume2 className="w-[16px] h-[16px] text-[#287C78] dark:text-[#42A39E]" />
                     <span>Đọc giọng nói</span>
                   </span>
                   <span
@@ -299,13 +300,13 @@ export const MobileSidebarDrawer: React.FC<MobileSidebarDrawerProps> = ({
                   className="w-full px-3 py-2.5 rounded-[12px] text-[12px] font-[600] flex items-center justify-between bg-lovira-card hover:bg-lovira-card-hover border border-lovira text-lovira-title transition-all cursor-pointer"
                 >
                   <span className="flex items-center gap-2">
-                    <Sparkles className="w-[16px] h-[16px] text-indigo-500" />
+                    <Sparkles className="w-[16px] h-[16px] text-[#287C78] dark:text-[#42A39E]" />
                     <span>Ngôn ngữ Ký hiệu VSL</span>
                   </span>
                   <span
                     className={`text-[11px] font-[800] px-2 py-0.5 rounded-md ${
                       accessibility.vslEnabled
-                        ? 'bg-indigo-500/10 text-indigo-600 dark:text-indigo-400'
+                        ? 'bg-[#287C78]/10 text-[#287C78] dark:text-[#42A39E]'
                         : 'text-lovira-muted'
                     }`}
                   >

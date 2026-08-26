@@ -1,16 +1,41 @@
 import React, { useState } from 'react';
 import { BRAND_IMAGES } from '../../config/brandAssets';
 import { Sparkles } from 'lucide-react';
+import { UserProfile } from '../../types/userProfile';
+import { storageService } from '../../services/storageService';
+import { deduceHonorifics } from '../../services/conversationStyle';
 
 interface HomeHeroProps {
   userName?: string;
+  userProfile?: UserProfile | null;
 }
 
 export const HomeHero: React.FC<HomeHeroProps> = ({
   userName,
+  userProfile,
 }) => {
-  const displayName = userName && userName.trim() ? userName.trim() : 'bạn';
   const [imageError, setImageError] = useState(false);
+
+  const profile = userProfile !== undefined ? userProfile : storageService.getUserProfile();
+  const honorifics = deduceHonorifics(profile);
+
+  const rawName = userName?.trim() || profile?.preferredName?.trim() || '';
+  const addressing = honorifics.addressing || 'bạn';
+  const me = honorifics.me || 'Lovira';
+
+  let greetingTitle = `Chào ${addressing}! 👋`;
+  if (rawName && (addressing === 'bạn' || !addressing)) {
+    greetingTitle = `Chào ${rawName}! 👋`;
+  }
+
+  let heroSubtitle = '';
+  if (me === 'con') {
+    heroSubtitle = `Con là Lovira — trợ lý đồng hành cùng ${addressing} trong cuộc sống hằng ngày.`;
+  } else if (me === 'em') {
+    heroSubtitle = `Em là Lovira — trợ lý đồng hành cùng ${addressing} trong cuộc sống hằng ngày.`;
+  } else {
+    heroSubtitle = `Lovira là trợ lý đồng hành cùng bạn trong cuộc sống hằng ngày.`;
+  }
 
   return (
     <section className="relative rounded-[20px] sm:rounded-[28px] overflow-hidden border border-[#287C78]/30 shadow-md min-h-[140px] sm:min-h-[180px] md:min-h-[200px] flex items-center bg-gradient-to-r from-[#0E2F2D] via-[#14423F] to-[#1E5C57] transition-all">
@@ -37,11 +62,11 @@ export const HomeHero: React.FC<HomeHeroProps> = ({
         </div>
         <div className="flex items-center gap-2">
           <h1 className="text-xl sm:text-2xl md:text-3xl font-extrabold tracking-tight drop-shadow-xs">
-            Chào {displayName}! 👋
+            {greetingTitle}
           </h1>
         </div>
         <p className="text-xs sm:text-sm md:text-base text-teal-50/95 font-medium leading-relaxed max-w-md drop-shadow-xs">
-          Con là Lovira — trợ lý đồng hành cùng bạn trong cuộc sống hằng ngày.
+          {heroSubtitle}
         </p>
       </div>
     </section>

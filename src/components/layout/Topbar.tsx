@@ -134,7 +134,7 @@ export const Topbar: React.FC<TopbarProps> = ({
               onClick={() => setShowDropdown(!showDropdown)}
               className={`h-[38px] px-3.5 rounded-[12px] transition-all flex items-center gap-1.5 cursor-pointer text-[12px] font-[700] shadow-2xs ${
                 isCustomAccessActive
-                  ? 'bg-lovira-badge-purple text-[#287C78] dark:text-[#42A39E]'
+                  ? 'bg-[#E4F0EF] dark:bg-[#203A39] text-[#287C78] dark:text-[#42A39E]'
                   : 'bg-lovira-card text-lovira-muted hover:text-lovira-title hover:bg-lovira-card-hover'
               }`}
               title="Tùy chỉnh giao diện & Trợ năng"
@@ -182,7 +182,7 @@ export const Topbar: React.FC<TopbarProps> = ({
                         </>
                       ) : (
                         <>
-                          <Moon className="w-[14px] h-[14px] text-indigo-600" />
+                          <Moon className="w-[14px] h-[14px] text-[#287C78] dark:text-[#42A39E]" />
                           <span>Chế độ Sáng</span>
                         </>
                       )}
@@ -257,13 +257,13 @@ export const Topbar: React.FC<TopbarProps> = ({
                     className="w-full px-2.5 py-2 rounded-[10px] text-[12px] font-[600] flex items-center justify-between bg-lovira-input hover:bg-lovira-card-hover text-lovira-title transition-all cursor-pointer shadow-2xs"
                   >
                     <span className="flex items-center gap-1.5">
-                      <Sparkles className="w-[14px] h-[14px] text-indigo-500" />
+                      <Sparkles className="w-[14px] h-[14px] text-[#287C78] dark:text-[#42A39E]" />
                       <span>Bảng Ngôn ngữ Ký hiệu VSL</span>
                     </span>
                     <span
                       className={`text-[11px] font-[800] px-1.5 py-0.5 rounded-md ${
                         accessibility.vslEnabled
-                          ? 'bg-indigo-500/10 text-indigo-600 dark:text-indigo-400'
+                          ? 'bg-[#287C78]/10 text-[#287C78] dark:text-[#42A39E]'
                           : 'text-lovira-muted'
                       }`}
                     >
@@ -332,7 +332,7 @@ export const Topbar: React.FC<TopbarProps> = ({
         ) : (
           <button
             onClick={onOpenProfile}
-            className="w-[34px] h-[34px] sm:w-[40px] sm:h-[40px] rounded-full bg-lovira-badge-purple hover:ring-2 hover:ring-[#287C78]/30 flex items-center justify-center overflow-hidden transition-all cursor-pointer ml-0.5 shadow-2xs"
+            className="w-[34px] h-[34px] sm:w-[40px] sm:h-[40px] rounded-full bg-[#E4F0EF] dark:bg-[#203A39] hover:ring-2 hover:ring-[#287C78]/30 flex items-center justify-center overflow-hidden transition-all cursor-pointer ml-0.5 shadow-2xs"
             title="Hồ sơ & Tài khoản (Chế độ Khách)"
             aria-label="Hồ sơ & Tài khoản"
           >

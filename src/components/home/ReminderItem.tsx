@@ -305,7 +305,7 @@ export const ReminderItem: React.FC<ReminderItemProps> = ({
                     }}
                     className="w-full text-left px-3 py-1.5 hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-2 cursor-pointer"
                   >
-                    <Edit2 className="w-3.5 h-3.5 text-blue-500" />
+                    <Edit2 className="w-3.5 h-3.5 text-[#287C78] dark:text-[#42A39E]" />
                     <span>Chỉnh sửa</span>
                   </button>
                 )}

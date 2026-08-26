@@ -34,7 +34,7 @@ export const GlobalChatPage: React.FC<GlobalChatPageProps> = ({
     <div className="max-w-2xl mx-auto my-8 space-y-6">
       {/* Intro Card */}
       <div className="p-6 sm:p-8 rounded-[24px] bg-gradient-to-br from-lovira-card to-lovira-subtle border border-lovira shadow-lovira text-center space-y-4">
-        <div className="w-16 h-16 rounded-2xl bg-[#287C78]/10 dark:bg-[#42A39E]/20 text-[#287C78] dark:text-[#42A39E] flex items-center justify-center mx-auto shadow-2xs">
+        <div className="w-16 h-16 rounded-2xl bg-[#E4F0EF] dark:bg-[#203A39] text-[#287C78] dark:text-[#42A39E] flex items-center justify-center mx-auto shadow-2xs">
           <MessageSquare className="w-8 h-8" />
         </div>
 
@@ -83,7 +83,7 @@ export const GlobalChatPage: React.FC<GlobalChatPageProps> = ({
             onClick={() => onCreateSessionFromTemplate('shopping')}
             className="p-4 rounded-[16px] bg-lovira-card hover:bg-lovira-card-hover border border-lovira text-left flex flex-col justify-between space-y-3 transition-all cursor-pointer group shadow-2xs"
           >
-            <div className="w-10 h-10 rounded-xl bg-blue-500/10 text-blue-500 flex items-center justify-center">
+            <div className="w-10 h-10 rounded-xl bg-[#E4F0EF] dark:bg-[#203A39] text-[#287C78] dark:text-[#42A39E] flex items-center justify-center">
               <ShoppingBag className="w-5 h-5" />
             </div>
             <div>

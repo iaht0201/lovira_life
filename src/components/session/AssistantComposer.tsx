@@ -134,7 +134,7 @@ export const AssistantComposer: React.FC<AssistantComposerProps> = ({
             type="button"
             disabled={isLoading}
             onClick={() => handleQuickPrompt(prompt)}
-            className="px-2.5 py-1 sm:px-3 sm:py-1.5 rounded-full text-[11px] sm:text-xs font-medium bg-lovira-input border border-lovira hover:border-[#287C78] hover:text-[#287C78] hover:bg-lovira-badge-purple transition-all text-lovira-title active:scale-95 disabled:opacity-50 cursor-pointer"
+            className="px-2.5 py-1 sm:px-3 sm:py-1.5 rounded-full text-[11px] sm:text-xs font-medium bg-lovira-input border border-lovira hover:border-[#287C78] hover:text-[#287C78] hover:bg-[#E4F0EF] dark:hover:bg-[#203A39] transition-all text-lovira-title active:scale-95 disabled:opacity-50 cursor-pointer"
           >
             {prompt}
           </button>

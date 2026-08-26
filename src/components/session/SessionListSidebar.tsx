@@ -68,7 +68,7 @@ export const SessionListSidebar: React.FC<SessionListSidebarProps> = ({
         return <Stethoscope className="w-4 h-4 text-rose-500" />;
       case 'career':
       case 'interview':
-        return <Briefcase className="w-4 h-4 text-blue-500" />;
+        return <Briefcase className="w-4 h-4 text-[#287C78] dark:text-[#42A39E]" />;
       case 'shopping':
         return <ShoppingBag className="w-4 h-4 text-emerald-500" />;
       default:

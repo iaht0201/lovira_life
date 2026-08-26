@@ -22,6 +22,7 @@ import { HomePage } from './components/home/HomePage';
 import { LifeDashboard } from './components/dashboard/LifeDashboard';
 import { LifeSessionRoute } from './components/session/LifeSessionRoute';
 import { GlobalChatPage } from './components/chat/GlobalChatPage';
+import { VisionView } from './components/vision/VisionView';
 import { RemindersPage } from './components/reminders/RemindersPage';
 import { CameraModal } from './components/camera/CameraModal';
 import { VSLFloatingPanel } from './components/vsl/VSLFloatingPanel';
@@ -302,6 +303,7 @@ function AppContent() {
             path="/"
             element={
               <HomePage
+                userProfile={userProfile}
                 userName={userProfile?.preferredName || ''}
                 sessionsList={sessionsList}
                 onOpenSession={handleOpenSession}
@@ -333,6 +335,20 @@ function AppContent() {
                 onOpenSession={handleOpenSession}
                 onCreateSessionFromTemplate={handleCreateSessionFromTemplate}
                 userName={userProfile?.preferredName || ''}
+              />
+            }
+          />
+
+          {/* Route 2.5: Vision Assistant */}
+          <Route
+            path="/vision"
+            element={
+              <VisionView
+                userProfile={userProfile}
+                settings={accessibility}
+                onCreateSessionFromTemplate={handleCreateSessionFromTemplate}
+                onOpenSession={handleOpenSession}
+                onShowToast={showToast}
               />
             }
           />

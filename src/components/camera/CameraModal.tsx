@@ -4,14 +4,20 @@ import { Camera, Upload, X, Loader2, Sparkles, Timer, RefreshCw } from 'lucide-r
 interface CameraModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onCaptureImage: (dataUrl: string) => void;
+  onCaptureImage?: (dataUrl: string) => void;
+  onCapture?: (dataUrl: string) => void;
 }
 
 export const CameraModal: React.FC<CameraModalProps> = ({
   isOpen,
   onClose,
   onCaptureImage,
+  onCapture,
 }) => {
+  const handleCaptureCallback = (dataUrl: string) => {
+    if (onCapture) onCapture(dataUrl);
+    if (onCaptureImage) onCaptureImage(dataUrl);
+  };
   const [stream, setStream] = useState<MediaStream | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [isProcessing, setIsProcessing] = useState(false);
@@ -38,7 +44,17 @@ export const CameraModal: React.FC<CameraModalProps> = ({
     setStream(null);
   }, []);
 
-  // Stable start camera function with fixed dependencies to eliminate hook loops
+  // Attach stream to videoRef when video element mounts / stream changes
+  useEffect(() => {
+    if (videoRef.current && stream) {
+      videoRef.current.srcObject = stream;
+      videoRef.current.play().catch((err) => {
+        console.warn('[CameraModal] Video play error:', err);
+      });
+    }
+  }, [stream]);
+
+  // Stable start camera function with fallback for desktop/webcam devices
   const startCamera = useCallback(async () => {
     setCameraError(null);
     try {
@@ -46,14 +62,22 @@ export const CameraModal: React.FC<CameraModalProps> = ({
         streamRef.current.getTracks().forEach((track) => track.stop());
         streamRef.current = null;
       }
-      const mediaStream = await navigator.mediaDevices.getUserMedia({
-        video: { facingMode: 'environment', width: { ideal: 1280 }, height: { ideal: 720 } },
-      });
+      let mediaStream: MediaStream | null = null;
+      try {
+        // Try ideal environment camera (mobile rear camera)
+        mediaStream = await navigator.mediaDevices.getUserMedia({
+          video: { facingMode: { ideal: 'environment' }, width: { ideal: 1280 }, height: { ideal: 720 } },
+        });
+      } catch (e1) {
+        console.warn('[CameraModal] Environment camera ideal constraint failed, falling back to basic video:', e1);
+        // Fallback for laptops, webcams, or desktops
+        mediaStream = await navigator.mediaDevices.getUserMedia({
+          video: true,
+        });
+      }
+
       streamRef.current = mediaStream;
       setStream(mediaStream);
-      if (videoRef.current) {
-        videoRef.current.srcObject = mediaStream;
-      }
     } catch (e: any) {
       console.warn('[CameraModal] Camera access error:', e);
       setCameraError(
@@ -114,12 +138,12 @@ export const CameraModal: React.FC<CameraModalProps> = ({
       }
 
       setTimeout(() => {
-        onCaptureImage(compressedUrl);
+        handleCaptureCallback(compressedUrl);
         setIsProcessing(false);
         onClose();
       }, 400);
     }
-  }, [onCaptureImage, onClose, stopCamera]);
+  }, [handleCaptureCallback, onClose, stopCamera]);
 
   const handleStartCountdownOrCapture = useCallback(() => {
     if (timerSeconds === 0) {
@@ -214,11 +238,11 @@ export const CameraModal: React.FC<CameraModalProps> = ({
       role="dialog"
       aria-modal="true"
     >
-      <div className="w-full max-w-lg p-5 bg-white dark:bg-[#182222] opacity-100 border-2 border-[#287C78]/40 rounded-3xl shadow-2xl space-y-3 z-10">
+      <div className="w-full max-w-lg p-5 bg-surface border border-slate-200 dark:border-slate-800 rounded-3xl shadow-2xl space-y-3 z-10">
         {/* Modal Header */}
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2.5">
-            <div className="p-2 bg-amber-500/15 text-amber-600 rounded-xl">
+            <div className="p-2.5 bg-[#E4F0EF] dark:bg-[#203A39] text-[#287C78] dark:text-[#42A39E] rounded-xl">
               <Camera className="w-5 h-5" aria-hidden="true" />
             </div>
             <div>
@@ -230,7 +254,7 @@ export const CameraModal: React.FC<CameraModalProps> = ({
           </div>
           <button
             onClick={onClose}
-            className="p-2 rounded-xl text-text-secondary hover:text-text-primary focus:ring-2 focus:ring-primary focus:outline-none cursor-pointer"
+            className="p-2 rounded-xl text-text-secondary hover:text-text-primary hover:bg-slate-100 dark:hover:bg-slate-800 focus:ring-2 focus:ring-[#287C78] focus:outline-none cursor-pointer"
             aria-label="Đóng camera"
           >
             <X className="w-5 h-5" />
@@ -240,7 +264,7 @@ export const CameraModal: React.FC<CameraModalProps> = ({
         {/* Stable Quick Toolbar */}
         <div className="flex items-center justify-between bg-slate-100 dark:bg-slate-800/60 px-3 py-2 rounded-2xl text-xs gap-2 min-h-[40px]">
           <div className="flex items-center gap-1.5 text-text-secondary font-medium text-[12px]">
-            <Sparkles className="w-3.5 h-3.5 text-primary" />
+            <Sparkles className="w-3.5 h-3.5 text-[#287C78] dark:text-[#42A39E]" />
             <span>Nói "Chụp" qua nút VOICE để tự chụp</span>
           </div>
 
@@ -254,8 +278,8 @@ export const CameraModal: React.FC<CameraModalProps> = ({
                 onClick={() => setTimerSeconds(sec)}
                 className={`px-2 py-0.5 rounded-lg text-xs font-semibold transition-colors cursor-pointer ${
                   timerSeconds === sec
-                    ? 'bg-primary text-white shadow-xs'
-                    : 'bg-surface border border-default text-text-secondary hover:text-text-primary'
+                    ? 'bg-[#287C78] text-white shadow-xs'
+                    : 'bg-surface border border-slate-200 dark:border-slate-800 text-text-secondary hover:text-text-primary'
                 }`}
               >
                 {sec === 0 ? 'Tắt' : `${sec}s`}
@@ -265,7 +289,7 @@ export const CameraModal: React.FC<CameraModalProps> = ({
         </div>
 
         {/* Viewfinder or Preview with Stable Aspect Ratio */}
-        <div className="relative w-full aspect-4/3 bg-black rounded-2xl overflow-hidden flex items-center justify-center border border-default">
+        <div className="relative w-full aspect-4/3 bg-slate-950 rounded-2xl overflow-hidden flex items-center justify-center border border-slate-200 dark:border-slate-800">
           {previewUrl ? (
             <img src={previewUrl} alt="Ảnh đã chụp" className="w-full h-full object-contain" />
           ) : stream ? (
@@ -280,7 +304,7 @@ export const CameraModal: React.FC<CameraModalProps> = ({
               {/* Countdown overlay */}
               {countdown !== null && (
                 <div className="absolute inset-0 bg-black/50 backdrop-blur-xs flex items-center justify-center">
-                  <div className="w-20 h-20 rounded-full bg-amber-500 text-white font-black text-4xl flex items-center justify-center shadow-2xl scale-100 transition-transform">
+                  <div className="w-20 h-20 rounded-full bg-[#287C78] text-white font-black text-4xl flex items-center justify-center shadow-2xl scale-100 transition-transform">
                     {countdown}
                   </div>
                 </div>
@@ -288,14 +312,14 @@ export const CameraModal: React.FC<CameraModalProps> = ({
             </>
           ) : (
             <div className="text-center p-6 space-y-3">
-              <Camera className="w-10 h-10 text-gray-400 mx-auto" />
-              <p className="text-xs text-gray-300 max-w-xs mx-auto">
+              <Camera className="w-10 h-10 text-slate-500 mx-auto" />
+              <p className="text-xs text-slate-300 max-w-xs mx-auto">
                 {cameraError || 'Đang kết nối camera...'}
               </p>
               <button
                 type="button"
                 onClick={startCamera}
-                className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-primary/20 hover:bg-primary/30 text-primary-light rounded-xl text-xs font-medium cursor-pointer"
+                className="inline-flex items-center gap-1.5 px-3.5 py-2 bg-[#287C78]/30 hover:bg-[#287C78]/40 text-teal-200 rounded-xl text-xs font-semibold cursor-pointer transition-colors"
               >
                 <RefreshCw className="w-3.5 h-3.5" />
                 Thử lại camera
@@ -314,7 +338,7 @@ export const CameraModal: React.FC<CameraModalProps> = ({
                   setPreviewUrl(null);
                   startCamera();
                 }}
-                className="flex items-center gap-1.5 min-h-[44px] px-4 py-2 rounded-xl border border-default text-text-primary font-medium text-xs hover:bg-slate-100 dark:hover:bg-slate-800 cursor-pointer"
+                className="flex items-center gap-1.5 min-h-[44px] px-4 py-2 rounded-xl border border-slate-200 dark:border-slate-800 text-text-primary font-medium text-xs hover:bg-slate-100 dark:hover:bg-slate-800 cursor-pointer"
               >
                 Chụp lại
               </button>
@@ -322,7 +346,7 @@ export const CameraModal: React.FC<CameraModalProps> = ({
                 type="button"
                 onClick={handleConfirmImage}
                 disabled={isProcessing}
-                className="flex items-center gap-2 min-h-[44px] px-5 py-2.5 rounded-xl bg-primary text-white font-bold text-xs shadow-md hover:bg-primary-dark transition-colors cursor-pointer"
+                className="flex items-center gap-2 min-h-[44px] px-5 py-2.5 rounded-xl bg-[#287C78] hover:bg-[#1F625F] text-white font-bold text-xs shadow-md shadow-[#287C78]/20 transition-colors cursor-pointer"
               >
                 {isProcessing ? (
                   <Loader2 className="w-4 h-4 animate-spin" />
@@ -334,8 +358,8 @@ export const CameraModal: React.FC<CameraModalProps> = ({
             </>
           ) : (
             <>
-              <label className="flex items-center gap-1.5 min-h-[44px] px-4 py-2 rounded-xl border border-default bg-surface text-text-primary font-medium text-xs cursor-pointer hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors">
-                <Upload className="w-4 h-4 text-primary" />
+              <label className="flex items-center gap-1.5 min-h-[44px] px-4 py-2 rounded-xl border border-slate-200 dark:border-slate-800 bg-surface text-text-primary font-medium text-xs cursor-pointer hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors">
+                <Upload className="w-4 h-4 text-[#287C78] dark:text-[#42A39E]" />
                 <span>Chọn tệp ảnh</span>
                 <input
                   type="file"
@@ -351,8 +375,8 @@ export const CameraModal: React.FC<CameraModalProps> = ({
                 disabled={countdown !== null || !stream}
                 className={`flex items-center gap-2 min-h-[44px] px-6 py-2.5 rounded-xl font-bold text-xs shadow-md transition-all cursor-pointer ${
                   stream
-                    ? 'bg-amber-500 text-white hover:bg-amber-600 active:scale-95'
-                    : 'bg-slate-300 dark:bg-slate-700 text-text-muted cursor-not-allowed'
+                    ? 'bg-[#287C78] text-white hover:bg-[#1F625F] shadow-[#287C78]/20 active:scale-95'
+                    : 'bg-slate-200 dark:bg-slate-800 text-text-secondary cursor-not-allowed opacity-60'
                 }`}
               >
                 <Camera className="w-4 h-4" />

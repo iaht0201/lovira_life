@@ -34,11 +34,11 @@ export const ImportantFactsPanel: React.FC<ImportantFactsPanelProps> = ({
     switch (type) {
       case 'date':
       case 'time':
-        return { label: 'Thời gian & Lịch hẹn', icon: Clock, color: 'text-blue-600 dark:text-blue-400 bg-blue-500/10 border-blue-500/30' };
+        return { label: 'Thời gian & Lịch hẹn', icon: Clock, color: 'text-[#287C78] dark:text-[#42A39E] bg-[#E4F0EF] dark:bg-[#203A39] border-[#287C78]/30' };
       case 'location':
         return { label: 'Địa điểm / Số phòng', icon: MapPin, color: 'text-teal-600 dark:text-teal-400 bg-[#287C78]/10 border-[#287C78]/30' };
       case 'person':
-        return { label: 'Người liên quan', icon: User, color: 'text-indigo-600 dark:text-indigo-400 bg-indigo-500/10 border-indigo-500/30' };
+        return { label: 'Người liên quan', icon: User, color: 'text-[#287C78] dark:text-[#42A39E] bg-[#E4F0EF] dark:bg-[#203A39] border-[#287C78]/30' };
       case 'requirement':
         return { label: 'Giấy tờ cần có', icon: FileCheck, color: 'text-emerald-600 dark:text-emerald-400 bg-emerald-500/10 border-emerald-500/30' };
       case 'warning':

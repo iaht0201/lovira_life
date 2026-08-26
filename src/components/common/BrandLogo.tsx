@@ -36,7 +36,7 @@ export const BrandLogo: React.FC<BrandLogoProps> = ({
       ? BRAND_IMAGES.logoIcon
       : variant === 'client'
       ? BRAND_IMAGES.logoClient
-      : BRAND_IMAGES.logo);
+      : BRAND_IMAGES.logoFull || BRAND_IMAGES.logo);
 
   // If custom uploaded image is available and hasn't errored, render it
   if (targetSrc && !imageError) {

@@ -10,11 +10,13 @@ import { CreateSessionModal } from './CreateSessionModal';
 import { DetailedReminderModal } from '../reminders/DetailedReminderModal';
 import { BriefSessionHeader } from '../../services/storageService';
 import { ScenarioType } from '../../types';
+import { UserProfile } from '../../types/userProfile';
 import { ReminderData } from './ReminderItem';
 import { notificationService } from '../../services/notificationService';
 
 interface HomePageProps {
   userName?: string;
+  userProfile?: UserProfile | null;
   sessionsList: BriefSessionHeader[];
   onOpenSession: (id: string) => void;
   onCreateSessionFromTemplate: (type: ScenarioType, customGoal?: string) => Promise<void>;
@@ -28,6 +30,7 @@ interface HomePageProps {
 
 export const HomePage: React.FC<HomePageProps> = ({
   userName = 'Bạn',
+  userProfile,
   sessionsList,
   onOpenSession,
   onCreateSessionFromTemplate,
@@ -56,7 +59,7 @@ export const HomePage: React.FC<HomePageProps> = ({
       <HomeOfflineBanner isOffline={isOffline} />
 
       {/* 8. Hero Section */}
-      <HomeHero userName={userName} />
+      <HomeHero userName={userName} userProfile={userProfile} />
 
       {/* 10. Quick Action Cards */}
       <QuickActions
