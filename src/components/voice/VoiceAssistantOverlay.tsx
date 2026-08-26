@@ -1,5 +1,5 @@
 import React from 'react';
-import { Mic, Sparkles, Volume2, AlertTriangle, X, Send, RotateCcw, Square } from 'lucide-react';
+import { Mic, Sparkles, Volume2, AlertTriangle, X, RotateCcw, Square } from 'lucide-react';
 import { VoiceInteractionState } from '../../types';
 
 interface VoiceAssistantOverlayProps {
@@ -8,6 +8,7 @@ interface VoiceAssistantOverlayProps {
   audioVolume?: number;
   voiceError?: string;
   lastResponseText?: string;
+  isCameraOpen?: boolean;
   onStopListening: () => void;
   onCancel: () => void;
   onRetry: () => void;
@@ -21,6 +22,7 @@ export const VoiceAssistantOverlay: React.FC<VoiceAssistantOverlayProps> = ({
   audioVolume = 0,
   voiceError,
   lastResponseText,
+  isCameraOpen = false,
   onStopListening,
   onCancel,
   onRetry,
@@ -30,8 +32,8 @@ export const VoiceAssistantOverlay: React.FC<VoiceAssistantOverlayProps> = ({
   // 1. Processing Mode: Floating compact top pill (NO backdrop, allowing page underneath to show & navigate)
   if (voiceStatus === 'processing') {
     return (
-      <div className="fixed top-4 left-1/2 -translate-x-1/2 z-[9999] pointer-events-auto animate-in slide-in-from-top duration-200">
-        <div className="flex items-center gap-3 px-4 py-2.5 rounded-full bg-lovira-card/95 border border-[#287C78]/40 shadow-xl backdrop-blur-md text-lovira-title text-sm font-bold">
+      <div className="fixed top-4 left-1/2 -translate-x-1/2 z-[99999999] pointer-events-auto animate-in slide-in-from-top duration-200">
+        <div className="flex items-center gap-3 px-4 py-2.5 rounded-full bg-lovira-card/95 border border-[#287C78]/40 shadow-2xl backdrop-blur-md text-lovira-title text-sm font-bold">
           <Sparkles className="w-4 h-4 text-[#287C78] dark:text-[#42A39E] animate-spin" />
           <span>✨ Lovira đang xử lý...</span>
         </div>
@@ -39,14 +41,14 @@ export const VoiceAssistantOverlay: React.FC<VoiceAssistantOverlayProps> = ({
     );
   }
 
-  // 2. Speaking Mode: Non-blocking floating response card at top/bottom (NO backdrop, page is fully visible)
+  // 2. Speaking Mode: Non-blocking floating response card at top (NO backdrop, page is fully visible)
   if (voiceStatus === 'speaking') {
     return (
-      <div className="fixed top-4 left-1/2 -translate-x-1/2 z-[9999] pointer-events-auto w-[92%] max-w-md animate-in slide-in-from-top duration-200">
+      <div className="fixed top-4 left-1/2 -translate-x-1/2 z-[99999999] pointer-events-auto w-[92%] max-w-md animate-in slide-in-from-top duration-200">
         <div className="p-3.5 rounded-2xl bg-lovira-card/95 border border-emerald-500/40 shadow-2xl backdrop-blur-md flex flex-col gap-2">
           <div className="flex items-center justify-between gap-2">
             <div className="flex items-center gap-2 text-emerald-600 dark:text-emerald-400 font-bold text-xs uppercase tracking-wider">
-              <Volume2 className="w-4 h-4 animate-bounce" />
+              <Volume2 className="w-4 h-4" />
               <span>Lovira đang trả lời</span>
             </div>
             <button
@@ -68,12 +70,18 @@ export const VoiceAssistantOverlay: React.FC<VoiceAssistantOverlayProps> = ({
     );
   }
 
-  // 3. Listening Mode: Compact non-blocking toast at bottom (no backdrop, no modal)
+  // 3. Listening Mode: Compact non-blocking toast at bottom (or top if camera is open to avoid blocking camera buttons)
   if (voiceStatus === 'listening') {
     return (
-      <div className="fixed bottom-[80px] lg:bottom-6 left-1/2 -translate-x-1/2 z-[9999] pointer-events-auto w-[92%] max-w-sm animate-in slide-in-from-bottom-4 duration-200">
+      <div
+        className={`fixed left-1/2 -translate-x-1/2 z-[99999999] pointer-events-auto w-[92%] max-w-sm duration-200 ${
+          isCameraOpen
+            ? 'top-4 animate-in slide-in-from-top-4'
+            : 'bottom-[80px] lg:bottom-6 animate-in slide-in-from-bottom-4'
+        }`}
+      >
         <div className="flex items-center gap-3 px-4 py-3 rounded-2xl bg-lovira-card/96 border border-rose-500/40 shadow-2xl backdrop-blur-md">
-          {/* Pulsing mic icon */}
+          {/* Mic icon */}
           <div className="w-9 h-9 rounded-full bg-gradient-to-tr from-[#287C78] to-[#1F625F] flex items-center justify-center shrink-0 shadow-md">
             <Mic className="w-4 h-4 text-white animate-pulse" aria-hidden="true" />
           </div>
@@ -92,6 +100,8 @@ export const VoiceAssistantOverlay: React.FC<VoiceAssistantOverlayProps> = ({
                 ? `"${interimTranscript}"`
                 : audioVolume > 2
                 ? 'Đã phát hiện tiếng nói...'
+                : isCameraOpen
+                ? 'Nói "Chụp" để chụp ảnh ngay...'
                 : 'Hãy nói nhu cầu của bạn...'}
             </p>
           </div>
@@ -120,48 +130,46 @@ export const VoiceAssistantOverlay: React.FC<VoiceAssistantOverlayProps> = ({
     );
   }
 
-
-  // 4. Error State Modal
-  if (voiceStatus === 'error' || voiceError) {
+  // 4. Error Mode: Compact non-blocking toast
+  if (voiceStatus === 'error' && voiceError) {
     return (
-      <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm animate-in fade-in duration-150">
-        <div className="w-full max-w-md rounded-2xl bg-lovira-card border border-lovira-subtle shadow-2xl p-5 flex flex-col items-center text-center relative animate-in zoom-in-95 duration-150">
-          <button
-            onClick={onCancel}
-            className="absolute top-3 right-3 w-8 h-8 rounded-full bg-lovira-input hover:bg-lovira-card-hover text-lovira-muted flex items-center justify-center transition-colors cursor-pointer"
-            aria-label="Đóng"
-          >
-            <X className="w-4 h-4" />
-          </button>
-
-          <div className="flex items-center justify-center w-14 h-14 rounded-full bg-rose-500/15 text-rose-500 mb-3">
-            <AlertTriangle className="w-7 h-7" />
+      <div
+        className={`fixed left-1/2 -translate-x-1/2 z-[99999999] pointer-events-auto w-[92%] max-w-sm duration-200 ${
+          isCameraOpen
+            ? 'top-4 animate-in slide-in-from-top-4'
+            : 'bottom-[80px] lg:bottom-6 animate-in slide-in-from-bottom-4'
+        }`}
+      >
+        <div className="p-3.5 rounded-2xl bg-lovira-card/96 border border-amber-500/50 shadow-2xl backdrop-blur-md flex flex-col gap-2.5">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2 text-amber-600 dark:text-amber-400 font-bold text-xs">
+              <AlertTriangle className="w-4 h-4 shrink-0" />
+              <span>Chưa nghe rõ</span>
+            </div>
+            <button
+              onClick={onCancel}
+              className="text-lovira-muted hover:text-lovira-title p-1 rounded-lg cursor-pointer"
+              aria-label="Đóng"
+            >
+              <X className="w-4 h-4" />
+            </button>
           </div>
 
-          <h3 className="text-base font-extrabold text-lovira-title mb-1">
-            Chưa nhận dạng được giọng nói
-          </h3>
-          <p className="text-xs text-lovira-muted font-medium leading-relaxed px-2 mb-4">
-            {voiceError ||
-              'Micro chưa được mở hoặc không nhận được âm thanh. Chú/bạn kiểm tra lại micro hoặc gõ tin nhắn cho Lovira nhé!'}
-          </p>
+          <p className="text-xs text-lovira-text leading-relaxed text-left">{voiceError}</p>
 
-          <div className="flex flex-col gap-2 w-full">
+          <div className="flex items-center gap-2 pt-1 border-t border-lovira-subtle">
             <button
               onClick={onRetry}
-              className="w-full py-2.5 px-4 rounded-xl bg-gradient-to-r from-[#287C78] to-[#1F625F] hover:opacity-90 text-white text-sm font-bold flex items-center justify-center gap-2 shadow-md transition-all cursor-pointer"
+              className="flex-1 flex items-center justify-center gap-1.5 py-1.5 px-3 rounded-xl bg-primary text-white text-xs font-bold shadow-xs hover:bg-primary-dark transition-colors cursor-pointer"
             >
-              <RotateCcw className="w-4 h-4" />
-              <span>Thử lại bằng giọng nói</span>
+              <RotateCcw className="w-3.5 h-3.5" />
+              <span>Nói lại</span>
             </button>
             <button
-              onClick={() => {
-                onCancel();
-                onOpenChat();
-              }}
-              className="w-full py-2.5 px-4 rounded-xl bg-lovira-input hover:bg-lovira-card-hover text-lovira-title text-sm font-bold transition-all cursor-pointer"
+              onClick={onOpenChat}
+              className="py-1.5 px-3 rounded-xl bg-lovira-input text-lovira-title text-xs font-semibold hover:bg-lovira-card-hover transition-colors cursor-pointer"
             >
-              Nhập câu hỏi bằng tin nhắn (Chat)
+              Nhắn tin
             </button>
           </div>
         </div>
@@ -171,4 +179,3 @@ export const VoiceAssistantOverlay: React.FC<VoiceAssistantOverlayProps> = ({
 
   return null;
 };
-

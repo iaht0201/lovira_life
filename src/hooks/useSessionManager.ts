@@ -1389,14 +1389,37 @@ export function useSessionManager({
   ]);
 
   const handleCaptureCameraImage = useCallback(async (dataUrl: string) => {
-    if (!activeSession) return;
+    let currentTarget = activeSession;
+    if (!currentTarget) {
+      const activeId = storageService.getActiveSessionId();
+      if (activeId) {
+        currentTarget = storageService.getSession(activeId);
+      }
+      if (!currentTarget) {
+        const list = storageService.getSessionsList();
+        if (list.length > 0) {
+          currentTarget = storageService.getSession(list[0].id);
+        }
+      }
+      if (!currentTarget) {
+        currentTarget = createLifeSessionFromScenario(
+          'healthcare',
+          'Phiên chụp tài liệu & khám bệnh',
+          accessibilitySettings,
+          userProfile
+        );
+        storageService.saveSession(currentTarget);
+        storageService.setActiveSessionId(currentTarget.id);
+        refreshSessionsList();
+      }
+    }
 
     const now = new Date().toISOString();
     const resId = `res-${Date.now()}`;
 
     await indexedDbService.saveResourceBlob({
       id: resId,
-      sessionId: activeSession.id,
+      sessionId: currentTarget.id,
       dataUrl,
       mimeType: 'image/jpeg',
       createdAt: now,
@@ -1411,12 +1434,13 @@ export function useSessionManager({
     };
 
     const sessionWithRes = {
-      ...activeSession,
-      resources: [newResource, ...activeSession.resources],
+      ...currentTarget,
+      resources: [newResource, ...(currentTarget.resources || [])],
       updatedAt: now,
     };
 
     setActiveSession(sessionWithRes);
+    storageService.saveSession(sessionWithRes);
     showToast('Đã lưu ảnh chụp vào tài nguyên phiên. Đang đọc ảnh...');
 
     try {

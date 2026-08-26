@@ -622,6 +622,8 @@ export async function executeLocalBrain(
             needsClarification: true,
             clarificationActionType: 'GET_WEATHER',
             clarificationQuestion: weatherResult.reply,
+            reply: weatherResult.reply,
+            speech: weatherResult.speech,
             suggestedReplies: weatherResult.suggestedReplies,
           };
         }

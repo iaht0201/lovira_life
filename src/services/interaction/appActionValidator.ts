@@ -43,12 +43,17 @@ function resolveTargetReminder(
         errorReason: `Có ${partialMatches.length} nhắc nhở khớp với "${titleQuery}". Chú muốn thực hiện với nhắc nhở nào cụ thể ạ?`,
       };
     }
+
+    return {
+      errorReason: `Không tìm thấy nhắc nhở "${titleQuery}".`,
+    };
   }
 
-  if (activeReminders.length === 1) {
+  // Only fallback if NO titleQuery was specified
+  if (!titleQuery && activeReminders.length === 1) {
     return { reminderId: activeReminders[0].id };
   }
-  if (activeReminders.length > 1) {
+  if (!titleQuery && activeReminders.length > 1) {
     return {
       errorReason: 'Dạ chú muốn thực hiện với nhắc nhở nào cụ thể ạ?',
     };

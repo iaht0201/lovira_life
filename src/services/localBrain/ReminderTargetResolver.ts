@@ -95,6 +95,65 @@ const FILLER_HONORIFICS = [
   'luon',
 ];
 
+const DURATION_AND_TIME_PHRASES = [
+  'sau 10 phut',
+  'sau 30 phut',
+  'sau nua tieng',
+  'sau nua gio',
+  'sau 1 tieng',
+  'sau 1 gio',
+  'sau mot tieng',
+  'sau mot gio',
+  'sau 60 phut',
+  'sau 1h',
+  'sau 30m',
+  'sau 10m',
+  '10 phut nua',
+  '30 phut nua',
+  '1 tieng nua',
+  '1 gio nua',
+  '10 phut',
+  '30 phut',
+  'nua tieng',
+  'nua gio',
+  '1 tieng',
+  '1 gio',
+  'mot tieng',
+  'mot gio',
+  '60 phut',
+  '10m',
+  '30m',
+  '1h',
+  'toi nay',
+  'chieu toi',
+  'toi',
+  'ngay mai',
+  'bua mai',
+  'sang mai',
+  'chieu mai',
+  'mai',
+  'lat nua',
+  'luc nua',
+  'chut nua',
+  'sau nay',
+];
+
+function stripWordPrefix(str: string, prefix: string): string {
+  if (str === prefix) return '';
+  if (str.startsWith(prefix + ' ')) {
+    return str.slice(prefix.length).trim();
+  }
+  return str;
+}
+
+function stripWordSuffix(str: string, suffix: string): string {
+  if (str === suffix) return '';
+  if (str.endsWith(' ' + suffix)) {
+    return str.slice(0, -suffix.length).trim();
+  }
+  return str;
+}
+
 /**
  * Extract semantic reminder target text from query
  */
@@ -102,33 +161,50 @@ export function extractReminderTargetKeyword(rawText: string): string {
   const text = rawText.trim();
   const unaccented = stripVietnameseAccents(normalizeVietnameseText(text)).toLowerCase();
 
-  // Try to remove action prefixes
+  // Try to remove action prefixes (longer prefixes first)
   let strippedUnaccented = unaccented;
   for (const prefix of REMINDER_ACTION_PREFIXES) {
-    if (strippedUnaccented.startsWith(prefix)) {
-      strippedUnaccented = strippedUnaccented.slice(prefix.length).trim();
+    const next = stripWordPrefix(strippedUnaccented, prefix);
+    if (next !== strippedUnaccented) {
+      strippedUnaccented = next;
       break;
     }
+  }
+
+  // Remove duration / snooze time phrases
+  for (const durationPhrase of DURATION_AND_TIME_PHRASES) {
+    strippedUnaccented = stripWordSuffix(strippedUnaccented, durationPhrase);
+    strippedUnaccented = stripWordPrefix(strippedUnaccented, durationPhrase);
   }
 
   // Remove filler honorifics in a loop until clean
   let changed = true;
   while (changed) {
     changed = false;
+    const before = strippedUnaccented;
     for (const filler of FILLER_HONORIFICS) {
-      if (strippedUnaccented.endsWith(filler)) {
-        strippedUnaccented = strippedUnaccented.slice(0, -filler.length).trim();
-        changed = true;
-      }
-      if (strippedUnaccented.startsWith(filler)) {
-        strippedUnaccented = strippedUnaccented.slice(filler.length).trim();
-        changed = true;
-      }
+      strippedUnaccented = stripWordSuffix(strippedUnaccented, filler);
+      strippedUnaccented = stripWordPrefix(strippedUnaccented, filler);
+    }
+    for (const durationPhrase of DURATION_AND_TIME_PHRASES) {
+      strippedUnaccented = stripWordSuffix(strippedUnaccented, durationPhrase);
+      strippedUnaccented = stripWordPrefix(strippedUnaccented, durationPhrase);
+    }
+    if (strippedUnaccented !== before) {
+      changed = true;
     }
   }
 
-  // Remove general nouns like "nhac nho", "lich nhac", "lich" if left at the beginning
-  strippedUnaccented = strippedUnaccented.replace(/^(nhac nho|lich nhac|lich hen|lich|bao thuc)\s+/i, '').trim();
+  // Remove general nouns like "nhac nho", "lich nhac", "lich", "nay", "do", "nhac", "nho" if left
+  strippedUnaccented = strippedUnaccented
+    .replace(/^(nhac nho|lich nhac|lich hen|lich|bao thuc|nhac|nho)\s*/i, '')
+    .replace(/\s*(nhac nho|lich nhac|lich hen|lich|bao thuc|nhac|nho)$/i, '')
+    .trim();
+
+  // Clean trailing/leading demonstratives ("nay", "do", "kia", "sau", "nho")
+  if (['nay', 'do', 'kia', 'sau', 'nhac nho', 'lich nhac', 'lich', 'bao thuc', 'nhac', 'nho'].includes(strippedUnaccented)) {
+    return '';
+  }
 
   return strippedUnaccented;
 }

@@ -5,6 +5,7 @@
  */
 
 import { stripVietnameseAccents } from './interaction/VietnameseNormalizer.js';
+import { getCurrentLocation, UserLocation } from './locationService.js';
 
 export interface WeatherReportOptions {
   addressing?: string;
@@ -68,7 +69,7 @@ const VIETNAM_CITIES: Record<string, { name: string; lat: number; lon: number }>
   'pleiku': { name: 'Pleiku', lat: 13.9833, lon: 108.0000 },
 };
 
-function extractCityFromText(text?: string): { name: string; lat: number; lon: number } | null {
+export function extractCityFromText(text?: string): { name: string; lat: number; lon: number } | null {
   if (!text) return null;
   const norm = normalizeLocationText(text);
   const padded = ` ${norm} `;
@@ -80,12 +81,17 @@ function extractCityFromText(text?: string): { name: string; lat: number; lon: n
   return null;
 }
 
+export function hasExplicitLocation(rawText?: string): boolean {
+  if (!rawText) return false;
+  return extractCityFromText(rawText) !== null;
+}
+
 async function geocodeCityOpenMeteo(rawText?: string): Promise<{ name: string; lat: number; lon: number } | null> {
   if (!rawText) return null;
   const norm = normalizeLocationText(rawText);
   // Clean text from common weather queries and filler words
   const clean = norm
-    .replace(/\b(thoi tiet|mua|nang|hom nay|bay gio|du bao|nhiet do|co mua khong|mua khong|nhu the nao|the nao|ngoai troi|troi|ngay mai|a|nhe|co|xem|cho|gio|may do|o|tai|tinh|thanh pho|du|khong|chua|hoi|dung|ngay)\b/g, ' ')
+    .replace(/\b(thoi tiet|mua|nang|hom nay|bay gio|du bao|nhiet do|co mua khong|mua khong|nhu the nao|the nao|ngoai troi|troi|ngay mai|a|nhe|co|xem|cho|gio|may do|bao nhieu do|o|tai|tinh|thanh pho|du|khong|chua|hoi|dung|ngay|o day|cho toi|cho nay|hien tai|ben ngoai)\b/g, ' ')
     .replace(/\s+/g, ' ')
     .trim();
 
@@ -122,6 +128,19 @@ export function getWeatherConditionText(code: number): { text: string; icon: str
   return { text: 'Mát mẻ, dễ chịu', icon: '🌤️' };
 }
 
+interface CachedWeather {
+  temp: number;
+  maxTemp: number;
+  minTemp: number;
+  rainProb: number;
+  code: number;
+  condition: { text: string; icon: string };
+  timestamp: number;
+}
+
+const weatherCache = new Map<string, CachedWeather>();
+const WEATHER_CACHE_MS = 5 * 60 * 1000; // 5 minutes cache
+
 export async function fetchCurrentWeatherReport(
   opts: WeatherReportOptions = {}
 ): Promise<WeatherReportResult> {
@@ -129,15 +148,15 @@ export async function fetchCurrentWeatherReport(
   const me = opts.me || 'con';
   const da = opts.da || 'Dạ';
 
-  // 1. Try extracting city from static alias or geocoding API
+  let lat = opts.lat;
+  let lon = opts.lon;
+  let cityName = opts.cityName;
+
+  // 1. Try extracting city from static alias or geocoding API if rawText has explicit city
   let extractedCity = extractCityFromText(opts.rawText);
   if (!extractedCity && opts.rawText) {
     extractedCity = await geocodeCityOpenMeteo(opts.rawText);
   }
-
-  let lat = opts.lat;
-  let lon = opts.lon;
-  let cityName = opts.cityName;
 
   if (extractedCity) {
     lat = extractedCity.lat;
@@ -145,7 +164,21 @@ export async function fetchCurrentWeatherReport(
     cityName = extractedCity.name;
   }
 
-  // 2. If no lat/lon, ask for location clarification instead of defaulting to Hanoi
+  // 2. If no lat/lon specified or extracted, try getting browser GPS location
+  if (lat === undefined || lon === undefined) {
+    try {
+      const userLoc = await getCurrentLocation();
+      if (userLoc) {
+        lat = userLoc.lat;
+        lon = userLoc.lon;
+        cityName = userLoc.cityName || 'vị trí hiện tại';
+      }
+    } catch (locErr) {
+      console.warn('[WeatherService] Location fetch error:', locErr);
+    }
+  }
+
+  // 3. If still no lat/lon, ask for location clarification
   if (lat === undefined || lon === undefined) {
     const askReply = `${da}, ${addressing} muốn xem thời tiết ở đâu hay tỉnh thành phố nào ạ?`;
     return {
@@ -166,6 +199,36 @@ export async function fetchCurrentWeatherReport(
       opts.rawText.toLowerCase().includes('dù') ||
       opts.rawText.toLowerCase().includes('ô'));
 
+  const cacheKey = `${lat.toFixed(2)},${lon.toFixed(2)}`;
+  const now = Date.now();
+  const cached = weatherCache.get(cacheKey);
+
+  if (cached && now - cached.timestamp < WEATHER_CACHE_MS) {
+    const { temp, maxTemp, minTemp, rainProb, condition } = cached;
+    let reply = '';
+    let speech = '';
+
+    if (isRainQuery) {
+      if (rainProb >= 40) {
+        reply = `${da}, thời tiết tại ${cityName} hôm nay có khả năng mưa cao (khoảng ${rainProb}%), nhiệt độ khoảng ${minTemp}°C - ${maxTemp}°C. ${addressing.charAt(0).toUpperCase() + addressing.slice(1)} nhớ mang theo ô (dù) khi ra ngoài nhé ạ!`;
+        speech = `${da}, thời tiết tại ${cityName} hôm nay có khả năng mưa cao khoảng ${rainProb} phần trăm ạ. ${addressing.charAt(0).toUpperCase() + addressing.slice(1)} nhớ mang theo ô khi ra ngoài ạ.`;
+      } else {
+        reply = `${da}, thời tiết tại ${cityName} hôm nay tỉ lệ mưa khá thấp (chỉ khoảng ${rainProb}%), nhiệt độ từ ${minTemp}°C - ${maxTemp}°C, trời khá khô ráo ạ!`;
+        speech = `${da}, thời tiết tại ${cityName} hôm nay tỉ lệ có mưa rất thấp, trời khá khô ráo ạ.`;
+      }
+    } else {
+      reply = `${da}, thời tiết tại ${cityName} hiện tại khoảng ${temp}°C (cao nhất ${maxTemp}°C, thấp nhất ${minTemp}°C), ${condition.text} ${condition.icon}, tỉ lệ mưa ${rainProb}%. ${addressing.charAt(0).toUpperCase() + addressing.slice(1)} nhớ chú ý giữ gìn sức khỏe nhé ạ!`;
+      speech = `${da}, thời tiết tại ${cityName} hiện tại khoảng ${temp} độ C, ${condition.text} ạ.`;
+    }
+
+    return {
+      handled: true,
+      reply,
+      speech,
+      suggestedReplies: ['Lịch hôm nay có gì?', 'Tạo nhắc nhở mới'],
+    };
+  }
+
   try {
     const res = await fetch(
       `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current=temperature_2m,relative_humidity_2m,weather_code,is_day&daily=weather_code,temperature_2m_max,temperature_2m_min,precipitation_probability_max&timezone=auto`
@@ -184,6 +247,17 @@ export async function fetchCurrentWeatherReport(
         const maxTemp = daily?.temperature_2m_max?.[0] ? Math.round(daily.temperature_2m_max[0]) : temp;
         const minTemp = daily?.temperature_2m_min?.[0] ? Math.round(daily.temperature_2m_min[0]) : temp;
         const rainProb = daily?.precipitation_probability_max?.[0] ?? 0;
+
+        // Cache the weather data
+        weatherCache.set(cacheKey, {
+          temp,
+          maxTemp,
+          minTemp,
+          rainProb,
+          code,
+          condition,
+          timestamp: Date.now(),
+        });
 
         let reply = '';
         let speech = '';
@@ -222,3 +296,4 @@ export async function fetchCurrentWeatherReport(
     suggestedReplies: ['Lịch hôm nay có gì?'],
   };
 }
+

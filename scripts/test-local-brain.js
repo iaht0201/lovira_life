@@ -34,6 +34,11 @@ async function runTests() {
     { query: 'Ngày mai có lịch gì', expectedIntent: 'utility.tomorrow_schedule', shouldHandle: true },
     { query: 'Thời tiết hôm nay', expectedIntent: 'utility.weather', shouldHandle: true },
     { query: 'Bữa ni trời có mưa hông', expectedIntent: 'utility.weather', shouldHandle: true },
+    { query: 'Bây giờ bao nhiêu độ', expectedIntent: 'utility.weather', shouldHandle: true },
+    { query: 'Ở đây bao nhiêu độ', expectedIntent: 'utility.weather', shouldHandle: true },
+    { query: 'Nhiệt độ hiện tại', expectedIntent: 'utility.weather', shouldHandle: true },
+    { query: 'Chỗ tôi có mưa không', expectedIntent: 'utility.weather', shouldHandle: true },
+    { query: 'Ngoài trời bao nhiêu độ', expectedIntent: 'utility.weather', shouldHandle: true },
 
     // 4. Reminders
     { query: 'Nhắc chú uống thuốc lúc 7 giờ', expectedIntent: 'reminder.create', shouldHandle: true },
@@ -315,11 +320,142 @@ async function runTests() {
     failed++;
   }
 
+  // I. P0 Test: "không xóa", "chưa hoàn thành", "không kết thúc" MUST cancel (NOT execute)
+  const pendingCancelDelete = {
+    type: 'confirm_action',
+    data: {
+      action: {
+        type: 'DELETE_REMINDER',
+        payload: { reminderId: 'rem-1', title: 'Uống thuốc', skipConfirmation: true },
+      },
+      question: 'Chú có chắc muốn xóa lịch nhắc "Uống thuốc" không ạ?',
+    },
+    createdAt: new Date().toISOString(),
+    expiresAt: Date.now() + 180000,
+  };
+
+  const cancelDelRes = await resolvePendingInteraction('không xóa', pendingCancelDelete);
+  if (cancelDelRes.resolved && !cancelDelRes.appAction && cancelDelRes.clearPending) {
+    console.log('✅ [P0 Pass] "không xóa" safely cancels delete without executing action');
+    passed++;
+  } else {
+    console.error('❌ [P0 Fail] "không xóa" unexpectedly executed or failed:', cancelDelRes);
+    failed++;
+  }
+
+  const pendingSessionComplete = {
+    type: 'confirm_action',
+    data: {
+      action: {
+        type: 'COMPLETE_SESSION',
+        payload: { sessionId: 'sess-1' },
+      },
+      question: 'Chú có chắc muốn kết thúc phiên hỗ trợ này không ạ?',
+    },
+    createdAt: new Date().toISOString(),
+    expiresAt: Date.now() + 180000,
+  };
+
+  const cancelSessionRes1 = await resolvePendingInteraction('chưa hoàn thành', pendingSessionComplete);
+  const cancelSessionRes2 = await resolvePendingInteraction('không kết thúc', pendingSessionComplete);
+  if (
+    cancelSessionRes1.resolved && !cancelSessionRes1.appAction && cancelSessionRes1.clearPending &&
+    cancelSessionRes2.resolved && !cancelSessionRes2.appAction && cancelSessionRes2.clearPending
+  ) {
+    console.log('✅ [P0 Pass] "chưa hoàn thành" and "không kết thúc" safely cancel COMPLETE_SESSION');
+    passed++;
+  } else {
+    console.error('❌ [P0 Fail] Negative session confirmation failed:', { cancelSessionRes1, cancelSessionRes2 });
+    failed++;
+  }
+
+  // J. P0 Test: Sole reminder safety - User target "Đi khám" not found, must NOT fallback to sole reminder "Uống thuốc"
+  const { reminderService } = await import('../src/services/reminderService.ts');
+  // Clear reminders and add sole reminder "Uống thuốc"
+  const origReminders = reminderService.getReminders();
+  reminderService.saveReminders([
+    {
+      id: 'rem-sole',
+      title: 'Uống thuốc',
+      scheduledAt: new Date(Date.now() + 3600000).toISOString(),
+      status: 'active',
+      category: 'health',
+      priority: 'normal',
+      repeat: 'once',
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    },
+  ]);
+
+  const deleteNonExistent = validateAppAction(
+    {
+      type: 'DELETE_REMINDER',
+      payload: { title: 'Đi khám' },
+    },
+    { page: 'dashboard', hasActiveSession: false }
+  );
+
+  if (!deleteNonExistent.valid && deleteNonExistent.reason?.toLowerCase().includes('không tìm thấy nhắc nhở "đi khám"')) {
+    console.log('✅ [P0 Pass] Validator rejects non-existent target "Đi khám" and DOES NOT delete sole reminder "Uống thuốc"');
+    passed++;
+  } else {
+    console.error('❌ [P0 Fail] Validator mistakenly matched or accepted non-existent target:', deleteNonExistent);
+    failed++;
+  }
+
+  // Restore reminders
+  reminderService.saveReminders(origReminders);
+
+  // K. P1 Test: Clarification priority - "nhắc nhở uống thuốc" in pending DELETE selects candidate, NOT OPEN_REMINDERS
+  const pendingDeleteClarify = {
+    type: 'clarification',
+    data: {
+      actionType: 'DELETE_REMINDER',
+      payload: {
+        operation: 'DELETE_REMINDER',
+        candidates: [
+          { id: 'rem-med', title: 'Uống thuốc huyết áp' },
+          { id: 'rem-doc', title: 'Đi khám tổng quát' },
+        ],
+      },
+    },
+    createdAt: new Date().toISOString(),
+    expiresAt: Date.now() + 180000,
+  };
+
+  const clarifySelectRes = await resolvePendingInteraction('nhắc nhở uống thuốc', pendingDeleteClarify);
+  if (
+    clarifySelectRes.resolved &&
+    clarifySelectRes.newPending?.type === 'confirm_action' &&
+    clarifySelectRes.newPending.data.action?.payload?.reminderId === 'rem-med'
+  ) {
+    console.log('✅ [P1 Pass] "nhắc nhở uống thuốc" inside pending DELETE matches candidate, does NOT trigger OPEN_REMINDERS');
+    passed++;
+  } else {
+    console.error('❌ [P1 Fail] Clarification priority failed:', clarifySelectRes);
+    failed++;
+  }
+
+  // L. P1 Test: extractReminderTargetKeyword strips duration completely ("Báo lại nhắc nhở sau 1 tiếng" -> target = none)
+  const { extractReminderTargetKeyword } = await import('../src/services/localBrain/ReminderTargetResolver.ts');
+  const targetStripped = extractReminderTargetKeyword('Báo lại nhắc nhở sau 1 tiếng');
+  if (targetStripped === '') {
+    console.log('✅ [P1 Pass] "Báo lại nhắc nhở sau 1 tiếng" extracts duration and leaves target as empty/none');
+    passed++;
+  } else {
+    console.error(`❌ [P1 Fail] extractReminderTargetKeyword returned "${targetStripped}" instead of ""`);
+    failed++;
+  }
+
   console.log(`\n========================================`);
   console.log(`Result: ${passed}/${passed + failed} test cases passed.`);
   console.log(`========================================\n`);
 
-  if (failed > 0) process.exit(1);
+  if (failed > 0) {
+    process.exit(1);
+  } else {
+    process.exit(0);
+  }
 }
 
 runTests();

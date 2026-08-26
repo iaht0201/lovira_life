@@ -494,8 +494,8 @@ export async function routeFastIntent(
     };
   }
 
-  // B6. Weather Query -> Direct API call via WeatherService (Zero LLM)
-  if (
+  // B6. Weather & Temperature Query -> Direct API call via WeatherService (Zero LLM)
+  const isWeatherOrTempQuery =
     normalized.includes('thời tiết') ||
     normalized.includes('trời có mưa') ||
     normalized.includes('có mưa không') ||
@@ -503,11 +503,22 @@ export async function routeFastIntent(
     normalized.includes('hôm nay có mưa') ||
     normalized.includes('hôm nay mưa không') ||
     normalized.includes('nhiệt độ') ||
+    normalized.includes('bao nhiêu độ') ||
+    normalized.includes('mấy độ') ||
     normalized.includes('trời hôm nay thế nào') ||
+    normalized.includes('ngoài trời') ||
+    normalized.includes('chỗ tôi có mưa') ||
+    normalized.includes('ở đây có mưa') ||
+    normalized.includes('chỗ này có mưa') ||
     unaccented.includes('thoi tiet') ||
     unaccented.includes('co mua khong') ||
-    unaccented.includes('mua khong')
-  ) {
+    unaccented.includes('mua khong') ||
+    unaccented.includes('bao nhieu do') ||
+    unaccented.includes('may do') ||
+    unaccented.includes('nhiet do') ||
+    unaccented.includes('ngoai troi');
+
+  if (isWeatherOrTempQuery) {
     const weatherResult = await fetchCurrentWeatherReport({
       addressing,
       me,
@@ -524,6 +535,8 @@ export async function routeFastIntent(
         needsClarification: true,
         clarificationActionType: 'GET_WEATHER',
         clarificationQuestion: weatherResult.reply,
+        reply: weatherResult.reply,
+        speech: weatherResult.speech,
         suggestedReplies: weatherResult.suggestedReplies,
       };
     }

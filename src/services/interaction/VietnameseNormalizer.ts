@@ -15,38 +15,40 @@ export function stripVietnameseAccents(str: string): string {
 export function normalizeVietnameseText(input: string): string {
   if (!input) return '';
 
-  let text = input.trim().toLowerCase();
+  // Ensure consistent NFC unicode form first
+  let text = input.trim().normalize('NFC').toLowerCase();
 
   // 1. Remove basic punctuation marks
   text = text.replace(/[?,!.:;"'…()]/g, ' ');
 
-  // 2. STT Phonetic & Dialect Replacement Map
-  const dialectMap: [RegExp, string][] = [
-    // Phonetic STT misrecognitions for Camera
-    [/\bmơ\s+cờ\s+me\s+ra\b/g, 'mở camera'],
-    [/\bmơ\s+ca\s+me\s+ra\b/g, 'mở camera'],
-    [/\bmở\s+cờ\s+me\s+ra\b/g, 'mở camera'],
-    [/\bmở\s+ca\s+me\s+ra\b/g, 'mở camera'],
-    [/\bmo\s+camera\b/g, 'mở camera'],
-    [/\bmở\s+cam\b/g, 'mở camera'],
+  // 2. STT Phonetic fixes for Camera
+  text = text
+    .replace(/m[ơở]\s+c[ờa]\s+me\s+ra/gi, 'mở camera')
+    .replace(/mo\s+camera/gi, 'mở camera')
+    .replace(/mở\s+cam/gi, 'mở camera');
 
-    // Dialect words
-    [/\bni\b/g, 'này'],
-    [/\bmô\b/g, 'đâu'],
-    [/\brăng\b/g, 'sao'],
-    [/\brứa\b/g, 'vậy'],
-    [/\btui\b/g, 'tôi'],
+  // 3. Word-level dialect replacements and filler word stripping
+  const words = text.split(/\s+/).filter(Boolean);
+  const normalizedWords = words.map((w) => {
+    if (w === 'ni') return 'này';
+    if (w === 'mô') return 'đâu';
+    if (w === 'răng') return 'sao';
+    if (w === 'rứa') return 'vậy';
+    if (w === 'tui') return 'tôi';
+    return w;
+  });
 
-    // Spoken prefixes/suffixes clean-up
-    [/\bcho\s+(chú|bác|cô|ông|bà|tôi|tui)\b/g, ''],
-    [/\bgiúp\s+(chú|bác|cô|ông|bà|tôi|tui)\b/g, ''],
-    [/\b(dạ|ơi|ạ|nhé|nha|hỉ|nè|nghen)\b/g, ''],
-  ];
+  const FILLERS = new Set(['dạ', 'ơi', 'ạ', 'nhé', 'nha', 'hỉ', 'nè', 'nghen']);
+  const filteredWords = normalizedWords.filter((w) => !FILLERS.has(w));
 
-  for (const [pattern, replacement] of dialectMap) {
-    text = text.replace(pattern, replacement);
-  }
+  text = filteredWords.join(' ');
 
-  // Normalize multiple spaces into single space
-  return text.replace(/\s+/g, ' ').trim();
+  // Clean conversational prefixes: "cho chú/bác/tôi...", "giúp chú/bác/tôi..."
+  text = text
+    .replace(/^cho\s+(chú|bác|cô|ông|bà|tôi)\s+/i, '')
+    .replace(/^giúp\s+(chú|bác|cô|ông|bà|tôi)\s+/i, '')
+    .replace(/\s+cho\s+(chú|bác|cô|ông|bà|tôi)$/i, '')
+    .replace(/\s+giúp\s+(chú|bác|cô|ông|bà|tôi)$/i, '');
+
+  return text.trim();
 }

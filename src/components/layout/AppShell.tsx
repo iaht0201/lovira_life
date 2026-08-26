@@ -136,7 +136,7 @@ export const AppShell: React.FC<AppShellProps> = ({
       />
 
       {/* Desktop & Tablet Floating Global Voice Trigger Button (>= 1024px) */}
-      <div className="hidden lg:flex fixed right-6 bottom-6 z-40 items-center justify-center pointer-events-auto select-none">
+      <div className="hidden lg:flex fixed right-6 bottom-6 z-[99999999] items-center justify-center pointer-events-auto select-none">
         <button
           type="button"
           onClick={onVoiceClick}

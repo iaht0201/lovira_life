@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
+import { getCurrentLocation } from '../services/locationService';
 
 export interface WeatherData {
   location: string;
@@ -138,31 +139,19 @@ export function useWeather() {
     }
   }, []);
 
-  const requestGpsLocation = useCallback(() => {
-    if (!navigator.geolocation) {
-      // Geolocation not supported
-      fetchWeather();
-      return;
-    }
-
+  const requestGpsLocation = useCallback(async (forceFresh = false) => {
     setWeather((prev) => ({ ...prev, loading: true, condition: 'Đang định vị GPS...' }));
-
-    navigator.geolocation.getCurrentPosition(
-      (pos) => {
-        const { latitude, longitude } = pos.coords;
-        fetchWeather(latitude, longitude);
-      },
-      (err) => {
-        console.warn('GPS permission denied or failed:', err);
-        // Fallback to Hanoi default
-        fetchWeather();
-      },
-      {
-        enableHighAccuracy: true,
-        timeout: 10000,
-        maximumAge: 300000, // 5 minutes cache
+    try {
+      const loc = await getCurrentLocation(forceFresh);
+      if (loc) {
+        await fetchWeather(loc.lat, loc.lon);
+      } else {
+        await fetchWeather();
       }
-    );
+    } catch (err) {
+      console.warn('GPS location request error:', err);
+      await fetchWeather();
+    }
   }, [fetchWeather]);
 
   useEffect(() => {

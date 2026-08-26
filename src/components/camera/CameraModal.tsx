@@ -1,7 +1,5 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
-import { Camera, Upload, X, Loader2, Sparkles, Timer, Mic, MicOff, Volume2, RefreshCw } from 'lucide-react';
-import { speechRecognitionService } from '../../services/voice/speechRecognitionService';
-import { speakText } from '../../services/ttsService';
+import { Camera, Upload, X, Loader2, Sparkles, Timer, RefreshCw } from 'lucide-react';
 
 interface CameraModalProps {
   isOpen: boolean;
@@ -19,32 +17,45 @@ export const CameraModal: React.FC<CameraModalProps> = ({
   const [isProcessing, setIsProcessing] = useState(false);
   const [timerSeconds, setTimerSeconds] = useState<number>(0); // 0 = off, 3 = 3s, 5 = 5s
   const [countdown, setCountdown] = useState<number | null>(null);
-  const [isListeningVoice, setIsListeningVoice] = useState<boolean>(true);
-  const [autoSend, setAutoSend] = useState<boolean>(true);
   const [cameraError, setCameraError] = useState<string | null>(null);
 
   const videoRef = useRef<HTMLVideoElement>(null);
+  const streamRef = useRef<MediaStream | null>(null);
   const countdownIntervalRef = useRef<any>(null);
 
+  // Stable stop camera function that operates directly on streamRef without recreating callback
   const stopCamera = useCallback(() => {
-    if (stream) {
-      stream.getTracks().forEach((track) => track.stop());
-      setStream(null);
+    if (streamRef.current) {
+      streamRef.current.getTracks().forEach((track) => {
+        try {
+          track.stop();
+        } catch {
+          // ignore
+        }
+      });
+      streamRef.current = null;
     }
-  }, [stream]);
+    setStream(null);
+  }, []);
 
+  // Stable start camera function with fixed dependencies to eliminate hook loops
   const startCamera = useCallback(async () => {
     setCameraError(null);
     try {
+      if (streamRef.current) {
+        streamRef.current.getTracks().forEach((track) => track.stop());
+        streamRef.current = null;
+      }
       const mediaStream = await navigator.mediaDevices.getUserMedia({
         video: { facingMode: 'environment', width: { ideal: 1280 }, height: { ideal: 720 } },
       });
+      streamRef.current = mediaStream;
       setStream(mediaStream);
       if (videoRef.current) {
         videoRef.current.srcObject = mediaStream;
       }
     } catch (e: any) {
-      console.warn('Camera access error:', e);
+      console.warn('[CameraModal] Camera access error:', e);
       setCameraError(
         'Không thể bật camera trực tiếp (do quyền truy cập hoặc thiết bị). Bạn vẫn có thể tải tệp ảnh từ máy lên.'
       );
@@ -83,34 +94,32 @@ export const CameraModal: React.FC<CameraModalProps> = ({
       setPreviewUrl(compressedUrl);
       stopCamera();
 
-      if (autoSend) {
-        setIsProcessing(true);
-        // Play shutter feedback
-        try {
-          const audioCtx = new (window.AudioContext || (window as any).webkitAudioContext)();
-          const osc = audioCtx.createOscillator();
-          const gain = audioCtx.createGain();
-          osc.type = 'sine';
-          osc.frequency.setValueAtTime(800, audioCtx.currentTime);
-          osc.frequency.exponentialRampToValueAtTime(400, audioCtx.currentTime + 0.1);
-          gain.gain.setValueAtTime(0.3, audioCtx.currentTime);
-          gain.gain.linearRampToValueAtTime(0.01, audioCtx.currentTime + 0.1);
-          osc.connect(gain);
-          gain.connect(audioCtx.destination);
-          osc.start();
-          osc.stop(audioCtx.currentTime + 0.1);
-        } catch {
-          // ignore audio context errors
-        }
-
-        setTimeout(() => {
-          onCaptureImage(compressedUrl);
-          setIsProcessing(false);
-          onClose();
-        }, 400);
+      setIsProcessing(true);
+      // Play subtle shutter feedback
+      try {
+        const audioCtx = new (window.AudioContext || (window as any).webkitAudioContext)();
+        const osc = audioCtx.createOscillator();
+        const gain = audioCtx.createGain();
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(800, audioCtx.currentTime);
+        osc.frequency.exponentialRampToValueAtTime(400, audioCtx.currentTime + 0.1);
+        gain.gain.setValueAtTime(0.3, audioCtx.currentTime);
+        gain.gain.linearRampToValueAtTime(0.01, audioCtx.currentTime + 0.1);
+        osc.connect(gain);
+        gain.connect(audioCtx.destination);
+        osc.start();
+        osc.stop(audioCtx.currentTime + 0.1);
+      } catch {
+        // ignore audio context errors
       }
+
+      setTimeout(() => {
+        onCaptureImage(compressedUrl);
+        setIsProcessing(false);
+        onClose();
+      }, 400);
     }
-  }, [autoSend, onCaptureImage, onClose, stopCamera]);
+  }, [onCaptureImage, onClose, stopCamera]);
 
   const handleStartCountdownOrCapture = useCallback(() => {
     if (timerSeconds === 0) {
@@ -134,40 +143,22 @@ export const CameraModal: React.FC<CameraModalProps> = ({
     }, 1000);
   }, [timerSeconds, executeCapture]);
 
-  // Voice Command Listener inside Camera Modal
+  // Listen to centralized voice capture trigger event from global voice handler
   useEffect(() => {
-    if (!isOpen || previewUrl || !stream || !isListeningVoice) {
-      speechRecognitionService.cancelListening();
-      return;
-    }
+    if (!isOpen) return;
 
-    const checkVoiceCommand = (transcript: string) => {
-      const lower = transcript.toLowerCase();
-      if (
-        lower.includes('chụp') ||
-        lower.includes('tách') ||
-        lower.includes('ok') ||
-        lower.includes('xong') ||
-        lower.includes('lấy ảnh') ||
-        lower.includes('nhìn giúp')
-      ) {
-        speechRecognitionService.cancelListening();
-        handleStartCountdownOrCapture();
-      }
+    const handleVoiceTrigger = () => {
+      console.log('[CameraModal] Received lovira:trigger-camera-capture event');
+      handleStartCountdownOrCapture();
     };
 
-    speechRecognitionService.startListening({
-      onInterimResult: checkVoiceCommand,
-      onFinalResult: checkVoiceCommand,
-      onError: () => {},
-      onEnd: () => {},
-    });
-
+    window.addEventListener('lovira:trigger-camera-capture', handleVoiceTrigger);
     return () => {
-      speechRecognitionService.cancelListening();
+      window.removeEventListener('lovira:trigger-camera-capture', handleVoiceTrigger);
     };
-  }, [isOpen, previewUrl, stream, isListeningVoice, handleStartCountdownOrCapture]);
+  }, [isOpen, handleStartCountdownOrCapture]);
 
+  // Lifecycle control on modal open / close
   useEffect(() => {
     if (isOpen) {
       startCamera();
@@ -194,14 +185,12 @@ export const CameraModal: React.FC<CameraModalProps> = ({
         const compressedUrl = resizeAndCompressImage(img);
         setPreviewUrl(compressedUrl);
         stopCamera();
-        if (autoSend) {
-          setIsProcessing(true);
-          setTimeout(() => {
-            onCaptureImage(compressedUrl);
-            setIsProcessing(false);
-            onClose();
-          }, 300);
-        }
+        setIsProcessing(true);
+        setTimeout(() => {
+          onCaptureImage(compressedUrl);
+          setIsProcessing(false);
+          onClose();
+        }, 300);
       };
       img.src = event.target?.result as string;
     };
@@ -221,14 +210,15 @@ export const CameraModal: React.FC<CameraModalProps> = ({
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/90 backdrop-blur-md animate-fade-in"
+      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/85 backdrop-blur-sm animate-fade-in"
       role="dialog"
       aria-modal="true"
     >
-      <div className="w-full max-w-lg p-5 bg-white dark:bg-[#182222] opacity-100 border-2 border-[#287C78]/40 rounded-3xl shadow-2xl space-y-4 z-10">
+      <div className="w-full max-w-lg p-5 bg-white dark:bg-[#182222] opacity-100 border-2 border-[#287C78]/40 rounded-3xl shadow-2xl space-y-3 z-10">
+        {/* Modal Header */}
         <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <div className="p-2 bg-amber-500/20 text-amber-600 rounded-xl">
+          <div className="flex items-center gap-2.5">
+            <div className="p-2 bg-amber-500/15 text-amber-600 rounded-xl">
               <Camera className="w-5 h-5" aria-hidden="true" />
             </div>
             <div>
@@ -240,51 +230,41 @@ export const CameraModal: React.FC<CameraModalProps> = ({
           </div>
           <button
             onClick={onClose}
-            className="p-2 rounded-xl text-text-secondary hover:text-text-primary focus:ring-2 focus:ring-primary focus:outline-none"
+            className="p-2 rounded-xl text-text-secondary hover:text-text-primary focus:ring-2 focus:ring-primary focus:outline-none cursor-pointer"
             aria-label="Đóng camera"
           >
             <X className="w-5 h-5" />
           </button>
         </div>
 
-        {/* Quick Toolbar: Voice Trigger & Auto Timer */}
-        {!previewUrl && stream && (
-          <div className="flex items-center justify-between bg-slate-100 dark:bg-slate-800/60 p-2.5 rounded-2xl text-xs gap-2">
-            {/* Voice command indicator */}
-            <button
-              onClick={() => setIsListeningVoice((prev) => !prev)}
-              className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl font-medium transition-colors ${
-                isListeningVoice
-                  ? 'bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30'
-                  : 'bg-surface text-text-secondary border border-default'
-              }`}
-              title="Bật/tắt chụp bằng giọng nói"
-            >
-              {isListeningVoice ? <Mic className="w-3.5 h-3.5 animate-pulse" /> : <MicOff className="w-3.5 h-3.5" />}
-              <span>{isListeningVoice ? 'Nói "Chụp" để tự chụp' : 'Mic tắt'}</span>
-            </button>
-
-            {/* Countdown timer toggle */}
-            <div className="flex items-center gap-1">
-              <span className="text-text-secondary text-[11px] font-medium hidden sm:inline">Hẹn giờ:</span>
-              {[0, 3, 5].map((sec) => (
-                <button
-                  key={sec}
-                  onClick={() => setTimerSeconds(sec)}
-                  className={`px-2 py-1 rounded-lg text-xs font-semibold transition-colors ${
-                    timerSeconds === sec
-                      ? 'bg-primary text-white'
-                      : 'bg-surface border border-default text-text-secondary hover:text-text-primary'
-                  }`}
-                >
-                  {sec === 0 ? 'Tắt' : `${sec}s`}
-                </button>
-              ))}
-            </div>
+        {/* Stable Quick Toolbar */}
+        <div className="flex items-center justify-between bg-slate-100 dark:bg-slate-800/60 px-3 py-2 rounded-2xl text-xs gap-2 min-h-[40px]">
+          <div className="flex items-center gap-1.5 text-text-secondary font-medium text-[12px]">
+            <Sparkles className="w-3.5 h-3.5 text-primary" />
+            <span>Nói "Chụp" qua nút VOICE để tự chụp</span>
           </div>
-        )}
 
-        {/* Viewfinder or Preview */}
+          {/* Countdown timer toggle */}
+          <div className="flex items-center gap-1 shrink-0">
+            <Timer className="w-3.5 h-3.5 text-text-secondary mr-0.5" />
+            {[0, 3, 5].map((sec) => (
+              <button
+                key={sec}
+                type="button"
+                onClick={() => setTimerSeconds(sec)}
+                className={`px-2 py-0.5 rounded-lg text-xs font-semibold transition-colors cursor-pointer ${
+                  timerSeconds === sec
+                    ? 'bg-primary text-white shadow-xs'
+                    : 'bg-surface border border-default text-text-secondary hover:text-text-primary'
+                }`}
+              >
+                {sec === 0 ? 'Tắt' : `${sec}s`}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {/* Viewfinder or Preview with Stable Aspect Ratio */}
         <div className="relative w-full aspect-4/3 bg-black rounded-2xl overflow-hidden flex items-center justify-center border border-default">
           {previewUrl ? (
             <img src={previewUrl} alt="Ảnh đã chụp" className="w-full h-full object-contain" />
@@ -299,8 +279,8 @@ export const CameraModal: React.FC<CameraModalProps> = ({
               />
               {/* Countdown overlay */}
               {countdown !== null && (
-                <div className="absolute inset-0 bg-black/40 backdrop-blur-xs flex items-center justify-center">
-                  <div className="w-24 h-24 rounded-full bg-amber-500 text-white font-black text-5xl flex items-center justify-center animate-ping">
+                <div className="absolute inset-0 bg-black/50 backdrop-blur-xs flex items-center justify-center">
+                  <div className="w-20 h-20 rounded-full bg-amber-500 text-white font-black text-4xl flex items-center justify-center shadow-2xl scale-100 transition-transform">
                     {countdown}
                   </div>
                 </div>
@@ -308,13 +288,14 @@ export const CameraModal: React.FC<CameraModalProps> = ({
             </>
           ) : (
             <div className="text-center p-6 space-y-3">
-              <Camera className="w-12 h-12 text-gray-500 mx-auto animate-bounce" />
+              <Camera className="w-10 h-10 text-gray-400 mx-auto" />
               <p className="text-xs text-gray-300 max-w-xs mx-auto">
-                {cameraError || 'Đang kết nối camera hoặc chưa cấp quyền truy cập.'}
+                {cameraError || 'Đang kết nối camera...'}
               </p>
               <button
+                type="button"
                 onClick={startCamera}
-                className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-primary/20 hover:bg-primary/30 text-primary-light rounded-xl text-xs font-medium"
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-primary/20 hover:bg-primary/30 text-primary-light rounded-xl text-xs font-medium cursor-pointer"
               >
                 <RefreshCw className="w-3.5 h-3.5" />
                 Thử lại camera
@@ -323,30 +304,32 @@ export const CameraModal: React.FC<CameraModalProps> = ({
           )}
         </div>
 
-        {/* Action Controls */}
-        <div className="flex items-center justify-between gap-3 pt-2">
+        {/* Action Controls - Fixed Height Row */}
+        <div className="flex items-center justify-between gap-3 pt-1 min-h-[48px]">
           {previewUrl ? (
             <>
               <button
+                type="button"
                 onClick={() => {
                   setPreviewUrl(null);
                   startCamera();
                 }}
-                className="flex items-center gap-1.5 min-h-[44px] px-4 py-2 rounded-xl border border-default text-text-primary font-medium text-xs hover:bg-slate-100 dark:hover:bg-slate-800"
+                className="flex items-center gap-1.5 min-h-[44px] px-4 py-2 rounded-xl border border-default text-text-primary font-medium text-xs hover:bg-slate-100 dark:hover:bg-slate-800 cursor-pointer"
               >
                 Chụp lại
               </button>
               <button
+                type="button"
                 onClick={handleConfirmImage}
                 disabled={isProcessing}
-                className="flex items-center gap-2 min-h-[44px] px-6 py-2.5 rounded-xl bg-primary text-white font-bold text-xs shadow-md hover:bg-primary-dark transition-colors"
+                className="flex items-center gap-2 min-h-[44px] px-5 py-2.5 rounded-xl bg-primary text-white font-bold text-xs shadow-md hover:bg-primary-dark transition-colors cursor-pointer"
               >
                 {isProcessing ? (
                   <Loader2 className="w-4 h-4 animate-spin" />
                 ) : (
                   <Sparkles className="w-4 h-4" />
                 )}
-                <span>Sử dụng ảnh này để đọc thông tin</span>
+                <span>Sử dụng ảnh này</span>
               </button>
             </>
           ) : (
@@ -362,22 +345,25 @@ export const CameraModal: React.FC<CameraModalProps> = ({
                 />
               </label>
 
-              {stream && (
-                <button
-                  onClick={handleStartCountdownOrCapture}
-                  disabled={countdown !== null}
-                  className="flex items-center gap-2 min-h-[44px] px-6 py-2.5 rounded-xl bg-amber-500 text-white font-bold text-xs shadow-md hover:bg-amber-600 active:scale-95 transition-all"
-                >
-                  <Camera className="w-4 h-4" />
-                  <span>
-                    {countdown !== null
-                      ? `Đang đếm (${countdown}s)...`
-                      : timerSeconds > 0
-                      ? `Tự chụp sau ${timerSeconds}s`
-                      : 'Chụp ảnh ngay'}
-                  </span>
-                </button>
-              )}
+              <button
+                type="button"
+                onClick={handleStartCountdownOrCapture}
+                disabled={countdown !== null || !stream}
+                className={`flex items-center gap-2 min-h-[44px] px-6 py-2.5 rounded-xl font-bold text-xs shadow-md transition-all cursor-pointer ${
+                  stream
+                    ? 'bg-amber-500 text-white hover:bg-amber-600 active:scale-95'
+                    : 'bg-slate-300 dark:bg-slate-700 text-text-muted cursor-not-allowed'
+                }`}
+              >
+                <Camera className="w-4 h-4" />
+                <span>
+                  {countdown !== null
+                    ? `Đang đếm (${countdown}s)...`
+                    : timerSeconds > 0
+                    ? `Tự chụp sau ${timerSeconds}s`
+                    : 'Chụp ảnh ngay'}
+                </span>
+              </button>
             </>
           )}
         </div>
@@ -385,4 +371,3 @@ export const CameraModal: React.FC<CameraModalProps> = ({
     </div>
   );
 };
-

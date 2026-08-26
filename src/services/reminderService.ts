@@ -13,6 +13,27 @@ function getRelativeISODate(dayOffset: number, hour: number, minute: number): st
   return d.toISOString();
 }
 
+let memoryStorage: Record<string, string> = {};
+
+function safeGetItem(key: string): string | null {
+  try {
+    if (typeof localStorage !== 'undefined') {
+      return localStorage.getItem(key);
+    }
+  } catch {}
+  return memoryStorage[key] || null;
+}
+
+function safeSetItem(key: string, value: string): void {
+  try {
+    if (typeof localStorage !== 'undefined') {
+      localStorage.setItem(key, value);
+      return;
+    }
+  } catch {}
+  memoryStorage[key] = value;
+}
+
 export const INITIAL_REMINDERS: Reminder[] = [
   {
     id: 'rem-1',
@@ -105,7 +126,7 @@ class ReminderService {
    */
   getReminders(): Reminder[] {
     try {
-      const raw = localStorage.getItem(KEY_REMINDERS);
+      const raw = safeGetItem(KEY_REMINDERS);
       if (!raw) {
         this.saveReminders(INITIAL_REMINDERS);
         return INITIAL_REMINDERS;
@@ -122,7 +143,7 @@ class ReminderService {
    */
   saveReminders(list: Reminder[]): void {
     try {
-      localStorage.setItem(KEY_REMINDERS, JSON.stringify(list));
+      safeSetItem(KEY_REMINDERS, JSON.stringify(list));
       this.notifyListeners();
     } catch (e) {
       console.error('Failed to save reminders', e);

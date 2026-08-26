@@ -22,38 +22,38 @@ export const MobileBottomNav: React.FC<MobileBottomNavProps> = ({
     switch (voiceStatus) {
       case 'listening':
         return (
-          <div className="flex flex-col items-center justify-center">
-            <Mic className="w-[26px] h-[26px] animate-pulse text-white" />
-            <span className="text-[9px] font-bold text-white mt-0.5">Đang nghe</span>
+          <div className="flex flex-col items-center justify-center h-[42px] w-[42px]">
+            <Mic className="w-[24px] h-[24px] animate-pulse text-white" />
+            <span className="text-[9px] font-bold text-white mt-0.5 whitespace-nowrap">Đang nghe</span>
           </div>
         );
       case 'processing':
         return (
-          <div className="flex flex-col items-center justify-center">
-            <Sparkles className="w-[26px] h-[26px] animate-spin text-white" />
-            <span className="text-[9px] font-bold text-white mt-0.5">Đang xử lý</span>
+          <div className="flex flex-col items-center justify-center h-[42px] w-[42px]">
+            <Sparkles className="w-[24px] h-[24px] animate-spin text-white" />
+            <span className="text-[9px] font-bold text-white mt-0.5 whitespace-nowrap">Xử lý</span>
           </div>
         );
       case 'speaking':
         return (
-          <div className="flex flex-col items-center justify-center">
-            <Volume2 className="w-[26px] h-[26px] animate-bounce text-white" />
-            <span className="text-[9px] font-bold text-white mt-0.5">Đang nói</span>
+          <div className="flex flex-col items-center justify-center h-[42px] w-[42px]">
+            <Volume2 className="w-[24px] h-[24px] text-white" />
+            <span className="text-[9px] font-bold text-white mt-0.5 whitespace-nowrap">Đang nói</span>
           </div>
         );
       case 'error':
         return (
-          <div className="flex flex-col items-center justify-center">
-            <AlertCircle className="w-[26px] h-[26px] text-white" />
-            <span className="text-[9px] font-bold text-white mt-0.5">Thử lại</span>
+          <div className="flex flex-col items-center justify-center h-[42px] w-[42px]">
+            <AlertCircle className="w-[24px] h-[24px] text-white" />
+            <span className="text-[9px] font-bold text-white mt-0.5 whitespace-nowrap">Thử lại</span>
           </div>
         );
       case 'idle':
       default:
         return (
-          <div className="flex flex-col items-center justify-center">
-            <Mic className="w-[26px] h-[26px] text-white" />
-            <span className="text-[10px] font-bold text-white tracking-wider mt-0.5">VOICE</span>
+          <div className="flex flex-col items-center justify-center h-[42px] w-[42px]">
+            <Mic className="w-[24px] h-[24px] text-white" />
+            <span className="text-[10px] font-bold text-white tracking-wider mt-0.5 whitespace-nowrap">VOICE</span>
           </div>
         );
     }
@@ -61,7 +61,7 @@ export const MobileBottomNav: React.FC<MobileBottomNavProps> = ({
 
   return (
     <nav
-      className="lg:hidden fixed bottom-0 left-0 right-0 z-40 bg-lovira-topbar backdrop-blur-md border-t border-lovira-subtle h-[calc(66px+env(safe-area-inset-bottom,0px))] pb-[env(safe-area-inset-bottom,0px)] px-2 flex items-center justify-around shadow-lg select-none"
+      className="lg:hidden fixed bottom-0 left-0 right-0 z-[99999999] bg-lovira-topbar/95 backdrop-blur-md border-t border-lovira-subtle h-[calc(66px+env(safe-area-inset-bottom,0px))] pb-[env(safe-area-inset-bottom,0px)] px-2 flex items-center justify-around shadow-2xl select-none"
       aria-label="Điều hướng di động"
     >
       {/* 1. Trang chủ */}
@@ -93,8 +93,10 @@ export const MobileBottomNav: React.FC<MobileBottomNavProps> = ({
         <button
           onClick={onVoiceClick}
           aria-label="Nói chuyện bằng giọng nói với Lovira"
-          className={`w-[60px] h-[60px] rounded-full bg-gradient-to-tr from-[#287C78] to-[#1F625F] text-white flex flex-col items-center justify-center shadow-lovira-lg ring-[5px] ring-lovira-base transition-transform active:scale-95 cursor-pointer ${
-            isVoiceActive ? 'animate-pulse ring-[#E76F91]/40' : 'hover:scale-105'
+          className={`w-[60px] h-[60px] rounded-full bg-gradient-to-tr from-[#287C78] to-[#1F625F] text-white flex flex-col items-center justify-center shadow-lovira-lg ring-[4px] ring-lovira-base transition-transform active:scale-95 cursor-pointer ${
+            isVoiceActive
+              ? 'ring-[#E76F91]/50 shadow-[0_0_15px_rgba(231,111,145,0.4)]'
+              : 'hover:scale-105'
           }`}
         >
           {getVoiceButtonContent()}

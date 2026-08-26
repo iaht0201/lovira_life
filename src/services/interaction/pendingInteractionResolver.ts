@@ -5,13 +5,83 @@ import { parseClarifiedTime } from '../../utils/dateTimeResolver.js';
 import { fetchCurrentWeatherReport } from '../weatherService.js';
 import { reminderService } from '../reminderService.js';
 import { normalizeVietnameseText, stripVietnameseAccents } from './VietnameseNormalizer.js';
-import { extractSnoozePreset } from '../localBrain/ReminderTargetResolver.js';
+import { extractSnoozePreset, extractReminderTargetKeyword } from '../localBrain/ReminderTargetResolver.js';
 
-const AFFIRMATIVE_REGEX =
-  /^(có|ừ|uh|u|ok|oke|okie|được|tạo đi|tạo giúp|tạo luôn|đồng ý|nhất trí|tạo giúp chú|tạo giúp bác|tạo giúp tôi|tạo giúp cô|làm đi|tiến hành đi|mở đi|mở giúp|xóa|xóa đi|xóa giúp|xóa luôn|chắc chắn|đồng ý xóa|ừ xóa đi|ok xóa|hoàn thành|kết thúc|đúng rồi)$/i;
+const STRICT_AFFIRMATIVE_REGEX =
+  /^(có|ừ|uh|u|ok|oke|okie|được|tạo đi|tạo giúp|tạo luôn|đồng ý|nhất trí|tạo giúp chú|tạo giúp bác|tạo giúp tôi|tạo giúp cô|làm đi|tiến hành đi|mở đi|mở giúp|xóa đi|xóa giúp|xóa luôn|chắc chắn|đồng ý xóa|ừ xóa đi|ok xóa|hoàn thành đi|kết thúc đi|đúng rồi|chính xác)$/i;
 
-const NEGATIVE_REGEX =
-  /^(không|thôi|hủy|khỏi|không cần|thôi khỏi|bỏ qua|đừng|không tạo|không xóa|đừng xóa|giữ lại|thôi nha|thôi đừng|chưa|chưa đâu)$/i;
+const STRICT_NEGATIVE_REGEX =
+  /^(không|thôi|hủy|khỏi|không cần|thôi khỏi|bỏ qua|đừng|không tạo|không xóa|đừng xóa|giữ lại|thôi nha|thôi đừng|chưa|chưa đâu|chưa hoàn thành|không hoàn thành|chưa kết thúc|không kết thúc|ko|k|thôi không xóa|không đồng ý)$/i;
+
+export function isNegativeResponse(text: string): boolean {
+  const raw = text.trim();
+  const norm = stripVietnameseAccents(normalizeVietnameseText(raw)).toLowerCase();
+
+  if (STRICT_NEGATIVE_REGEX.test(raw) || STRICT_NEGATIVE_REGEX.test(norm)) {
+    return true;
+  }
+
+  if (
+    norm.startsWith('khong ') ||
+    norm.startsWith('thoi ') ||
+    norm.startsWith('dung ') ||
+    norm.startsWith('chua ') ||
+    norm.startsWith('huy ') ||
+    norm.startsWith('ko ') ||
+    norm.startsWith('k ') ||
+    norm === 'ko' ||
+    norm === 'k' ||
+    norm.includes('khong xoa') ||
+    norm.includes('dung xoa') ||
+    norm.includes('thoi khong') ||
+    norm.includes('chua xoa') ||
+    norm.includes('chua hoan thanh') ||
+    norm.includes('khong hoan thanh') ||
+    norm.includes('khong ket thuc') ||
+    norm.includes('chua ket thuc') ||
+    norm.includes('khong dong y')
+  ) {
+    return true;
+  }
+
+  return false;
+}
+
+export function isAffirmativeResponse(text: string): boolean {
+  const raw = text.trim();
+  const norm = stripVietnameseAccents(normalizeVietnameseText(raw)).toLowerCase();
+
+  // If it's negative, it can NEVER be affirmative
+  if (isNegativeResponse(text)) {
+    return false;
+  }
+
+  if (STRICT_AFFIRMATIVE_REGEX.test(raw) || STRICT_AFFIRMATIVE_REGEX.test(norm)) {
+    return true;
+  }
+
+  const AFFIRMATIVE_PHRASES = [
+    'dong y',
+    'dong y xoa',
+    'xoa di',
+    'xoa giup',
+    'xoa luon',
+    'ok xoa',
+    'u xoa di',
+    'chac chan',
+    'hoan thanh di',
+    'ket thuc di',
+    'dung roi',
+    'chinh xac',
+    'tien hanh di',
+    'lam di',
+    'tao di',
+    'tao giup',
+    'tao luon',
+  ];
+
+  return AFFIRMATIVE_PHRASES.some((phrase) => norm === phrase || norm.startsWith(phrase + ' '));
+}
 
 export interface PendingResolution {
   resolved: boolean;
@@ -40,7 +110,17 @@ export async function resolvePendingInteraction(
   const trimmed = userText.trim();
 
   if (pending.type === 'create_session') {
-    if (AFFIRMATIVE_REGEX.test(trimmed)) {
+    // 1. Negative first
+    if (isNegativeResponse(trimmed)) {
+      return {
+        resolved: true,
+        reply: 'Dạ vâng, khi nào cần hỗ trợ việc gì bạn cứ nói với Lovira nhé!',
+        clearPending: true,
+      };
+    }
+
+    // 2. Strict affirmative second
+    if (isAffirmativeResponse(trimmed)) {
       return {
         resolved: true,
         appAction: {
@@ -51,26 +131,20 @@ export async function resolvePendingInteraction(
         clearPending: true,
       };
     }
-
-    if (NEGATIVE_REGEX.test(trimmed)) {
-      return {
-        resolved: true,
-        reply: 'Dạ vâng, khi nào cần hỗ trợ việc gì bạn cứ nói với Lovira nhé!',
-        clearPending: true,
-      };
-    }
   }
 
   if (pending.type === 'confirm_action') {
-    if (
-      AFFIRMATIVE_REGEX.test(trimmed) ||
-      trimmed.toLowerCase().includes('xóa') ||
-      trimmed.toLowerCase().includes('đồng ý') ||
-      trimmed.toLowerCase().includes('hoàn thành') ||
-      trimmed.toLowerCase().includes('kết thúc') ||
-      trimmed.toLowerCase().includes('đúng rồi') ||
-      trimmed.toLowerCase().includes('chắc chắn')
-    ) {
+    // 1. NEGATIVE FIRST (Safeguards "không xóa", "chưa hoàn thành", "không kết thúc")
+    if (isNegativeResponse(trimmed)) {
+      return {
+        resolved: true,
+        reply: pending.data.cancelReply || 'Dạ vâng, con đã giữ nguyên cho chú rồi ạ.',
+        clearPending: true,
+      };
+    }
+
+    // 2. STRICT AFFIRMATIVE SECOND (Only explicit affirmative phrases)
+    if (isAffirmativeResponse(trimmed)) {
       const appAction: AppAction | undefined = pending.data.action;
       const agentActions: AgentAction[] | undefined =
         pending.data.agentActions || (pending.data.payload?.agentActions as AgentAction[]);
@@ -82,24 +156,11 @@ export async function resolvePendingInteraction(
         clearPending: true,
       };
     }
-
-    if (
-      NEGATIVE_REGEX.test(trimmed) ||
-      trimmed.toLowerCase().includes('không') ||
-      trimmed.toLowerCase().includes('thôi') ||
-      trimmed.toLowerCase().includes('chưa') ||
-      trimmed.toLowerCase().includes('hủy')
-    ) {
-      return {
-        resolved: true,
-        reply: pending.data.cancelReply || 'Dạ vâng, con đã giữ nguyên cho chú rồi ạ.',
-        clearPending: true,
-      };
-    }
   }
 
   if (pending.type === 'clarification') {
-    if (NEGATIVE_REGEX.test(trimmed)) {
+    // 1. Negative first
+    if (isNegativeResponse(trimmed)) {
       return {
         resolved: true,
         reply: 'Dạ vâng, con đã hủy rồi ạ.',
@@ -107,6 +168,9 @@ export async function resolvePendingInteraction(
       };
     }
 
+    // 2. Action-specific resolvers FIRST
+
+    // Weather clarification
     if (pending.data.actionType === 'GET_WEATHER') {
       const origQuery = pending.data.payload?.originalQuery || '';
       const combinedText = origQuery ? `${origQuery} ${trimmed}` : trimmed;
@@ -128,32 +192,6 @@ export async function resolvePendingInteraction(
       return {
         resolved: true,
         reply: weatherResult.reply,
-        clearPending: true,
-      };
-    }
-
-    const norm = trimmed.toLowerCase();
-    if (norm.includes('camera') || norm.includes('máy ảnh') || norm.includes('chụp')) {
-      return {
-        resolved: true,
-        appAction: { type: 'OPEN_CAMERA' },
-        reply: 'Dạ, con mở camera cho chú ngay đây ạ!',
-        clearPending: true,
-      };
-    }
-    if (norm.includes('nhắc nhở') || norm.includes('lịch hẹn') || norm.includes('lịch')) {
-      return {
-        resolved: true,
-        appAction: { type: 'OPEN_REMINDERS' },
-        reply: 'Dạ, con mở trang lịch nhắc nhở cho chú đây ạ!',
-        clearPending: true,
-      };
-    }
-    if (norm.includes('trang chủ') || norm.includes('về nhà') || norm.includes('màn hình chính')) {
-      return {
-        resolved: true,
-        appAction: { type: 'GO_HOME' },
-        reply: 'Dạ, con đưa chú về trang chủ ạ!',
         clearPending: true,
       };
     }
@@ -186,9 +224,18 @@ export async function resolvePendingInteraction(
 
       // 2. Check title / keyword match against candidate list
       if (!matchedCandidate) {
+        const cleanInput = extractReminderTargetKeyword(trimmed);
+        const normClean = stripVietnameseAccents(normalizeVietnameseText(cleanInput)).toLowerCase();
+
         for (const cand of candidateList) {
           const candNorm = stripVietnameseAccents(normalizeVietnameseText(cand.title)).toLowerCase();
-          if (candNorm === normInput || candNorm.includes(normInput) || normInput.includes(candNorm)) {
+          const candClean = stripVietnameseAccents(normalizeVietnameseText(extractReminderTargetKeyword(cand.title))).toLowerCase();
+          if (
+            candNorm === normInput ||
+            candNorm.includes(normInput) ||
+            normInput.includes(candNorm) ||
+            (normClean && (candNorm.includes(normClean) || candClean.includes(normClean) || normClean.includes(candClean)))
+          ) {
             matchedCandidate = cand;
             break;
           }
@@ -198,9 +245,18 @@ export async function resolvePendingInteraction(
       // 3. Fallback: check active reminders in reminderService
       if (!matchedCandidate && candidateList.length > 0) {
         const activeReminders = reminderService.getReminders().filter((r) => r.status === 'active');
+        const cleanInput = extractReminderTargetKeyword(trimmed);
+        const normClean = stripVietnameseAccents(normalizeVietnameseText(cleanInput)).toLowerCase();
+
         for (const rem of activeReminders) {
           const remNorm = stripVietnameseAccents(normalizeVietnameseText(rem.title)).toLowerCase();
-          if (remNorm === normInput || remNorm.includes(normInput) || normInput.includes(remNorm)) {
+          const remClean = stripVietnameseAccents(normalizeVietnameseText(extractReminderTargetKeyword(rem.title))).toLowerCase();
+          if (
+            remNorm === normInput ||
+            remNorm.includes(normInput) ||
+            normInput.includes(remNorm) ||
+            (normClean && (remNorm.includes(normClean) || remClean.includes(normClean) || normClean.includes(remClean)))
+          ) {
             matchedCandidate = { id: rem.id, title: rem.title };
             break;
           }
@@ -357,6 +413,35 @@ export async function resolvePendingInteraction(
           resolved: true,
           reply: "Dạ, con chưa nghe rõ giờ. Chú có thể nói ví dụ '7 giờ 30 sáng' giúp con nhé.",
           clearPending: false,
+        };
+      }
+    }
+
+    // 3. Generic navigation fallback ONLY if no specific pending action/operation was set
+    if (!pending.data.actionType && !pending.data.payload?.operation) {
+      const norm = trimmed.toLowerCase();
+      if (norm.includes('camera') || norm.includes('máy ảnh') || norm.includes('chụp')) {
+        return {
+          resolved: true,
+          appAction: { type: 'OPEN_CAMERA' },
+          reply: 'Dạ, con mở camera cho chú ngay đây ạ!',
+          clearPending: true,
+        };
+      }
+      if (norm.includes('nhắc nhở') || norm.includes('lịch hẹn') || norm.includes('lịch')) {
+        return {
+          resolved: true,
+          appAction: { type: 'OPEN_REMINDERS' },
+          reply: 'Dạ, con mở trang lịch nhắc nhở cho chú đây ạ!',
+          clearPending: true,
+        };
+      }
+      if (norm.includes('trang chủ') || norm.includes('về nhà') || norm.includes('màn hình chính')) {
+        return {
+          resolved: true,
+          appAction: { type: 'GO_HOME' },
+          reply: 'Dạ, con đưa chú về trang chủ ạ!',
+          clearPending: true,
         };
       }
     }

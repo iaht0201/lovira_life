@@ -232,6 +232,31 @@ function AppContent() {
     sessionId: isSessionRoute ? (activeSession?.id || routeSessionId) : undefined,
   };
 
+  const handleVoiceInput = (transcript: string) => {
+    if (cameraModalOpen) {
+      const lower = transcript.toLowerCase().trim();
+      if (
+        lower.includes('chụp') ||
+        lower.includes('tách') ||
+        lower.includes('lấy ảnh') ||
+        lower.includes('xong') ||
+        lower.includes('ok') ||
+        lower === 'chụp ảnh' ||
+        lower === 'chụp hình'
+      ) {
+        console.log('[App] Voice command triggered camera capture:', transcript);
+        window.dispatchEvent(new CustomEvent('lovira:trigger-camera-capture'));
+        return;
+      }
+    }
+
+    sendInteraction(transcript, {
+      inputMode: 'voice',
+      activeTab: isSessionRoute ? 'session' : activeTab,
+      pageContext: currentGlobalPageContext,
+    });
+  };
+
   return (
     <>
       {/* 1. App Boot Splash Screen */}
@@ -248,14 +273,7 @@ function AppContent() {
         onVoiceClick={
           voiceStatus === 'listening'
             ? stopListening
-            : () =>
-                startListening((transcript) =>
-                  sendInteraction(transcript, {
-                    inputMode: 'voice',
-                    activeTab: isSessionRoute ? 'session' : activeTab,
-                    pageContext: currentGlobalPageContext,
-                  })
-                )
+            : () => startListening(handleVoiceInput)
         }
         accessibility={accessibility}
         onUpdateAccessibility={setAccessibility}
@@ -355,19 +373,7 @@ function AppContent() {
                 voiceStatus={voiceStatus}
                 interimTranscript={interimTranscript}
                 userName={userProfile?.preferredName || ''}
-                onStartVoice={() =>
-                  startListening((transcript) =>
-                    sendInteraction(transcript, {
-                      inputMode: 'voice',
-                      activeTab: 'session',
-                      pageContext: {
-                        page: 'session',
-                        pathname: location.pathname,
-                        sessionId: activeSession?.id || routeSessionId,
-                      },
-                    })
-                  )
-                }
+                onStartVoice={() => startListening(handleVoiceInput)}
                 onStopVoice={stopListening}
                 onCancelVoice={cancelListening}
               />
@@ -549,6 +555,7 @@ function AppContent() {
         audioVolume={audioVolume}
         voiceError={voiceError}
         lastResponseText={lastVoiceResponseText}
+        isCameraOpen={cameraModalOpen}
         onStopListening={stopListening}
         onCancel={() => {
           cancelListening();
@@ -557,13 +564,7 @@ function AppContent() {
         }}
         onRetry={() => {
           setVoiceError(undefined);
-          startListening((transcript) =>
-            sendInteraction(transcript, {
-              inputMode: 'voice',
-              activeTab: isSessionRoute ? 'session' : activeTab,
-              pageContext: currentGlobalPageContext,
-            })
-          );
+          startListening(handleVoiceInput);
         }}
         onOpenChat={() => navigate('/chat')}
         onStopSpeaking={stopSpeakingAudio}
