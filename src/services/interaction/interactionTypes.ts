@@ -33,6 +33,7 @@ export interface PendingInteraction {
     question?: string;
     action?: any;
     agentActions?: AgentAction[];
+    intentId?: string;
     candidates?: string[];
     suggestedReplies?: string[];
     successReply?: string;

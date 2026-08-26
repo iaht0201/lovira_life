@@ -99,7 +99,7 @@ const FILLER_HONORIFICS = [
  * Extract semantic reminder target text from query
  */
 export function extractReminderTargetKeyword(rawText: string): string {
-  let text = rawText.trim();
+  const text = rawText.trim();
   const unaccented = stripVietnameseAccents(normalizeVietnameseText(text)).toLowerCase();
 
   // Try to remove action prefixes
@@ -111,34 +111,24 @@ export function extractReminderTargetKeyword(rawText: string): string {
     }
   }
 
-  // Remove filler honorifics
-  for (const filler of FILLER_HONORIFICS) {
-    if (strippedUnaccented.endsWith(filler)) {
-      strippedUnaccented = strippedUnaccented.slice(0, -filler.length).trim();
-    }
-    if (strippedUnaccented.startsWith(filler)) {
-      strippedUnaccented = strippedUnaccented.slice(filler.length).trim();
+  // Remove filler honorifics in a loop until clean
+  let changed = true;
+  while (changed) {
+    changed = false;
+    for (const filler of FILLER_HONORIFICS) {
+      if (strippedUnaccented.endsWith(filler)) {
+        strippedUnaccented = strippedUnaccented.slice(0, -filler.length).trim();
+        changed = true;
+      }
+      if (strippedUnaccented.startsWith(filler)) {
+        strippedUnaccented = strippedUnaccented.slice(filler.length).trim();
+        changed = true;
+      }
     }
   }
 
   // Remove general nouns like "nhac nho", "lich nhac", "lich" if left at the beginning
   strippedUnaccented = strippedUnaccented.replace(/^(nhac nho|lich nhac|lich hen|lich|bao thuc)\s+/i, '').trim();
-
-  // Map stripped tokens back to rawText substring if possible, or return stripped text
-  if (!strippedUnaccented) {
-    return '';
-  }
-
-  // Find corresponding part in original rawText
-  const rawWords = text.split(/\s+/);
-  const unaccentedWords = unaccented.split(/\s+/);
-  const targetWords = strippedUnaccented.split(/\s+/);
-
-  const startIdx = unaccentedWords.findIndex((w) => w === targetWords[0]);
-  if (startIdx !== -1 && startIdx + targetWords.length <= rawWords.length) {
-    const rawTarget = rawWords.slice(startIdx, startIdx + targetWords.length).join(' ');
-    return rawTarget.replace(/^(nhắc nhở|lịch nhắc|lịch hẹn|lịch|báo thức)\s+/i, '').trim();
-  }
 
   return strippedUnaccented;
 }

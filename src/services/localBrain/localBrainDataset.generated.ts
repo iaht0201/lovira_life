@@ -1458,7 +1458,7 @@ export const LOCAL_BRAIN_DATASET_GENERATED: LocalBrainDataset = {
       "handler": "app_action_slot",
       "risk": "high",
       "priority": 106,
-      "minConfidence": 0.96,
+      "minConfidence": 0.9,
       "autoExecute": false,
       "requiresConfirmation": true,
       "requiresSession": false,
@@ -1466,6 +1466,13 @@ export const LOCAL_BRAIN_DATASET_GENERATED: LocalBrainDataset = {
         "title?"
       ],
       "examples": [
+        "xóa nhắc nhở {title}",
+        "xóa nhắc {title}",
+        "xóa lịch nhắc {title}",
+        "xóa lịch {title}",
+        "hủy nhắc nhở {title}",
+        "hủy lịch nhắc {title}",
+        "bỏ nhắc nhở {title}",
         "xóa nhắc nhở uống thuốc",
         "xóa lịch hẹn",
         "bỏ nhắc nhở này",

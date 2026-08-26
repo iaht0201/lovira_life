@@ -135,13 +135,24 @@ function tryMatchSlotTemplate(
   if (!template.includes('{') || !template.includes('}')) return null;
 
   const slotNames: string[] = [];
-  const regexStr = template.replace(/\{([a-zA-Z0-9_?]+)\}/g, (_, slotName) => {
-    slotNames.push(slotName.replace('?', ''));
-    return '(.+)';
-  });
+  const parts = template.split(/(\{.+?\})/g);
+  let regexPattern = '^';
+  for (const part of parts) {
+    if (part.startsWith('{') && part.endsWith('}')) {
+      const slotName = part.slice(1, -1).replace('?', '');
+      slotNames.push(slotName);
+      regexPattern += '(.+)';
+    } else if (part.trim()) {
+      const words = part.trim().split(/\s+/);
+      const escapedWords = words.map((w) => w.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'));
+      const joined = escapedWords.join('(?:\\s+(?:giúp|giup|hộ|ho|giùm|gium|cho)?\\s*(?:chú|chu|bác|bac|tôi|toi|anh|chị|chi|em|ông|ong|bà|ba|con)?)*\\s+');
+      regexPattern += joined;
+    }
+  }
+  regexPattern += '$';
 
   try {
-    const regex = new RegExp(`^${regexStr}$`, 'i');
+    const regex = new RegExp(regexPattern, 'i');
     const match = normalized.match(regex);
     if (match && match.length > 1) {
       const slots: Record<string, string> = {};
@@ -202,9 +213,18 @@ export function classifyLocalBrain(
       continue;
     }
 
-    // 2. If this is a scenario creation intent, DO NOT hijack if query is complex reasoning
-    if (intent.id.startsWith('scenario.create.') && isComplexReasoning) {
-      continue;
+    // 2. If this is a scenario creation intent, DO NOT hijack if query is complex reasoning or deletion/cancellation
+    if (intent.id.startsWith('scenario.create.')) {
+      if (isComplexReasoning) continue;
+      if (
+        /^(xóa|hủy|bỏ|tắt|đừng|không)/i.test(normalized) ||
+        /^(xoa|huy|bo|tat|dung|khong)/i.test(unaccented) ||
+        /^(xóa|hủy|bỏ|tắt|đừng|không)/i.test(rawNormalized) ||
+        normalized.includes('nhắc nhở') ||
+        unaccented.includes('nhac nho')
+      ) {
+        continue;
+      }
     }
 
     // 3. Negative Examples Blocker Check (First-Class False-Positive Prevention)

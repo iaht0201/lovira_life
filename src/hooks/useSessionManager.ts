@@ -702,15 +702,16 @@ export function useSessionManager({
             finalReply = execRes.reason || 'Dạ, con chưa thực hiện được thao tác này do có lỗi xảy ra.';
           }
         }
-        if (pendingRes.agentActions && pendingRes.agentActions.length > 0 && activeSession) {
+        let sessionAfterPending = activeSession;
+
+        if (pendingRes.agentActions && pendingRes.agentActions.length > 0 && sessionAfterPending) {
           const batchTrigger = inputMode === 'voice' ? 'voice' : 'chat';
-          const batchRes = applyAgentActionBatch(activeSession, pendingRes.agentActions, batchTrigger);
-          const sessionToSave = batchRes.newState;
-          setActiveSession(sessionToSave);
-          saveUpdatedSession(sessionToSave);
+          const batchRes = applyAgentActionBatch(sessionAfterPending, pendingRes.agentActions, batchTrigger);
+          sessionAfterPending = batchRes.newState;
         }
+
         if (finalReply) {
-          if (activeSession && isSessionContext) {
+          if (sessionAfterPending && isSessionContext) {
             const now = new Date().toISOString();
             const userMsg = {
               id: `msg-${Date.now()}`,
@@ -725,13 +726,16 @@ export function useSessionManager({
               text: finalReply,
               timestamp: new Date().toISOString(),
             };
-            const updatedSession = {
-              ...activeSession,
-              messages: [...activeSession.messages, userMsg, loviraMsg],
+            sessionAfterPending = {
+              ...sessionAfterPending,
+              messages: [...sessionAfterPending.messages, userMsg, loviraMsg],
               updatedAt: now,
             };
-            setActiveSession(updatedSession);
-            saveUpdatedSession(updatedSession);
+          }
+
+          if (sessionAfterPending) {
+            setActiveSession(sessionAfterPending);
+            saveUpdatedSession(sessionAfterPending);
           }
 
           showToast(finalReply);
@@ -741,6 +745,10 @@ export function useSessionManager({
             setVoiceStatus('idle');
           }
         } else {
+          if (sessionAfterPending) {
+            setActiveSession(sessionAfterPending);
+            saveUpdatedSession(sessionAfterPending);
+          }
           setVoiceStatus('idle');
         }
         setIsLoading(false);
@@ -974,9 +982,9 @@ export function useSessionManager({
         setPendingInteraction({
           type: 'confirm_action',
           data: {
-            actionType: fastRoute.intentId || fastRoute.appAction?.type || 'CONFIRM_ACTION',
             action: fastRoute.appAction,
             agentActions: fastRoute.agentActions,
+            intentId: fastRoute.intentId,
             payload: fastRoute.appAction?.payload,
             question: prompt,
             successReply: fastRoute.confirmSuccessReply,

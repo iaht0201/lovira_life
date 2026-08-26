@@ -163,6 +163,21 @@ async function runTests() {
     failed++;
   }
 
+  // D. Reminder Target Resolver with "giúp chú" prefix
+  const deleteGiupChuQuery = 'Xóa giúp chú nhắc nhở đi chợ';
+  const deleteGiupChuExec = await executeLocalBrain(deleteGiupChuQuery);
+  if (
+    deleteGiupChuExec.requiresConfirmation &&
+    deleteGiupChuExec.appAction?.type === 'DELETE_REMINDER' &&
+    deleteGiupChuExec.appAction?.payload?.title?.toLowerCase().includes('đi chợ')
+  ) {
+    console.log(`✅ [Reminder Target Resolver Pass with 'giúp chú'] "${deleteGiupChuQuery}" -> Resolved title="${deleteGiupChuExec.appAction?.payload?.title}"`);
+    passed++;
+  } else {
+    console.error(`❌ [Reminder Target Resolver Fail with 'giúp chú'] "${deleteGiupChuQuery}" ->`, deleteGiupChuExec);
+    failed++;
+  }
+
   console.log(`\n========================================`);
   console.log(`Result: ${passed}/${passed + failed} test cases passed.`);
   console.log(`========================================\n`);

@@ -213,6 +213,10 @@ export async function executeLocalBrain(
             confidence,
             needsClarification: true,
             clarificationActionType: 'DELETE_REMINDER',
+            clarificationPayload: {
+              operation: 'DELETE_REMINDER',
+              candidates: target.candidates?.map((c) => ({ id: c.id, title: c.title })) || [],
+            },
             clarificationQuestion: target.errorReason || `${da}, ${addressing} muốn xóa nhắc nhở nào cụ thể ạ?`,
             clarificationCandidates: target.candidates?.map((c) => c.title) || [],
             suggestedReplies: target.candidates?.slice(0, 3).map((c) => `Xóa "${c.title}"`) || [],
@@ -268,6 +272,10 @@ export async function executeLocalBrain(
             confidence,
             needsClarification: true,
             clarificationActionType: 'SNOOZE_REMINDER',
+            clarificationPayload: {
+              operation: 'SNOOZE_REMINDER',
+              candidates: target.candidates?.map((c) => ({ id: c.id, title: c.title })) || [],
+            },
             clarificationQuestion: target.errorReason || `${da}, ${addressing} muốn hoãn nhắc nhở nào cụ thể ạ?`,
             clarificationCandidates: target.candidates?.map((c) => c.title) || [],
             suggestedReplies: target.candidates?.slice(0, 3).map((c) => `Hoãn "${c.title}"`) || [],
@@ -316,6 +324,10 @@ export async function executeLocalBrain(
             confidence,
             needsClarification: true,
             clarificationActionType: 'COMPLETE_REMINDER',
+            clarificationPayload: {
+              operation: 'COMPLETE_REMINDER',
+              candidates: target.candidates?.map((c) => ({ id: c.id, title: c.title })) || [],
+            },
             clarificationQuestion: target.errorReason || `${da}, ${addressing} muốn đánh dấu hoàn thành nhắc nhở nào cụ thể ạ?`,
             clarificationCandidates: target.candidates?.map((c) => c.title) || [],
             suggestedReplies: target.candidates?.slice(0, 3).map((c) => `Xong "${c.title}"`) || [],
@@ -363,6 +375,10 @@ export async function executeLocalBrain(
             confidence,
             needsClarification: true,
             clarificationActionType: 'UPDATE_REMINDER',
+            clarificationPayload: {
+              operation: 'UPDATE_REMINDER',
+              candidates: target.candidates?.map((c) => ({ id: c.id, title: c.title })) || [],
+            },
             clarificationQuestion: target.errorReason || `${da}, ${addressing} muốn chỉnh sửa lịch nhắc nào cụ thể ạ?`,
             clarificationCandidates: target.candidates?.map((c) => c.title) || [],
             suggestedReplies: target.candidates?.slice(0, 3).map((c) => `Sửa "${c.title}"`) || [],
