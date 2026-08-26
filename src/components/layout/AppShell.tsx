@@ -27,7 +27,7 @@ export const AppShell: React.FC<AppShellProps> = ({
   onTabChange,
   onCreateSession,
   onOpenAuthModal,
-  userName = 'Chú Ba',
+  userName = 'Bạn',
   planName = 'Gói miễn phí',
   voiceStatus,
   onVoiceClick,

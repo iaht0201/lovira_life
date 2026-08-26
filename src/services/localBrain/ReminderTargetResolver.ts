@@ -215,7 +215,7 @@ export function extractReminderTargetKeyword(rawText: string): string {
 export function extractSnoozePreset(
   rawText: string,
   extractedSlots?: Record<string, string>
-): { preset: '10m' | '30m' | '1h' | 'tonight' | 'tomorrow'; label: string } {
+): { preset: '10m' | '15m' | '30m' | '1h' | 'tonight' | 'tomorrow'; label: string } {
   const norm = stripVietnameseAccents(normalizeVietnameseText(rawText)).toLowerCase();
 
   // 1. Check slots if present
@@ -223,6 +223,10 @@ export function extractSnoozePreset(
   const slotNorm = durationSlot ? stripVietnameseAccents(normalizeVietnameseText(durationSlot)).toLowerCase() : '';
 
   const textToCheck = `${norm} ${slotNorm}`;
+
+  if (textToCheck.includes('15 phut') || textToCheck.includes('15m') || textToCheck.includes('muoi lam phut') || textToCheck.includes('muoi lam')) {
+    return { preset: '15m', label: '15 phút' };
+  }
 
   if (textToCheck.includes('30 phut') || textToCheck.includes('nua tieng') || textToCheck.includes('nua gio') || textToCheck.includes('30m')) {
     return { preset: '30m', label: '30 phút' };

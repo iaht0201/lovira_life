@@ -8,10 +8,10 @@ import { normalizeVietnameseText, stripVietnameseAccents } from './VietnameseNor
 import { extractSnoozePreset, extractReminderTargetKeyword } from '../localBrain/ReminderTargetResolver.js';
 
 const STRICT_AFFIRMATIVE_REGEX =
-  /^(có|ừ|uh|u|ok|oke|okie|được|tạo đi|tạo giúp|tạo luôn|đồng ý|nhất trí|tạo giúp chú|tạo giúp bác|tạo giúp tôi|tạo giúp cô|làm đi|tiến hành đi|mở đi|mở giúp|xóa đi|xóa giúp|xóa luôn|chắc chắn|đồng ý xóa|ừ xóa đi|ok xóa|hoàn thành đi|kết thúc đi|đúng rồi|chính xác)$/i;
+  /^(có|ừ|ừm|ừ nè|ờ|uh|u|ok|oke|okie|dạ có|dạ được|dạ vâng|được|được chứ|được nha|tạo đi|tạo giúp|tạo luôn|đồng ý|đồng ý nha|nhất trí|tạo giúp chú|tạo giúp bác|tạo giúp tôi|tạo giúp cô|tạo giúp anh|tạo giúp chị|làm đi|làm luôn|tiến hành đi|triển luôn|mở đi|mở giúp|xóa đi|xóa giúp|xóa luôn|xóa luôn đi|chắc chắn|chắc cú|đồng ý xóa|ừ xóa đi|ok xóa|hoàn thành đi|kết thúc đi|đúng rồi|chuẩn|chính xác)$/i;
 
 const STRICT_NEGATIVE_REGEX =
-  /^(không|thôi|hủy|khỏi|không cần|thôi khỏi|bỏ qua|đừng|không tạo|không xóa|đừng xóa|giữ lại|thôi nha|thôi đừng|chưa|chưa đâu|chưa hoàn thành|không hoàn thành|chưa kết thúc|không kết thúc|ko|k|thôi không xóa|không đồng ý)$/i;
+  /^(không|thôi|hủy|hủy bỏ|hủy kèo|khỏi|không cần|thôi khỏi|bỏ qua|đừng|đừng làm|không tạo|không xóa|đừng xóa|khỏi xóa|giữ lại|giữ lại giúp|thôi nha|thôi nghen|thôi đừng|chưa|chưa đâu|chưa muốn|chưa hoàn thành|không hoàn thành|chưa kết thúc|không kết thúc|ko|k|thôi không xóa|không đồng ý|hổng phải|hổng cần|hổng muốn)$/i;
 
 export function isNegativeResponse(text: string): boolean {
   const raw = text.trim();
@@ -29,8 +29,10 @@ export function isNegativeResponse(text: string): boolean {
     norm.startsWith('huy ') ||
     norm.startsWith('ko ') ||
     norm.startsWith('k ') ||
+    norm.startsWith('hong ') ||
     norm === 'ko' ||
     norm === 'k' ||
+    norm === 'hong' ||
     norm.includes('khong xoa') ||
     norm.includes('dung xoa') ||
     norm.includes('thoi khong') ||
@@ -39,7 +41,11 @@ export function isNegativeResponse(text: string): boolean {
     norm.includes('khong hoan thanh') ||
     norm.includes('khong ket thuc') ||
     norm.includes('chua ket thuc') ||
-    norm.includes('khong dong y')
+    norm.includes('khong dong y') ||
+    norm.includes('huy bo') ||
+    norm.includes('huy keo') ||
+    norm.includes('khoi xoa') ||
+    norm.includes('giu lai')
   ) {
     return true;
   }
@@ -62,22 +68,33 @@ export function isAffirmativeResponse(text: string): boolean {
 
   const AFFIRMATIVE_PHRASES = [
     'dong y',
+    'dong y nha',
     'dong y xoa',
     'xoa di',
     'xoa giup',
     'xoa luon',
+    'xoa luon di',
     'ok xoa',
     'u xoa di',
     'chac chan',
+    'chac cu',
     'hoan thanh di',
     'ket thuc di',
     'dung roi',
     'chinh xac',
+    'chuan',
     'tien hanh di',
+    'trien luon',
     'lam di',
+    'lam luon',
     'tao di',
     'tao giup',
     'tao luon',
+    'da co',
+    'da duoc',
+    'da vang',
+    'duoc chu',
+    'duoc nha',
   ];
 
   return AFFIRMATIVE_PHRASES.some((phrase) => norm === phrase || norm.startsWith(phrase + ' '));
@@ -101,6 +118,11 @@ export async function resolvePendingInteraction(
     return { resolved: false, clearPending: false };
   }
 
+  const addressing = opts?.addressing || 'bạn';
+  const me = opts?.me || (addressing === 'bạn' ? 'Lovira' : 'con');
+  const da = opts?.da || 'Dạ';
+  const a = addressing !== 'bạn' ? ' ạ' : '';
+
   // Check expiry (e.g. valid within 3 minutes)
   const isExpired = pending.expiresAt && Date.now() > pending.expiresAt;
   if (isExpired) {
@@ -114,7 +136,7 @@ export async function resolvePendingInteraction(
     if (isNegativeResponse(trimmed)) {
       return {
         resolved: true,
-        reply: 'Dạ vâng, khi nào cần hỗ trợ việc gì bạn cứ nói với Lovira nhé!',
+        reply: `${da} vâng, khi nào cần hỗ trợ việc gì ${addressing} cứ nói với ${me} nhé!`,
         clearPending: true,
       };
     }
@@ -127,7 +149,7 @@ export async function resolvePendingInteraction(
           type: 'CREATE_SESSION',
           payload: { goal: pending.data.goal },
         },
-        reply: `Dạ, con tạo phiên hỗ trợ "${pending.data.goal}" cho bạn ngay bây giờ nhé!`,
+        reply: `${da}, ${me} tạo phiên hỗ trợ "${pending.data.goal}" cho ${addressing} ngay bây giờ nhé!`,
         clearPending: true,
       };
     }
@@ -138,7 +160,7 @@ export async function resolvePendingInteraction(
     if (isNegativeResponse(trimmed)) {
       return {
         resolved: true,
-        reply: pending.data.cancelReply || 'Dạ vâng, con đã giữ nguyên cho chú rồi ạ.',
+        reply: pending.data.cancelReply || `${da} vâng, ${me} đã giữ nguyên cho ${addressing} rồi${a}.`,
         clearPending: true,
       };
     }
@@ -152,7 +174,7 @@ export async function resolvePendingInteraction(
         resolved: true,
         appAction,
         agentActions,
-        reply: pending.data.successReply || 'Dạ vâng, con đã thực hiện thao tác rồi ạ!',
+        reply: pending.data.successReply || `${da} vâng, ${me} đã thực hiện thao tác cho ${addressing} rồi${a}!`,
         clearPending: true,
       };
     }
@@ -163,7 +185,7 @@ export async function resolvePendingInteraction(
     if (isNegativeResponse(trimmed)) {
       return {
         resolved: true,
-        reply: 'Dạ vâng, con đã hủy rồi ạ.',
+        reply: `${da} vâng, ${me} đã hủy rồi${a}.`,
         clearPending: true,
       };
     }
@@ -284,8 +306,8 @@ export async function resolvePendingInteraction(
                 intentId: 'reminder.delete',
                 payload: { reminderId, title: remTitle, skipConfirmation: true },
                 question: confirmPrompt,
-                successReply: `Dạ vâng, con đã xóa lịch nhắc "${remTitle}" cho chú rồi ạ.`,
-                cancelReply: `Dạ vâng, con giữ nguyên lịch nhắc "${remTitle}" cho chú nhé ạ.`,
+                successReply: `${da} vâng, ${me} đã xóa lịch nhắc "${remTitle}" cho ${addressing} rồi${a}.`,
+                cancelReply: `${da} vâng, ${me} giữ nguyên lịch nhắc "${remTitle}" cho ${addressing} nhé${a}.`,
                 suggestedReplies: ['Đồng ý xóa', 'Thôi không xóa'],
               },
               createdAt: new Date().toISOString(),
@@ -307,7 +329,7 @@ export async function resolvePendingInteraction(
               type: 'SNOOZE_REMINDER',
               payload: { reminderId, title: remTitle, snoozePreset: finalPreset },
             },
-            reply: `Dạ, con đã hoãn lịch nhắc "${remTitle}" ${finalLabel === '10 phút' || finalLabel === '30 phút' || finalLabel === '1 tiếng' ? `thêm ${finalLabel}` : `sang ${finalLabel}`} cho chú rồi ạ.`,
+            reply: `${da}, ${me} đã hoãn lịch nhắc "${remTitle}" ${finalLabel === '10 phút' || finalLabel === '15 phút' || finalLabel === '30 phút' || finalLabel === '1 tiếng' ? `thêm ${finalLabel}` : `sang ${finalLabel}`} cho ${addressing} rồi${a}.`,
             clearPending: true,
           };
         }
@@ -319,14 +341,14 @@ export async function resolvePendingInteraction(
               type: 'COMPLETE_REMINDER',
               payload: { reminderId, title: remTitle },
             },
-            reply: `Dạ, con đã đánh dấu hoàn thành lịch nhắc "${remTitle}" rồi ạ.`,
+            reply: `${da}, ${me} đã đánh dấu hoàn thành lịch nhắc "${remTitle}" rồi${a}.`,
             clearPending: true,
           };
         }
 
         if (op === 'UPDATE_REMINDER') {
           // Stage 2: Prompt for new time with selected reminder
-          const promptQuestion = `Dạ, chú muốn đổi lịch nhắc "${remTitle}" sang lúc mấy giờ ạ?`;
+          const promptQuestion = `${da}, ${addressing} muốn đổi lịch nhắc "${remTitle}" sang lúc mấy giờ${a}?`;
           return {
             resolved: true,
             reply: promptQuestion,
@@ -370,7 +392,7 @@ export async function resolvePendingInteraction(
               scheduledAt,
             },
           },
-          reply: `Dạ, con đã cập nhật lịch nhắc "${title}" sang lúc ${timeFormatted} (${dateFormatted}) rồi ạ.`,
+          reply: `${da}, ${me} đã cập nhật lịch nhắc "${title}" sang lúc ${timeFormatted} (${dateFormatted}) rồi${a}.`,
           clearPending: true,
         };
       }
@@ -404,14 +426,14 @@ export async function resolvePendingInteraction(
               sessionId,
             },
           },
-          reply: `Dạ, con đã lên lịch nhắc nhở "${title}" vào lúc ${timeFormatted} (${dateFormatted}) rồi ạ.`,
+          reply: `${da}, ${me} đã lên lịch nhắc nhở "${title}" vào lúc ${timeFormatted} (${dateFormatted}) rồi${a}.`,
           clearPending: true,
         };
       } else {
         // If user gave an unclear time response, retain pending clarification and ask again nicely
         return {
           resolved: true,
-          reply: "Dạ, con chưa nghe rõ giờ. Chú có thể nói ví dụ '7 giờ 30 sáng' giúp con nhé.",
+          reply: `${da}, ${me} chưa nghe rõ giờ. ${addressing} có thể nói ví dụ '7 giờ 30 sáng' giúp ${me} nhé.`,
           clearPending: false,
         };
       }
@@ -424,7 +446,7 @@ export async function resolvePendingInteraction(
         return {
           resolved: true,
           appAction: { type: 'OPEN_CAMERA' },
-          reply: 'Dạ, con mở camera cho chú ngay đây ạ!',
+          reply: `${da}, ${me} mở camera cho ${addressing} ngay đây${a}!`,
           clearPending: true,
         };
       }
@@ -432,7 +454,7 @@ export async function resolvePendingInteraction(
         return {
           resolved: true,
           appAction: { type: 'OPEN_REMINDERS' },
-          reply: 'Dạ, con mở trang lịch nhắc nhở cho chú đây ạ!',
+          reply: `${da}, ${me} mở trang lịch nhắc nhở cho ${addressing} đây${a}!`,
           clearPending: true,
         };
       }
@@ -440,7 +462,7 @@ export async function resolvePendingInteraction(
         return {
           resolved: true,
           appAction: { type: 'GO_HOME' },
-          reply: 'Dạ, con đưa chú về trang chủ ạ!',
+          reply: `${da}, ${me} đưa ${addressing} về trang chủ${a}!`,
           clearPending: true,
         };
       }

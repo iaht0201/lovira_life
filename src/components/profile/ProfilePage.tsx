@@ -44,7 +44,7 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({
 }) => {
   const [showClearConfirm, setShowClearConfirm] = useState(false);
 
-  const addressing = buildAddressing(userProfile) || 'Chú Ba';
+  const addressing = buildAddressing(userProfile) || (userProfile?.preferredName ? userProfile.preferredName : 'Bạn');
 
   const handleToggleHealthSync = () => {
     if (!userProfile) return;
@@ -153,7 +153,7 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({
           <div className="p-4 rounded-[16px] bg-lovira-input border border-lovira space-y-1">
             <span className="text-[11px] font-[700] uppercase tracking-wider text-lovira-sub">Tên gọi / Biệt danh</span>
             <p className="text-[15px] font-[700] text-lovira-title">
-              {userProfile?.preferredName || 'Chưa thiết lập (Mặc định: Chú Ba)'}
+              {userProfile?.preferredName || 'Chưa thiết lập'}
             </p>
           </div>
 

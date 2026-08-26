@@ -41,7 +41,7 @@ export const MobileSidebarDrawer: React.FC<MobileSidebarDrawerProps> = ({
   onTabChange,
   onCreateSession,
   onOpenAuthModal,
-  userName = 'Chú Ba',
+  userName = 'Bạn',
   planName = 'Gói miễn phí',
   accessibility,
   onUpdateAccessibility,

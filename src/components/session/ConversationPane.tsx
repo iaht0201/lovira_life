@@ -25,7 +25,7 @@ export const ConversationPane: React.FC<ConversationPaneProps> = ({
   isLoading = false,
   voiceStatus = 'idle',
   interimTranscript = '',
-  userName = 'Chú Ba',
+  userName = 'Bạn',
   onStartVoice,
   onStopVoice,
   onCancelVoice,

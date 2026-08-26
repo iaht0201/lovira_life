@@ -85,14 +85,9 @@ export function migrateSession(raw: any): LifeSession {
 
 class StorageService {
   /**
-   * Initializes storage with demo data if empty and increments app launch counter
+   * Initializes storage and increments app launch counter
    */
   init(): void {
-    const list = this.getSessionsList();
-    if (list.length === 0) {
-      this.saveSession(DEMO_MEDICAL_SESSION);
-      this.setActiveSessionId(DEMO_MEDICAL_SESSION.id);
-    }
     this.incrementAppOpenCount();
   }
 

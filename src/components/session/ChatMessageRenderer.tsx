@@ -53,7 +53,7 @@ function normalizeMessageContent(raw: string): string {
 
 export const ChatMessageRenderer: React.FC<ChatMessageRendererProps> = ({
   message,
-  userName = 'Chú Ba',
+  userName = 'Bạn',
   showAvatar = true,
   onSpeak,
   isSpeaking = false,

@@ -8,6 +8,7 @@ import { BrowserRouter, Routes, Route, Navigate, useLocation, useNavigate } from
 import { NavTab } from './components/layout/DesktopSidebar';
 import { storageService } from './services/storageService';
 import { AISettings, UserProfile } from './types';
+import { getUserPlanName } from './types/userProfile';
 import { getTabFromPathname, getPathForTab } from './utils/navigation';
 
 import { AccessibilityProvider, useAccessibility } from './context/AccessibilityContext';
@@ -267,8 +268,8 @@ function AppContent() {
         onTabChange={handleTabChange}
         onCreateSession={() => handleCreateSessionFromTemplate('medical')}
         onOpenAuthModal={handleOpenAuthModal}
-        userName={userProfile?.preferredName || ''}
-        planName="Gói miễn phí"
+        userName={userProfile?.preferredName || (user?.displayName ? user.displayName : '')}
+        planName={getUserPlanName(userProfile)}
         voiceStatus={voiceStatus}
         onVoiceClick={
           voiceStatus === 'listening'

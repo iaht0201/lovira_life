@@ -187,6 +187,22 @@ async function runTests() {
   console.log('\n--- E2E Pending Flow Integration Tests ---');
   const { resolvePendingInteraction } = await import('../src/services/interaction/pendingInteractionResolver.ts');
   const { validateAppAction } = await import('../src/services/interaction/appActionValidator.ts');
+  const { reminderService } = await import('../src/services/reminderService.ts');
+
+  // Seed test fixture reminders
+  reminderService.saveReminders([
+    {
+      id: 'rem-1',
+      title: 'Uống thuốc huyết áp',
+      category: 'medication',
+      scheduledAt: new Date(Date.now() + 3600000).toISOString(),
+      status: 'active',
+      priority: 'high',
+      repeat: 'daily',
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    },
+  ]);
 
   // E. P0 Test: Delete Reminder Confirmation does NOT ask confirmation a 2nd time
   const pendingConfirmDelete = {
@@ -370,7 +386,6 @@ async function runTests() {
   }
 
   // J. P0 Test: Sole reminder safety - User target "Đi khám" not found, must NOT fallback to sole reminder "Uống thuốc"
-  const { reminderService } = await import('../src/services/reminderService.ts');
   // Clear reminders and add sole reminder "Uống thuốc"
   const origReminders = reminderService.getReminders();
   reminderService.saveReminders([

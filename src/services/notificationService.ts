@@ -2,48 +2,11 @@ import { AppNotification, NotificationType } from '../types.js';
 
 const KEY_NOTIFICATIONS = 'lovira_notifications';
 
-export const INITIAL_NOTIFICATIONS: AppNotification[] = [
-  {
-    id: 'notif-1',
-    title: '💊 Uống thuốc huyết áp buổi sáng',
-    message: 'Nhớ uống 1 viên Amlodipine 5mg sau bữa ăn sáng nhen.',
-    type: 'medical',
-    timestamp: '8:00 Sáng hôm nay',
-    read: false,
-    actionTab: 'reminders',
-    priority: 'high',
-  },
-  {
-    id: 'notif-[#2]',
-    title: '🏥 Lịch tái khám Bệnh viện Chợ Rẫy',
-    message: 'Thứ 6 tuần này lúc 8:30 Sáng. Hãy chuẩn bị sẵn thẻ BHYT và sổ khám bệnh.',
-    type: 'reminder',
-    timestamp: 'Hôm qua',
-    read: false,
-    actionTab: 'reminders',
-    priority: 'high',
-  },
-  {
-    id: 'notif-[#3]',
-    title: '🌸 Chào mừng bạn đến với Lovira!',
-    message: 'Lovira sẽ luôn đồng hành trợ giúp công việc, nhắc nhở y tế và chuẩn bị giấy tờ thủ tục cho bạn.',
-    type: 'system',
-    timestamp: 'Vừa xong',
-    read: true,
-    actionTab: 'dashboard',
-    priority: 'normal',
-  },
-  {
-    id: 'notif-[#4]',
-    title: '📋 Hoàn thành danh sách đi siêu thị',
-    message: 'Đã lưu danh sách các món đồ cần mua cho tuần mới.',
-    type: 'task',
-    timestamp: '3 ngày trước',
-    read: true,
-    actionTab: 'tasks',
-    priority: 'low',
-  },
-];
+export function createInitialNotifications(userName?: string): AppNotification[] {
+  return [];
+}
+
+export const INITIAL_NOTIFICATIONS: AppNotification[] = [];
 
 class NotificationService {
   /**

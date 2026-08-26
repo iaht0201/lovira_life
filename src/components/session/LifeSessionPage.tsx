@@ -55,7 +55,7 @@ export const LifeSessionPage: React.FC<LifeSessionPageProps> = ({
   isLoading = false,
   voiceStatus = 'idle',
   interimTranscript = '',
-  userName = 'Chú Ba',
+  userName = 'Bạn',
   onStartVoice,
   onStopVoice,
   onCancelVoice,

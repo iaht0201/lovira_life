@@ -34,57 +34,11 @@ function safeSetItem(key: string, value: string): void {
   memoryStorage[key] = value;
 }
 
-export const INITIAL_REMINDERS: Reminder[] = [
-  {
-    id: 'rem-1',
-    title: '💊 Uống thuốc huyết áp buổi sáng',
-    notes: 'Uống 1 viên Amlodipine 5mg sau ăn sáng với 1 ly nước ấm.',
-    category: 'medication',
-    scheduledAt: getRelativeISODate(0, 7, 30),
-    repeat: 'daily',
-    priority: 'high',
-    status: 'active',
-    createdAt: new Date().toISOString(),
-    updatedAt: new Date().toISOString(),
-  },
-  {
-    id: 'rem-2',
-    title: '🏥 Tái khám Bệnh viện Chợ Rẫy',
-    notes: 'Khoa Tim mạch phòng 204. Nhớ mang theo thẻ BHYT, sổ khám bệnh và kết quả xét nghiệm cũ.',
-    category: 'appointment',
-    scheduledAt: getRelativeISODate(2, 8, 30),
-    repeat: 'once',
-    priority: 'high',
-    status: 'active',
-    sessionId: 'session-medical-1',
-    createdAt: new Date().toISOString(),
-    updatedAt: new Date().toISOString(),
-  },
-  {
-    id: 'rem-3',
-    title: '👨‍👩‍👧 Họp mặt gia đình cuối tuần',
-    notes: 'Ăn cơm gia đình tại nhà con gái Út, mang theo ảnh cũ chụp tuần trước.',
-    category: 'family',
-    scheduledAt: getRelativeISODate(5, 17, 0),
-    repeat: 'once',
-    priority: 'normal',
-    status: 'active',
-    createdAt: new Date().toISOString(),
-    updatedAt: new Date().toISOString(),
-  },
-  {
-    id: 'rem-4',
-    title: '💧 Uống 1 ly nước ấm & tập thể dục nhẹ',
-    notes: 'Tập các bài xoay cổ tay, cổ chân nhẹ nhàng 10 phút.',
-    category: 'general',
-    scheduledAt: getRelativeISODate(0, 15, 0),
-    repeat: 'daily',
-    priority: 'normal',
-    status: 'active',
-    createdAt: new Date().toISOString(),
-    updatedAt: new Date().toISOString(),
-  },
-];
+export function createInitialReminders(): Reminder[] {
+  return [];
+}
+
+export const INITIAL_REMINDERS: Reminder[] = [];
 
 class ReminderService {
   private listeners: Array<(reminders: Reminder[]) => void> = [];
@@ -247,6 +201,21 @@ class ReminderService {
   }
 
   /**
+   * Clear all reminders
+   */
+  clearAllReminders(): void {
+    this.saveReminders([]);
+  }
+
+  /**
+   * Reset reminders to initial dynamic samples
+   */
+  resetToInitialReminders(): void {
+    const initials = createInitialReminders();
+    this.saveReminders(initials);
+  }
+
+  /**
    * Toggle or complete reminder
    */
   toggleComplete(id: string): Reminder | null {
@@ -285,6 +254,9 @@ class ReminderService {
       switch (snoozeOption) {
         case '10m':
           newScheduled = new Date(now.getTime() + 10 * 60 * 1000);
+          break;
+        case '15m':
+          newScheduled = new Date(now.getTime() + 15 * 60 * 1000);
           break;
         case '30m':
           newScheduled = new Date(now.getTime() + 30 * 60 * 1000);

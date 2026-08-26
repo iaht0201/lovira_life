@@ -28,7 +28,7 @@ interface HomePageProps {
 }
 
 export const HomePage: React.FC<HomePageProps> = ({
-  userName = 'Chú Ba',
+  userName = 'Bạn',
   sessionsList,
   onOpenSession,
   onCreateSessionFromTemplate,

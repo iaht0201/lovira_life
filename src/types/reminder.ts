@@ -18,7 +18,7 @@ export interface Reminder {
   updatedAt: string;
 }
 
-export type SnoozePreset = '10m' | '30m' | '1h' | 'tonight' | 'tomorrow';
+export type SnoozePreset = '10m' | '15m' | '30m' | '1h' | 'tonight' | 'tomorrow';
 
 export interface AgendaItem {
   id: string;

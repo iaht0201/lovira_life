@@ -17,7 +17,7 @@ export const GlobalChatPage: React.FC<GlobalChatPageProps> = ({
   sessionsList,
   onOpenSession,
   onCreateSessionFromTemplate,
-  userName = 'Chú Ba',
+  userName = 'Bạn',
 }) => {
   const navigate = useNavigate();
 

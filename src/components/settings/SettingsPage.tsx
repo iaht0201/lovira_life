@@ -194,7 +194,7 @@ export const SettingsPage: React.FC<SettingsPageProps> = ({
               <div className="p-3.5 rounded-[14px] border border-lovira bg-lovira-input space-y-1">
                 <span className="text-[11px] font-[700] uppercase tracking-wider text-lovira-sub">Cách xưng hô:</span>
                 <span className="text-[14px] font-[700] text-lovira-title block">
-                  {addressing || 'Chú Ba'}
+                  {addressing || 'Bạn'}
                 </span>
               </div>
 

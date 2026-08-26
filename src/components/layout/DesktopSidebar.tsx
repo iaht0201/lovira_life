@@ -41,7 +41,7 @@ export const DesktopSidebar: React.FC<DesktopSidebarProps> = ({
   onTabChange,
   onCreateSession,
   onOpenAuthModal,
-  userName = 'Chú Ba',
+  userName = 'Bạn',
   planName = 'Gói miễn phí',
   isCollapsed = false,
   onToggleCollapse,

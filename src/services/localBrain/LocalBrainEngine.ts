@@ -42,6 +42,13 @@ export interface LocalBrainContext {
 
 const DAYS_OF_WEEK_VI = ['Chủ Nhật', 'Thứ Hai', 'Thứ Ba', 'Thứ Tư', 'Thứ Năm', 'Thứ Sáu', 'Thứ Bảy'];
 
+export function cleanSentence(text?: string): string {
+  if (!text) return '';
+  const cleaned = text.replace(/^[,.\s]+/, '').trim();
+  if (!cleaned) return '';
+  return cleaned.charAt(0).toUpperCase() + cleaned.slice(1);
+}
+
 /**
  * Format dynamic template variables from intent responseTemplate
  */
@@ -63,8 +70,7 @@ function formatResponseTemplate(
     }
   }
 
-  // Capitalize first letter of sentence
-  return res.charAt(0).toUpperCase() + res.slice(1);
+  return cleanSentence(res);
 }
 
 /**
@@ -73,6 +79,20 @@ function formatResponseTemplate(
  * enforcing negative blockers, confirmation policies, and slot extraction.
  */
 export async function executeLocalBrain(
+  rawText: string,
+  context?: LocalBrainContext
+): Promise<LocalBrainExecutionResult> {
+  const res = await _executeLocalBrainInternal(rawText, context);
+  if (res.reply) res.reply = cleanSentence(res.reply);
+  if (res.speech) res.speech = cleanSentence(res.speech);
+  if (res.clarificationQuestion) res.clarificationQuestion = cleanSentence(res.clarificationQuestion);
+  if (res.confirmationPrompt) res.confirmationPrompt = cleanSentence(res.confirmationPrompt);
+  if (res.confirmSuccessReply) res.confirmSuccessReply = cleanSentence(res.confirmSuccessReply);
+  if (res.confirmCancelReply) res.confirmCancelReply = cleanSentence(res.confirmCancelReply);
+  return res;
+}
+
+async function _executeLocalBrainInternal(
   rawText: string,
   context?: LocalBrainContext
 ): Promise<LocalBrainExecutionResult> {
