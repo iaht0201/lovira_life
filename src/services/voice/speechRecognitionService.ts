@@ -20,7 +20,14 @@ export class SpeechRecognitionService {
   // Silence & Timeout Timers
   private silenceTimer: any = null;
   private sessionTimeoutTimer: any = null;
+  private restartTimer: any = null;
   private hasHeardSpeech = false;
+
+  // Loop & restart protection
+  private consecutiveRapidEnds = 0;
+  private restartCount = 0;
+  private lastStartTime = 0;
+  private readonly MAX_CONSECUTIVE_RESTARTS = 3;
 
   private readonly SILENCE_COMMIT_MS = 1200; // 1.2s of silence after speaking -> auto-commit
   private readonly MAX_SESSION_MS = 15000; // 15s max listening window
@@ -39,6 +46,10 @@ export class SpeechRecognitionService {
     if (this.sessionTimeoutTimer) {
       clearTimeout(this.sessionTimeoutTimer);
       this.sessionTimeoutTimer = null;
+    }
+    if (this.restartTimer) {
+      clearTimeout(this.restartTimer);
+      this.restartTimer = null;
     }
   }
 
@@ -133,6 +144,9 @@ export class SpeechRecognitionService {
       this.isSubmitted = false;
       this.isCancelled = false;
       this.hasHeardSpeech = false;
+      this.consecutiveRapidEnds = 0;
+      this.restartCount = 0;
+      this.lastStartTime = Date.now();
       this.latestTranscript = '';
       this.confirmedTranscript = '';
       this.interimTranscript = '';
@@ -157,6 +171,7 @@ export class SpeechRecognitionService {
 
       recognition.onstart = () => {
         if (this.isCancelled) return;
+        this.lastStartTime = Date.now();
         console.log('[SpeechRecognition] Microphone active! Listening continuously...');
         this.isListening = true;
         this.events.onStart?.();
@@ -190,6 +205,7 @@ export class SpeechRecognitionService {
 
         if (combined) {
           this.hasHeardSpeech = true;
+          this.consecutiveRapidEnds = 0; // Reset rapid ends on detected voice
           this.latestTranscript = combined;
           console.log('[SpeechRecognition] Live speech:', combined);
           this.events.onInterimResult?.(combined);
@@ -222,6 +238,7 @@ export class SpeechRecognitionService {
       };
 
       recognition.onend = () => {
+        const duration = Date.now() - this.lastStartTime;
         console.log(
           '[SpeechRecognition] onend fired — hasFatalError:',
           hasFatalError,
@@ -230,10 +247,26 @@ export class SpeechRecognitionService {
           '| isSubmitted:',
           this.isSubmitted,
           '| isListening:',
-          this.isListening
+          this.isListening,
+          '| duration:',
+          duration
         );
 
         if (this.isCancelled || hasFatalError || this.isSubmitted) {
+          this.clearTimers();
+          this.events.onEnd?.();
+          return;
+        }
+
+        // Loop prevention: If speech recognition ends in less than 700ms without hearing speech
+        if (duration < 700 && !this.hasHeardSpeech) {
+          this.consecutiveRapidEnds++;
+        }
+
+        // If we hit too many rapid ends or too many empty restarts, gracefully terminate
+        if (this.consecutiveRapidEnds >= 2 || this.restartCount >= this.MAX_CONSECUTIVE_RESTARTS) {
+          console.log('[SpeechRecognition] Halting rapid restart loop to avoid thrashing.');
+          this.isListening = false;
           this.clearTimers();
           this.events.onEnd?.();
           return;
@@ -245,19 +278,27 @@ export class SpeechRecognitionService {
             // If we have text buffered, finalize it
             this.commitTranscript(this.latestTranscript);
           } else {
-            // Keep listening seamlessly (restart recognizer)
-            try {
-              console.log('[SpeechRecognition] Seamlessly restarting listener...');
-              recognition.start();
-            } catch (e) {
-              this.isListening = false;
-              this.clearTimers();
-              this.events.onEnd?.();
-            }
+            // Restart with backoff delay (350ms) to prevent synchronous loop
+            this.restartCount++;
+            if (this.restartTimer) clearTimeout(this.restartTimer);
+            this.restartTimer = setTimeout(() => {
+              if (this.isListening && !this.isCancelled && !this.isSubmitted && this.recognition) {
+                try {
+                  console.log('[SpeechRecognition] Seamlessly restarting listener (attempt ' + this.restartCount + ')...');
+                  this.lastStartTime = Date.now();
+                  this.recognition.start();
+                } catch (e) {
+                  this.isListening = false;
+                  this.clearTimers();
+                  this.events.onEnd?.();
+                }
+              }
+            }, 350);
           }
         }
       };
 
+      this.lastStartTime = Date.now();
       recognition.start();
       return true;
     } catch (e: any) {

@@ -160,19 +160,7 @@ export const CameraModal: React.FC<CameraModalProps> = ({
       onInterimResult: checkVoiceCommand,
       onFinalResult: checkVoiceCommand,
       onError: () => {},
-      onEnd: () => {
-        // restart if modal still open and stream active
-        if (isOpen && !previewUrl && isListeningVoice) {
-          try {
-            speechRecognitionService.startListening({
-              onInterimResult: checkVoiceCommand,
-              onFinalResult: checkVoiceCommand,
-            });
-          } catch {
-            // ignore
-          }
-        }
-      },
+      onEnd: () => {},
     });
 
     return () => {
