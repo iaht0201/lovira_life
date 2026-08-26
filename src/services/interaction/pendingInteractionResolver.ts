@@ -5,6 +5,7 @@ import { parseClarifiedTime } from '../../utils/dateTimeResolver.js';
 import { fetchCurrentWeatherReport } from '../weatherService.js';
 import { reminderService } from '../reminderService.js';
 import { normalizeVietnameseText, stripVietnameseAccents } from './VietnameseNormalizer.js';
+import { extractSnoozePreset } from '../localBrain/ReminderTargetResolver.js';
 
 const AFFIRMATIVE_REGEX =
   /^(có|ừ|uh|u|ok|oke|okie|được|tạo đi|tạo giúp|tạo luôn|đồng ý|nhất trí|tạo giúp chú|tạo giúp bác|tạo giúp tôi|tạo giúp cô|làm đi|tiến hành đi|mở đi|mở giúp|xóa|xóa đi|xóa giúp|xóa luôn|chắc chắn|đồng ý xóa|ừ xóa đi|ok xóa|hoàn thành|kết thúc|đúng rồi)$/i;
@@ -18,6 +19,7 @@ export interface PendingResolution {
   agentActions?: AgentAction[];
   reply?: string;
   clearPending: boolean;
+  newPending?: PendingInteraction;
 }
 
 export async function resolvePendingInteraction(
@@ -158,7 +160,7 @@ export async function resolvePendingInteraction(
 
     // Reminder CRUD operations clarification (when ambiguous candidates exist)
     const op = pending.data.actionType || pending.data.payload?.operation;
-    if (op === 'DELETE_REMINDER' || op === 'SNOOZE_REMINDER' || op === 'COMPLETE_REMINDER') {
+    if (op === 'DELETE_REMINDER' || op === 'SNOOZE_REMINDER' || op === 'COMPLETE_REMINDER' || op === 'UPDATE_REMINDER') {
       const rawCandidates = pending.data.payload?.candidates || pending.data.candidates || [];
       const candidateList: Array<{ id?: string; title: string }> = rawCandidates.map((c: any) =>
         typeof c === 'string' ? { title: c } : { id: c.id, title: c.title }
@@ -194,7 +196,7 @@ export async function resolvePendingInteraction(
       }
 
       // 3. Fallback: check active reminders in reminderService
-      if (!matchedCandidate) {
+      if (!matchedCandidate && candidateList.length > 0) {
         const activeReminders = reminderService.getReminders().filter((r) => r.status === 'active');
         for (const rem of activeReminders) {
           const remNorm = stripVietnameseAccents(normalizeVietnameseText(rem.title)).toLowerCase();
@@ -210,25 +212,46 @@ export async function resolvePendingInteraction(
         const reminderId = matchedCandidate.id;
 
         if (op === 'DELETE_REMINDER') {
+          // P0 SAFETY: Ambiguity selection resolved the target, but user must still confirm deletion!
+          const confirmPrompt = `Chú có chắc muốn xóa lịch nhắc "${remTitle}" không ạ?`;
           return {
             resolved: true,
-            appAction: {
-              type: 'DELETE_REMINDER',
-              payload: { reminderId, title: remTitle, skipConfirmation: true },
+            reply: confirmPrompt,
+            clearPending: false,
+            newPending: {
+              type: 'confirm_action',
+              data: {
+                action: {
+                  type: 'DELETE_REMINDER',
+                  payload: { reminderId, title: remTitle, skipConfirmation: true },
+                },
+                intentId: 'reminder.delete',
+                payload: { reminderId, title: remTitle, skipConfirmation: true },
+                question: confirmPrompt,
+                successReply: `Dạ vâng, con đã xóa lịch nhắc "${remTitle}" cho chú rồi ạ.`,
+                cancelReply: `Dạ vâng, con giữ nguyên lịch nhắc "${remTitle}" cho chú nhé ạ.`,
+                suggestedReplies: ['Đồng ý xóa', 'Thôi không xóa'],
+              },
+              createdAt: new Date().toISOString(),
+              expiresAt: Date.now() + 180000,
             },
-            reply: `Dạ, con đã xóa lịch nhắc "${remTitle}" cho chú rồi ạ.`,
-            clearPending: true,
           };
         }
 
         if (op === 'SNOOZE_REMINDER') {
+          const inheritedPreset = pending.data.payload?.snoozePreset || '10m';
+          const inheritedLabel = pending.data.payload?.snoozeLabel || '10 phút';
+          const querySnooze = extractSnoozePreset(trimmed);
+          const finalPreset = querySnooze.preset !== '10m' ? querySnooze.preset : inheritedPreset;
+          const finalLabel = querySnooze.preset !== '10m' ? querySnooze.label : inheritedLabel;
+
           return {
             resolved: true,
             appAction: {
               type: 'SNOOZE_REMINDER',
-              payload: { reminderId, title: remTitle, snoozePreset: '10m' },
+              payload: { reminderId, title: remTitle, snoozePreset: finalPreset },
             },
-            reply: `Dạ, con đã hoãn lịch nhắc "${remTitle}" thêm 10 phút cho chú rồi ạ.`,
+            reply: `Dạ, con đã hoãn lịch nhắc "${remTitle}" ${finalLabel === '10 phút' || finalLabel === '30 phút' || finalLabel === '1 tiếng' ? `thêm ${finalLabel}` : `sang ${finalLabel}`} cho chú rồi ạ.`,
             clearPending: true,
           };
         }
@@ -242,6 +265,30 @@ export async function resolvePendingInteraction(
             },
             reply: `Dạ, con đã đánh dấu hoàn thành lịch nhắc "${remTitle}" rồi ạ.`,
             clearPending: true,
+          };
+        }
+
+        if (op === 'UPDATE_REMINDER') {
+          // Stage 2: Prompt for new time with selected reminder
+          const promptQuestion = `Dạ, chú muốn đổi lịch nhắc "${remTitle}" sang lúc mấy giờ ạ?`;
+          return {
+            resolved: true,
+            reply: promptQuestion,
+            clearPending: false,
+            newPending: {
+              type: 'clarification',
+              data: {
+                actionType: 'UPDATE_REMINDER',
+                payload: {
+                  reminderId,
+                  title: remTitle,
+                },
+                question: promptQuestion,
+                suggestedReplies: ['7 giờ sáng', '8 giờ tối', 'ngày mai 9 giờ'],
+              },
+              createdAt: new Date().toISOString(),
+              expiresAt: Date.now() + 180000,
+            },
           };
         }
       }

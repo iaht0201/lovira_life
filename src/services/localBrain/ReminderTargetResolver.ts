@@ -134,6 +134,45 @@ export function extractReminderTargetKeyword(rawText: string): string {
 }
 
 /**
+ * Extract snooze duration preset from Vietnamese query text
+ */
+export function extractSnoozePreset(
+  rawText: string,
+  extractedSlots?: Record<string, string>
+): { preset: '10m' | '30m' | '1h' | 'tonight' | 'tomorrow'; label: string } {
+  const norm = stripVietnameseAccents(normalizeVietnameseText(rawText)).toLowerCase();
+
+  // 1. Check slots if present
+  const durationSlot = extractedSlots?.duration || extractedSlots?.time;
+  const slotNorm = durationSlot ? stripVietnameseAccents(normalizeVietnameseText(durationSlot)).toLowerCase() : '';
+
+  const textToCheck = `${norm} ${slotNorm}`;
+
+  if (textToCheck.includes('30 phut') || textToCheck.includes('nua tieng') || textToCheck.includes('nua gio') || textToCheck.includes('30m')) {
+    return { preset: '30m', label: '30 phút' };
+  }
+
+  if (textToCheck.includes('1 tieng') || textToCheck.includes('1 gio') || textToCheck.includes('mot tieng') || textToCheck.includes('mot gio') || textToCheck.includes('1h') || textToCheck.includes('60 phut')) {
+    return { preset: '1h', label: '1 tiếng' };
+  }
+
+  if (textToCheck.includes('toi nay') || textToCheck.includes('chieu toi') || textToCheck.includes('toi')) {
+    return { preset: 'tonight', label: 'tối nay' };
+  }
+
+  if (textToCheck.includes('ngay mai') || textToCheck.includes('mai') || textToCheck.includes('bua mai')) {
+    return { preset: 'tomorrow', label: 'ngày mai' };
+  }
+
+  if (textToCheck.includes('10 phut') || textToCheck.includes('10m')) {
+    return { preset: '10m', label: '10 phút' };
+  }
+
+  // Default
+  return { preset: '10m', label: '10 phút' };
+}
+
+/**
  * Resolve target reminder from reminders list
  */
 export function resolveReminderTarget(

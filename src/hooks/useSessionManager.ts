@@ -689,7 +689,9 @@ export function useSessionManager({
     if (pendingInteraction) {
       const honorifics = deduceHonorifics(userProfile, trimmedText);
       const pendingRes = await resolvePendingInteraction(trimmedText, pendingInteraction, honorifics);
-      if (pendingRes.clearPending) {
+      if (pendingRes.newPending) {
+        setPendingInteraction(pendingRes.newPending);
+      } else if (pendingRes.clearPending) {
         setPendingInteraction(null);
       }
       if (pendingRes.resolved) {
@@ -979,13 +981,23 @@ export function useSessionManager({
 
       if (fastRoute.requiresConfirmation) {
         const prompt = fastRoute.confirmationPrompt || fastRoute.reply || 'Chú có chắc muốn thực hiện thao tác này không ạ?';
+        const actionWithSkip = fastRoute.appAction
+          ? {
+              ...fastRoute.appAction,
+              payload: {
+                ...fastRoute.appAction.payload,
+                skipConfirmation: true,
+              },
+            }
+          : undefined;
+
         setPendingInteraction({
           type: 'confirm_action',
           data: {
-            action: fastRoute.appAction,
+            action: actionWithSkip,
             agentActions: fastRoute.agentActions,
             intentId: fastRoute.intentId,
-            payload: fastRoute.appAction?.payload,
+            payload: actionWithSkip?.payload,
             question: prompt,
             successReply: fastRoute.confirmSuccessReply,
             cancelReply: fastRoute.confirmCancelReply,

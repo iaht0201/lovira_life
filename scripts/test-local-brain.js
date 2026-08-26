@@ -178,6 +178,143 @@ async function runTests() {
     failed++;
   }
 
+  // 10. End-to-End PendingInteraction & Validator Tests
+  console.log('\n--- E2E Pending Flow Integration Tests ---');
+  const { resolvePendingInteraction } = await import('../src/services/interaction/pendingInteractionResolver.ts');
+  const { validateAppAction } = await import('../src/services/interaction/appActionValidator.ts');
+
+  // E. P0 Test: Delete Reminder Confirmation does NOT ask confirmation a 2nd time
+  const pendingConfirmDelete = {
+    type: 'confirm_action',
+    data: {
+      action: {
+        type: 'DELETE_REMINDER',
+        payload: { reminderId: 'rem-1', title: 'Uống thuốc huyết áp', skipConfirmation: true },
+      },
+      question: 'Chú có chắc muốn xóa lịch nhắc "Uống thuốc huyết áp" không ạ?',
+    },
+    createdAt: new Date().toISOString(),
+    expiresAt: Date.now() + 180000,
+  };
+
+  const resolvedConfirm = await resolvePendingInteraction('Đồng ý xóa', pendingConfirmDelete);
+  if (resolvedConfirm.resolved && resolvedConfirm.appAction && resolvedConfirm.appAction.payload?.skipConfirmation === true) {
+    const valRes = validateAppAction(resolvedConfirm.appAction, { page: 'dashboard', hasActiveSession: false });
+    if (valRes.valid && !valRes.action?.requiresConfirmation) {
+      console.log('✅ [P0 Pass] Delete Reminder confirmation marks skipConfirmation:true and does not re-prompt');
+      passed++;
+    } else {
+      console.error('❌ [P0 Fail] Validator re-prompted confirmation on delete:', valRes);
+      failed++;
+    }
+  } else {
+    console.error('❌ [P0 Fail] resolvePendingInteraction failed on affirmative delete:', resolvedConfirm);
+    failed++;
+  }
+
+  // F. P0 Test: Ambiguous Delete Reminder requires confirmation before deleting
+  const pendingAmbiguousDelete = {
+    type: 'clarification',
+    data: {
+      actionType: 'DELETE_REMINDER',
+      payload: {
+        operation: 'DELETE_REMINDER',
+        candidates: [
+          { id: 'rem-1', title: 'Uống thuốc buổi sáng' },
+          { id: 'rem-2', title: 'Đi khám tổng quát' },
+        ],
+      },
+    },
+    createdAt: new Date().toISOString(),
+    expiresAt: Date.now() + 180000,
+  };
+
+  const resolvedAmbiguousChoice = await resolvePendingInteraction('Uống thuốc buổi sáng', pendingAmbiguousDelete);
+  if (
+    resolvedAmbiguousChoice.resolved &&
+    !resolvedAmbiguousChoice.clearPending &&
+    resolvedAmbiguousChoice.newPending?.type === 'confirm_action' &&
+    resolvedAmbiguousChoice.newPending.data.action?.type === 'DELETE_REMINDER' &&
+    resolvedAmbiguousChoice.newPending.data.action?.payload?.reminderId === 'rem-1'
+  ) {
+    console.log('✅ [P0 Pass] Ambiguous delete choice creates confirmation prompt instead of deleting directly');
+    passed++;
+  } else {
+    console.error('❌ [P0 Fail] Ambiguous delete did not require confirmation:', resolvedAmbiguousChoice);
+    failed++;
+  }
+
+  // G. P1 Test: UPDATE_REMINDER 2-stage pending flow
+  const pendingAmbiguousUpdate = {
+    type: 'clarification',
+    data: {
+      actionType: 'UPDATE_REMINDER',
+      payload: {
+        operation: 'UPDATE_REMINDER',
+        candidates: [
+          { id: 'rem-1', title: 'Uống thuốc buổi sáng' },
+          { id: 'rem-2', title: 'Đi khám tổng quát' },
+        ],
+      },
+    },
+    createdAt: new Date().toISOString(),
+    expiresAt: Date.now() + 180000,
+  };
+
+  // Stage 1: Choose which reminder
+  const stage1Res = await resolvePendingInteraction('Uống thuốc', pendingAmbiguousUpdate);
+  if (
+    stage1Res.resolved &&
+    !stage1Res.clearPending &&
+    stage1Res.newPending?.type === 'clarification' &&
+    stage1Res.newPending.data.actionType === 'UPDATE_REMINDER' &&
+    stage1Res.newPending.data.payload?.reminderId === 'rem-1'
+  ) {
+    // Stage 2: Provide new time
+    const stage2Res = await resolvePendingInteraction('8 giờ tối', stage1Res.newPending);
+    if (
+      stage2Res.resolved &&
+      stage2Res.clearPending &&
+      stage2Res.appAction?.type === 'UPDATE_REMINDER' &&
+      stage2Res.appAction.payload?.reminderId === 'rem-1' &&
+      stage2Res.appAction.payload.scheduledAt
+    ) {
+      console.log('✅ [P1 Pass] UPDATE_REMINDER 2-stage pending flow successfully resolves target and new time');
+      passed++;
+    } else {
+      console.error('❌ [P1 Fail] Stage 2 UPDATE_REMINDER failed:', stage2Res);
+      failed++;
+    }
+  } else {
+    console.error('❌ [P1 Fail] Stage 1 UPDATE_REMINDER failed:', stage1Res);
+    failed++;
+  }
+
+  // H. P1 Test: Snooze preset extraction & dynamic handling
+  const snooze30mExec = await executeLocalBrain('Hoãn nhắc uống thuốc 30 phút');
+  if (
+    snooze30mExec.appAction?.type === 'SNOOZE_REMINDER' &&
+    snooze30mExec.appAction.payload?.snoozePreset === '30m'
+  ) {
+    console.log('✅ [P1 Pass] Snooze 30 minutes dynamically extracts preset "30m"');
+    passed++;
+  } else {
+    console.error('❌ [P1 Fail] Snooze 30 minutes failed:', snooze30mExec);
+    failed++;
+  }
+
+  const snooze1hExec = await executeLocalBrain('Báo lại nhắc nhở sau 1 tiếng');
+  if (
+    snooze1hExec.appAction?.type === 'SNOOZE_REMINDER' &&
+    snooze1hExec.appAction.payload?.snoozePreset === '1h'
+  ) {
+    console.log('✅ [P1 Pass] Snooze 1 hour dynamically extracts preset "1h"');
+    passed++;
+  } else {
+    console.error('❌ [P1 Fail] Snooze 1 hour failed:', snooze1hExec);
+    failed++;
+  }
+
   console.log(`\n========================================`);
   console.log(`Result: ${passed}/${passed + failed} test cases passed.`);
   console.log(`========================================\n`);

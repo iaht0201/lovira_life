@@ -6,7 +6,7 @@ import { reminderService } from '../reminderService.js';
 import { fetchCurrentWeatherReport } from '../weatherService.js';
 import { parseVietnameseReminderText } from '../../utils/dateTimeResolver.js';
 import { parseLocalIntent } from '../localIntentEngine.js';
-import { resolveReminderTarget } from './ReminderTargetResolver.js';
+import { resolveReminderTarget, extractSnoozePreset } from './ReminderTargetResolver.js';
 
 export interface LocalBrainExecutionResult {
   handled: boolean;
@@ -264,6 +264,7 @@ export async function executeLocalBrain(
       // Reminder Snooze (Low risk - auto execute with target extraction)
       if (intent.id === 'reminder.snooze') {
         const target = resolveReminderTarget(trimmedText, extractedSlots);
+        const snoozeInfo = extractSnoozePreset(trimmedText, extractedSlots);
         if (target.isAmbiguous) {
           return {
             handled: true,
@@ -274,6 +275,8 @@ export async function executeLocalBrain(
             clarificationActionType: 'SNOOZE_REMINDER',
             clarificationPayload: {
               operation: 'SNOOZE_REMINDER',
+              snoozePreset: snoozeInfo.preset,
+              snoozeLabel: snoozeInfo.label,
               candidates: target.candidates?.map((c) => ({ id: c.id, title: c.title })) || [],
             },
             clarificationQuestion: target.errorReason || `${da}, ${addressing} muốn hoãn nhắc nhở nào cụ thể ạ?`,
@@ -304,11 +307,11 @@ export async function executeLocalBrain(
             payload: {
               reminderId: target.reminderId,
               title: remTitle,
-              snoozePreset: '10m',
+              snoozePreset: snoozeInfo.preset,
             },
           },
-          reply: `${da}, ${me} đã hoãn lịch nhắc "${remTitle}" thêm 10 phút cho ${addressing} rồi ạ.`,
-          speech: `${da}, ${me} đã hoãn lịch nhắc "${remTitle}" thêm 10 phút rồi ạ.`,
+          reply: `${da}, ${me} đã hoãn lịch nhắc "${remTitle}" ${snoozeInfo.label === '10 phút' || snoozeInfo.label === '30 phút' || snoozeInfo.label === '1 tiếng' ? `thêm ${snoozeInfo.label}` : `sang ${snoozeInfo.label}`} cho ${addressing} rồi ạ.`,
+          speech: `${da}, ${me} đã hoãn lịch nhắc "${remTitle}" ${snoozeInfo.label === '10 phút' || snoozeInfo.label === '30 phút' || snoozeInfo.label === '1 tiếng' ? `thêm ${snoozeInfo.label}` : `sang ${snoozeInfo.label}`} rồi ạ.`,
           suggestedReplies: ['Xem tất cả lịch nhắc', 'Tạo nhắc nhở mới'],
         };
       }
