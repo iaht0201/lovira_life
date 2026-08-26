@@ -5,6 +5,28 @@ import { notificationService } from './notificationService.js';
 const KEY_REMINDERS = 'lovira_reminders';
 const NOTIFIED_CACHE = new Set<string>();
 
+const LEGACY_SEED_REMINDER_IDS = new Set(['rem-1', 'rem-2', 'rem-3', 'rem-4']);
+const LEGACY_SEED_REMINDER_TITLES = [
+  '💊 uống thuốc huyết áp buổi sáng',
+  'uống thuốc huyết áp buổi sáng',
+  '💧 uống 1 ly nước ấm & tập thể dục nhẹ',
+  'uống 1 ly nước ấm & tập thể dục nhẹ',
+  '🏥 tái khám bệnh viện chợ rẫy',
+  'tái khám bệnh viện chợ rẫy',
+  '👨‍👩‍👧 họp mặt gia đình cuối tuần',
+  'họp mặt gia đình cuối tuần',
+];
+
+function isLegacySeedReminder(r: Reminder): boolean {
+  if (!r) return true;
+  if (LEGACY_SEED_REMINDER_IDS.has(r.id)) return true;
+  const t = (r.title || '').toLowerCase().trim();
+  if (LEGACY_SEED_REMINDER_TITLES.some((seed) => t === seed || t.includes('bệnh viện chợ rẫy') || t.includes('huyết áp buổi sáng'))) {
+    return true;
+  }
+  return false;
+}
+
 // Helper to create today/future ISO date
 function getRelativeISODate(dayOffset: number, hour: number, minute: number): string {
   const d = new Date();
@@ -86,7 +108,14 @@ class ReminderService {
         return INITIAL_REMINDERS;
       }
       const list: Reminder[] = JSON.parse(raw);
-      return Array.isArray(list) ? list : INITIAL_REMINDERS;
+      if (!Array.isArray(list)) return INITIAL_REMINDERS;
+
+      // Automatically cleanse any leftover legacy demo/seed reminders
+      const cleaned = list.filter((r) => !isLegacySeedReminder(r));
+      if (cleaned.length !== list.length) {
+        this.saveReminders(cleaned);
+      }
+      return cleaned;
     } catch {
       return INITIAL_REMINDERS;
     }

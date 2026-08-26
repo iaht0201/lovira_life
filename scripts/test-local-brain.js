@@ -192,7 +192,7 @@ async function runTests() {
   // Seed test fixture reminders
   reminderService.saveReminders([
     {
-      id: 'rem-1',
+      id: 'rem-test-1',
       title: 'Uống thuốc huyết áp',
       category: 'medication',
       scheduledAt: new Date(Date.now() + 3600000).toISOString(),
@@ -210,7 +210,7 @@ async function runTests() {
     data: {
       action: {
         type: 'DELETE_REMINDER',
-        payload: { reminderId: 'rem-1', title: 'Uống thuốc huyết áp', skipConfirmation: true },
+        payload: { reminderId: 'rem-test-1', title: 'Uống thuốc huyết áp', skipConfirmation: true },
       },
       question: 'Chú có chắc muốn xóa lịch nhắc "Uống thuốc huyết áp" không ạ?',
     },

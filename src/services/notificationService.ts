@@ -2,6 +2,24 @@ import { AppNotification, NotificationType } from '../types.js';
 
 const KEY_NOTIFICATIONS = 'lovira_notifications';
 
+const LEGACY_SEED_NOTIF_IDS = new Set(['notif-1', 'notif-2', 'notif-3', 'notif-4']);
+const LEGACY_SEED_NOTIF_TITLES = [
+  'uống thuốc huyết áp buổi sáng',
+  'lịch tái khám bệnh viện chợ rẫy',
+  'chào mừng bạn đến với lovira',
+  'hoàn thành danh sách đi siêu thị',
+];
+
+function isLegacySeedNotification(n: AppNotification): boolean {
+  if (!n) return true;
+  if (LEGACY_SEED_NOTIF_IDS.has(n.id)) return true;
+  const t = (n.title || '').toLowerCase().trim();
+  if (LEGACY_SEED_NOTIF_TITLES.some((seed) => t.includes(seed))) {
+    return true;
+  }
+  return false;
+}
+
 export function createInitialNotifications(userName?: string): AppNotification[] {
   return [];
 }
@@ -19,7 +37,15 @@ class NotificationService {
         this.saveNotifications(INITIAL_NOTIFICATIONS);
         return INITIAL_NOTIFICATIONS;
       }
-      return JSON.parse(raw);
+      const list: AppNotification[] = JSON.parse(raw);
+      if (!Array.isArray(list)) return INITIAL_NOTIFICATIONS;
+
+      // Automatically cleanse any leftover legacy demo notifications
+      const cleaned = list.filter((n) => !isLegacySeedNotification(n));
+      if (cleaned.length !== list.length) {
+        this.saveNotifications(cleaned);
+      }
+      return cleaned;
     } catch {
       return INITIAL_NOTIFICATIONS;
     }
