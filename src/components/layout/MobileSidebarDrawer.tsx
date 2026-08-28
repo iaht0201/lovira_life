@@ -60,7 +60,6 @@ export const MobileSidebarDrawer: React.FC<MobileSidebarDrawerProps> = ({
     { id: 'dashboard' as NavTab, label: 'Trang chủ', icon: LayoutDashboard },
     { id: 'chat' as NavTab, label: 'Trò chuyện', icon: MessageSquare },
     { id: 'vision' as NavTab, label: 'Nhìn giúp tôi', icon: Eye },
-    { id: 'tasks' as NavTab, label: 'Việc cần làm', icon: CheckSquare },
     { id: 'history' as NavTab, label: 'Lịch sử', icon: History },
     { id: 'reminders' as NavTab, label: 'Nhắc nhở', icon: Bell },
     { id: 'settings' as NavTab, label: 'Cài đặt', icon: Settings },

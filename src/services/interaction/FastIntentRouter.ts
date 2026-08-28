@@ -102,6 +102,40 @@ export async function routeFastIntent(
   // LAYER A: Certain Local Navigation & App Controls (Confidence 1.0)
   // -------------------------------------------------------------
 
+  // A0. Vision Assistant ("Nhìn giúp tôi")
+  const isVisionPhrase =
+    normalized === 'nhìn giúp tôi' ||
+    normalized === 'nhìn giúp chú' ||
+    normalized === 'nhìn giúp con' ||
+    normalized === 'nhìn giúp' ||
+    normalized === 'mở nhìn giúp tôi' ||
+    normalized === 'bật nhìn giúp tôi' ||
+    normalized === 'mở nhìn giúp' ||
+    normalized.includes('nhìn giúp') ||
+    normalized.includes('trợ lý nhìn giúp') ||
+    normalized.includes('mở nhìn giúp') ||
+    normalized.includes('bật nhìn giúp') ||
+    normalized.includes('đọc đơn thuốc') ||
+    normalized.includes('đọc hóa đơn') ||
+    normalized.includes('đọc chữ giúp') ||
+    normalized.includes('nhận diện giúp') ||
+    normalized.includes('xem giúp tôi') ||
+    unaccented.includes('nhin giup') ||
+    unaccented.includes('doc don thuoc') ||
+    unaccented.includes('doc hoa don') ||
+    unaccented.includes('doc chu giup');
+
+  if (isVisionPhrase && !normalized.includes('không')) {
+    return {
+      handled: true,
+      confidence: 1.0,
+      source: 'exact',
+      appAction: { type: 'OPEN_VISION' },
+      reply: `${da}, ${me} mở tính năng Nhìn giúp tôi cho ${addressing} ngay đây ạ! ${addressing.charAt(0).toUpperCase() + addressing.slice(1)} có thể chụp hình để ${me} đọc chữ hoặc nhận diện đồ vật giúp nhé ạ.`,
+      speech: `${da}, ${me} mở tính năng Nhìn giúp tôi ngay đây ạ!`,
+    };
+  }
+
   // A1. Camera & Scanner (Explicit camera open commands)
   const isCameraPhrase =
     normalized === 'chụp ảnh' ||

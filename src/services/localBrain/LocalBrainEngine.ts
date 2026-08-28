@@ -171,6 +171,9 @@ async function _executeLocalBrainInternal(
       } else if (intent.id === 'nav.camera') {
         reply = `${da}, ${me} mở máy ảnh cho ${addressing} ngay đây ạ!`;
         speech = `${da}, ${me} mở máy ảnh cho ${addressing} ngay đây ạ!`;
+      } else if (intent.id === 'nav.vision') {
+        reply = `${da}, ${me} mở tính năng Nhìn giúp tôi cho ${addressing} ngay đây ạ! ${addressing.charAt(0).toUpperCase() + addressing.slice(1)} có thể chụp hình để ${me} đọc chữ hoặc nhận diện đồ vật giúp nhé ạ.`;
+        speech = `${da}, ${me} mở tính năng Nhìn giúp tôi ngay đây ạ!`;
       } else if (intent.id === 'nav.settings') {
         reply = `${da}, ${me} mở mục cài đặt cho ${addressing} đây ạ.`;
         speech = `${da}, ${me} mở mục cài đặt cho ${addressing} đây ạ.`;

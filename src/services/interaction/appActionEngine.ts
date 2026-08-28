@@ -11,6 +11,7 @@ export interface AppActionRuntimeContext {
   createSession: (goal: string) => Promise<void>;
   createSessionFromScenario?: (scenarioKey: string, goal: string) => Promise<void>;
   openCamera: () => void;
+  openVision?: () => void;
   openReminders?: () => void;
   updateAccessibilitySetting?: (key: string, value: any) => void;
   saveUpdatedSession?: (session: any) => void;
@@ -44,6 +45,14 @@ export async function applyAppAction(
 
       case 'OPEN_CAMERA':
         context.openCamera();
+        return true;
+
+      case 'OPEN_VISION':
+        if (context.openVision) {
+          context.openVision();
+        } else {
+          context.openCamera();
+        }
         return true;
 
       case 'OPEN_REMINDERS':

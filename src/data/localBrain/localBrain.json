@@ -776,6 +776,41 @@
       }
     },
     {
+      "id": "nav.vision",
+      "category": "navigation",
+      "handler": "app_action_static",
+      "risk": "none",
+      "priority": 115,
+      "minConfidence": 0.9,
+      "autoExecute": true,
+      "requiresConfirmation": false,
+      "requiresSession": false,
+      "requiredSlots": [],
+      "examples": [
+        "nhìn giúp tôi",
+        "nhìn giúp chú",
+        "nhìn giúp con",
+        "nhìn giúp",
+        "mở nhìn giúp tôi",
+        "bật nhìn giúp tôi",
+        "trợ lý nhìn giúp",
+        "mở trợ lý nhìn giúp",
+        "xem giúp tôi",
+        "đọc đơn thuốc giúp chú",
+        "đọc hóa đơn giúp chú",
+        "đọc chữ giúp tôi",
+        "nhận diện giúp tôi",
+        "lovira ơi nhìn giúp tôi"
+      ],
+      "negativeExamples": [
+        "không nhìn",
+        "không cần nhìn giúp"
+      ],
+      "appAction": {
+        "type": "OPEN_VISION"
+      }
+    },
+    {
       "id": "nav.open_current_session",
       "category": "navigation",
       "handler": "app_action",

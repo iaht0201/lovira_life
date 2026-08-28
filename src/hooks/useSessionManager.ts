@@ -669,6 +669,7 @@ export function useSessionManager({
         handleCreateSessionFromScenario(scenarioKey as ScenarioFamily, goal);
       },
       openCamera: () => setCameraModalOpen(true),
+      openVision: () => (onNavigate ? onNavigate('/vision') : setActiveTab?.('vision')),
       updateAccessibilitySetting: (key: string, value: any) => {
         setAccessibility((prev: any) => ({ ...prev, [key]: value }));
       },

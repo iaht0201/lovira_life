@@ -102,7 +102,7 @@ export const VoiceAssistantOverlay: React.FC<VoiceAssistantOverlayProps> = ({
                 ? 'Đã phát hiện tiếng nói...'
                 : isCameraOpen
                 ? 'Nói "Chụp" để chụp ảnh ngay...'
-                : 'Hãy nói nhu cầu của bạn...'}
+                : 'Nói "Nhìn giúp tôi", "Trò chuyện", "Tạo nhắc nhở"...'}
             </p>
           </div>
 

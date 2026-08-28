@@ -88,18 +88,6 @@ export const MobileBottomNav: React.FC<MobileBottomNavProps> = ({
         <span className="truncate">Chat</span>
       </button>
 
-      {/* 2.5 Nhìn giúp tôi */}
-      <button
-        onClick={() => onTabChange('vision')}
-        aria-current={activeTab === 'vision' ? 'page' : undefined}
-        className={`flex flex-col items-center justify-center min-w-[50px] min-h-[48px] px-1 py-1 rounded-[12px] text-[11px] font-[600] transition-colors cursor-pointer ${
-          activeTab === 'vision' ? 'text-[#287C78] dark:text-[#42A39E] font-[700]' : 'text-lovira-muted'
-        }`}
-      >
-        <Eye className="w-[22px] h-[22px] mb-0.5" />
-        <span className="truncate">Nhìn giúp</span>
-      </button>
-
       {/* 3. Floating Center Voice Button */}
       <div className="relative -mt-[22px] shrink-0">
         <button
@@ -115,16 +103,16 @@ export const MobileBottomNav: React.FC<MobileBottomNavProps> = ({
         </button>
       </div>
 
-      {/* 4. Việc cần làm */}
+      {/* 4. Nhìn giúp tôi */}
       <button
-        onClick={() => onTabChange('tasks')}
-        aria-current={activeTab === 'tasks' ? 'page' : undefined}
+        onClick={() => onTabChange('vision')}
+        aria-current={activeTab === 'vision' ? 'page' : undefined}
         className={`flex flex-col items-center justify-center min-w-[56px] min-h-[48px] px-1 py-1 rounded-[12px] text-[11px] font-[600] transition-colors cursor-pointer ${
-          activeTab === 'tasks' ? 'text-[#287C78] dark:text-[#42A39E] font-[700]' : 'text-lovira-muted'
+          activeTab === 'vision' ? 'text-[#287C78] dark:text-[#42A39E] font-[700]' : 'text-lovira-muted'
         }`}
       >
-        <CheckSquare className="w-[22px] h-[22px] mb-0.5" />
-        <span className="truncate">Việc cần làm</span>
+        <Eye className="w-[22px] h-[22px] mb-0.5" />
+        <span className="truncate">Nhìn giúp</span>
       </button>
 
       {/* 5. Cài đặt */}
