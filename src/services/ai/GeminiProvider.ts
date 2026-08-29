@@ -34,13 +34,34 @@ export class GeminiProvider {
     const ai = this.getClient();
     if (!ai) return null;
 
-    const { session, message, userProfile, inputMode, appContext } = options;
+    const { session, message, conversationHistory, userProfile, inputMode, appContext } = options;
     const systemPrompt = buildSessionContextPrompt({
       session,
       userProfile,
       inputMode,
       appContext,
       message,
+    });
+
+    const cleanHistory = (conversationHistory || []).filter((h) => h.text && h.text.trim());
+    if (
+      cleanHistory.length > 0 &&
+      cleanHistory[cleanHistory.length - 1].role === 'user' &&
+      cleanHistory[cleanHistory.length - 1].text.trim() === message.trim()
+    ) {
+      cleanHistory.pop();
+    }
+
+    const contents: any[] = [];
+    for (const h of cleanHistory) {
+      contents.push({
+        role: h.role === 'user' ? 'user' : 'model',
+        parts: [{ text: h.text }],
+      });
+    }
+    contents.push({
+      role: 'user',
+      parts: [{ text: message }],
     });
 
     const tools = [
@@ -149,10 +170,9 @@ export class GeminiProvider {
     const startTime = Date.now();
     const response = await ai.models.generateContent({
       model: 'gemini-2.5-flash',
-      contents: [
-        { role: 'user', parts: [{ text: `${systemPrompt}\n\nTin nhắn của người dùng: "${message}"` }] },
-      ],
+      contents,
       config: {
+        systemInstruction: systemPrompt,
         tools,
         temperature: 0.2,
       },

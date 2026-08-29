@@ -79,7 +79,7 @@ export async function callGroqAgent(
   options: GroqRequestOptions,
   apiKey: string
 ): Promise<LoviraAgentResponse | null> {
-  const { message, session, userProfile, modelOverride, inputMode, appContext } = options;
+  const { message, session, conversationHistory, userProfile, modelOverride, inputMode, appContext } = options;
   const startTime = Date.now();
 
   // Xác định mô hình mong muốn ban đầu và chuẩn hóa sang mô hình Groq chính thức
@@ -112,6 +112,21 @@ export async function callGroqAgent(
 
   const systemPrompt = `${baseContextPrompt}\n${jsonInstruction}`;
 
+  // Chuẩn bị lịch sử trò chuyện (conversationHistory)
+  const cleanHistory = (conversationHistory || []).filter((h) => h.text && h.text.trim());
+  if (
+    cleanHistory.length > 0 &&
+    cleanHistory[cleanHistory.length - 1].role === 'user' &&
+    cleanHistory[cleanHistory.length - 1].text.trim() === message.trim()
+  ) {
+    cleanHistory.pop();
+  }
+
+  const historyMessages = cleanHistory.map((h) => ({
+    role: h.role === 'user' ? 'user' : 'assistant',
+    content: h.text,
+  }));
+
   let lastError: Error | null = null;
   const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
@@ -127,6 +142,7 @@ export async function callGroqAgent(
           model: currentModel,
           messages: [
             { role: 'system', content: systemPrompt },
+            ...historyMessages,
             { role: 'user', content: message },
           ],
           response_format: { type: 'json_object' },

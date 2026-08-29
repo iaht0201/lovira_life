@@ -568,6 +568,8 @@ async function main() {
   const interactionTypesSrc = source('src/services/interaction/interactionTypes.ts');
   const storageSrc = source('src/services/storageService.ts');
   const validatorSrc = source('src/services/interaction/appActionValidator.ts');
+  const groqProviderSrc = source('src/services/ai/GroqProvider.ts');
+  const geminiProviderSrc = source('src/services/ai/GeminiProvider.ts');
 
   await test('ARCH-001', 'context-isolation', 'P0', () => {
     expectTrue(
@@ -599,12 +601,21 @@ async function main() {
   });
 
   await test('ARCH-004', 'global-chat-memory', 'P0', () => {
-    // Persisting messages is not enough: LLM fallback must receive recent global history.
-    const hasHistoryPayload =
-      /conversationHistory\s*:/.test(managerSrc) ||
-      /globalMessages\.slice\(/.test(managerSrc) ||
-      /recentGlobalMessages/.test(managerSrc);
-    expectTrue(hasHistoryPayload, 'Global chat history đang được lưu nhưng chưa thấy truyền vào /api/chat cho LLM');
+    // 1. Client must send history to /api/chat
+    const clientSendsHistory = /conversationHistory\s*:/.test(managerSrc);
+    expectTrue(clientSendsHistory, 'useSessionManager chưa truyền conversationHistory vào /api/chat');
+
+    // 2. GroqProvider must destructure conversationHistory and add to LLM messages
+    const groqConsumesHistory =
+      /conversationHistory/.test(groqProviderSrc) &&
+      /historyMessages/.test(groqProviderSrc);
+    expectTrue(groqConsumesHistory, 'GroqProvider chưa tiêu thụ conversationHistory hoặc chưa inject historyMessages vào LLM payload');
+
+    // 3. GeminiProvider must destructure conversationHistory and add to contents
+    const geminiConsumesHistory =
+      /conversationHistory/.test(geminiProviderSrc) &&
+      /cleanHistory/.test(geminiProviderSrc);
+    expectTrue(geminiConsumesHistory, 'GeminiProvider chưa tiêu thụ conversationHistory hoặc chưa inject contents vào LLM payload');
   });
 
   await test('ARCH-005', 'global-chat-memory', 'P1', () => {
@@ -613,10 +624,18 @@ async function main() {
     expectTrue(storageSrc.includes('saveGlobalChatMessages('), 'Thiếu saveGlobalChatMessages');
   });
 
-  await test('ARCH-006', 'pending-scope', 'P1', () => {
-    // A single persisted global pending can leak across /chat -> /session -> /vision.
+  await test('ARCH-006', 'pending-scope', 'P0', () => {
+    // 1. Interface check
     const hasScope = /scope\??:|conversationId\??:|pageContext\??:|sessionId\??:/.test(interactionTypesSrc.split('export interface PendingInteraction')[1] || '');
     expectTrue(hasScope, 'PendingInteraction cần scope/conversationId/page/session để tránh pending cũ bắt nhầm câu ở trang khác');
+
+    // 2. Exact session ID isolation check
+    const enforcesSessionId = /pendingInteraction\.sessionId\s*===\s*currentSessionId/.test(managerSrc);
+    expectTrue(enforcesSessionId, 'useSessionManager phải kiểm tra exact sessionId khi validate pendingInteraction scope');
+
+    // 3. Page context check for vision / easy-understand
+    const enforcesPageScope = /currentPage\s*===\s*'vision'/.test(managerSrc) && /currentPage\s*===\s*'easy-understand'/.test(managerSrc);
+    expectTrue(enforcesPageScope, 'useSessionManager phải kiểm tra exact page context khi validate vision/easy-understand pending scope');
   });
 
   await test('ARCH-007', 'global-chat-ui', 'P0', () => {
@@ -647,6 +666,16 @@ async function main() {
     const pageUnion = interactionTypesSrc.match(/export type LoviraPage\s*=([\s\S]*?);/)?.[1] || '';
     expectTrue(pageUnion.includes("'chat'"), 'LoviraPage nên khai báo chat thay vì dựa vào any');
     expectTrue(pageUnion.includes("'vision'"), 'LoviraPage nên khai báo vision');
+  });
+
+  await test('ARCH-012', 'clear-chat-pending', 'P1', () => {
+    const clearsPendingOnChatClear = /pendingInteraction\?\.scope\s*===\s*'global-chat'/.test(managerSrc) && /setPendingInteraction\(null\)/.test(managerSrc);
+    expectTrue(clearsPendingOnChatClear, 'clearGlobalChat phải xóa pendingInteraction của global-chat');
+  });
+
+  await test('ARCH-013', 'callback-dependencies', 'P1', () => {
+    const hasGlobalMsgDep = /globalMessages,[\s\S]{0,80}addGlobalMessage,[\s\S]{0,80}setPendingInteraction/.test(managerSrc);
+    expectTrue(hasGlobalMsgDep, 'sendInteraction useCallback phải đưa globalMessages, addGlobalMessage, setPendingInteraction vào dependency array');
   });
 
   // ---------------------------------------------------------------------------

@@ -1,9 +1,9 @@
 # Lovira Interaction Automation Test Report
 
-- **Started:** 2026-08-29T04:25:27.638Z
-- **Finished:** 2026-08-29T04:25:41.867Z
-- **Executed tests:** 157
-- **Passed:** 157
+- **Started:** 2026-08-29T04:45:10.342Z
+- **Finished:** 2026-08-29T04:45:24.401Z
+- **Executed tests:** 159
+- **Passed:** 159
 - **Failed:** 0
 - **Skipped:** 0
 - **Weighted suitability score:** **100/100**
@@ -22,6 +22,8 @@
 | Category | Tests | Pass | Fail | Score |
 |---|---:|---:|---:|---:|
 | ai-fallback | 4 | 4 | 0 | 100% |
+| callback-dependencies | 1 | 1 | 0 | 100% |
+| clear-chat-pending | 1 | 1 | 0 | 100% |
 | confirmation-safety | 15 | 15 | 0 | 100% |
 | context-isolation | 3 | 3 | 0 | 100% |
 | datetime | 3 | 3 | 0 | 100% |

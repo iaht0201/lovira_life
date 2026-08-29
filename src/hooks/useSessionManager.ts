@@ -118,7 +118,11 @@ export function useSessionManager({
   const clearGlobalChat = useCallback(() => {
     setGlobalMessages([]);
     storageService.clearGlobalChatMessages();
-  }, []);
+
+    if (pendingInteraction?.scope === 'global-chat' || !pendingInteraction?.scope) {
+      setPendingInteraction(null);
+    }
+  }, [pendingInteraction, setPendingInteraction]);
 
   // AbortController for cancelling stale fetch requests
   const abortControllerRef = useRef<AbortController | null>(null);
@@ -727,11 +731,14 @@ export function useSessionManager({
     // A. Check Pending Interaction FIRST
     if (pendingInteraction) {
       const pendingScope = pendingInteraction.scope || 'global-chat';
+      const currentPage = isSessionContext ? 'session' : (pageContext?.page || activeTab || 'dashboard');
+      const currentSessionId = isSessionContext ? (activeSession?.id || pageContext?.sessionId) : undefined;
+
       const isScopeValid =
-        (pendingScope === 'session' && isSessionContext) ||
+        (pendingScope === 'session' && isSessionContext && (!pendingInteraction.sessionId || pendingInteraction.sessionId === currentSessionId)) ||
         (pendingScope === 'global-chat' && !isSessionContext) ||
-        pendingScope === 'vision' ||
-        pendingScope === 'easy-understand';
+        (pendingScope === 'vision' && (currentPage === 'vision' || pageContext?.page === 'vision' || activeTab === 'vision')) ||
+        (pendingScope === 'easy-understand' && (currentPage === 'easy-understand' || pageContext?.page === 'easy-understand' || activeTab === 'easy-understand'));
 
       if (!isScopeValid) {
         setPendingInteraction(null);
@@ -1462,6 +1469,9 @@ export function useSessionManager({
     showToast,
     setVoiceStatus,
     executeValidatedAppAction,
+    globalMessages,
+    addGlobalMessage,
+    setPendingInteraction,
     speakWithVoiceStatus,
     saveUpdatedSession,
   ]);

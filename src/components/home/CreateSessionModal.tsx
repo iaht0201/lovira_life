@@ -38,13 +38,6 @@ export const CreateSessionModal: React.FC<CreateSessionModalProps> = ({
 
   const quickTopics = [
     {
-      title: '👁️ Nhìn giúp tôi (Quét & Đọc)',
-      desc: 'Đọc nhãn đơn thuốc, tài liệu & mô tả đồ vật xung quanh',
-      scenario: 'vision' as ScenarioType,
-      text: 'Quét và đọc nội dung tài liệu hình ảnh',
-      icon: Eye,
-    },
-    {
       title: '🏥 Đi khám sức khỏe',
       desc: 'Bác sĩ, phiếu khám, đơn thuốc & xét nghiệm',
       scenario: 'medical' as ScenarioType,
