@@ -9,6 +9,8 @@ export type LoviraPage =
   | 'settings'
   | 'profile'
   | 'camera'
+  | 'chat'
+  | 'vision'
   | 'other';
 
 export interface AppInteractionContext {
@@ -26,6 +28,8 @@ export type PendingInteractionType =
 
 export interface PendingInteraction {
   type: PendingInteractionType;
+  scope?: 'global-chat' | 'session' | 'vision' | 'easy-understand';
+  sessionId?: string;
   data: {
     goal?: string;
     actionType?: string;

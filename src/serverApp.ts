@@ -197,9 +197,10 @@ export function createApp() {
   // 2. Chat Endpoint with Groq, Gemini & Function Calling
   app.post('/api/chat', async (req, res) => {
     try {
-      const { session, message, isDemoMode, userProfile, provider, inputMode, appContext } = req.body as {
+      const { session, message, conversationHistory, isDemoMode, userProfile, provider, inputMode, appContext } = req.body as {
         session?: LifeSession | null;
         message: string;
+        conversationHistory?: Array<{ role: 'user' | 'assistant'; text: string }>;
         isDemoMode?: boolean;
         userProfile?: any;
         provider?: 'groq' | 'gemini' | 'demo';
@@ -225,7 +226,7 @@ export function createApp() {
         try {
           const selectedModel = selectGroqModel(message, session);
           const groqRes = await callGroqAgent(
-            { message, session, userProfile, modelOverride: selectedModel, inputMode, appContext },
+            { message, session, conversationHistory, userProfile, modelOverride: selectedModel, inputMode, appContext },
             groqKey
           );
           if (groqRes) {
@@ -241,6 +242,7 @@ export function createApp() {
         const geminiRes = await geminiProvider.chat({
           session,
           message,
+          conversationHistory,
           userProfile,
           inputMode,
           appContext,

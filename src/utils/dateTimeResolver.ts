@@ -210,8 +210,8 @@ export function parseVietnameseReminderText(
     .replace(/\d+\s*(phút|p)\s*(nữa|sau)/gi, '')
     .replace(/\d+\s*(tiếng|giờ|h)\s*(nữa|sau)/gi, '')
     .replace(/ngày\s+mai|sáng\s+mai|chiều\s+mai|tối\s+mai|trưa\s+mai|ngày\s+mốt|ngày\s+kia|hôm\s+nay|sáng\s+nay|chiều\s+nay|tối\s+nay|trưa\s+nay|hôm\s+kia/gi, '')
-    .replace(/lúc\s+\d{1,2}(:\d{2}|\s*h\s*\d{0,2}|\s*giờ\s*\d{0,2})?(\s*(sáng|trưa|chiều|tối|đêm))?/gi, '')
-    .replace(/\b\d{1,2}(:\d{2}|\s*h\s*\d{0,2}|\s*giờ\s*\d{0,2})?(\s*(sáng|trưa|chiều|tối|đêm))/gi, '')
+    .replace(/(lúc\s+)?\d{1,2}(:\d{2}|\s*h\s*\d{0,2}|\s*giờ\s*\d{0,2})?(\s*(sáng|trưa|chiều|tối|đêm))?/gi, '')
+    .replace(/\b\d{1,2}\s*(h|giờ)\b(\s*\d{1,2})?/gi, '')
     .replace(/lúc\s+(sáng|trưa|chiều|tối|đêm)/gi, '')
     .replace(/\b(sáng|trưa|chiều|tối|đêm)\b/gi, '')
     .replace(/\b(hãy\s+)?(nhắc|lên\s+lịch|đặt\s+lịch|hẹn\s+giờ|báo\s+thức|nhắc\s+nhở)\b(\s*(cho\s+)?(chú|bác|tôi|cô|bà|anh|em|mình|nhé|nha|giúp))?/gi, '')
@@ -551,26 +551,26 @@ export function extractLeadTimeFromText(text: string): {
 
   if (
     lower.includes('đúng giờ') ||
-    lower.includes('đúng ') ||
     lower.includes('nhắc đúng') ||
-    lower.startsWith('đúng')
+    lower.startsWith('đúng ') ||
+    lower === 'đúng'
   ) {
     return { hasLeadTime: true, leadMinutes: 0, isExact: true };
   }
 
-  const minsMatch = lower.match(/(trước\s*)?(\d+)\s*(phút|p)/);
+  const minsMatch = lower.match(/(trước\s*|truoc\s*)(\d+)\s*(phút|p)/i);
   if (minsMatch) {
     return { hasLeadTime: true, leadMinutes: parseInt(minsMatch[2], 10), isExact: false };
   }
 
-  const hoursMatch = lower.match(/(trước\s*)?(\d+)\s*(tiếng|giờ|h)/);
+  const hoursMatch = lower.match(/(trước\s*|truoc\s*)(\d+)\s*(tiếng|giờ|h)/i);
   if (hoursMatch) {
     return { hasLeadTime: true, leadMinutes: parseInt(hoursMatch[2], 10) * 60, isExact: false };
   }
 
-  if (lower.includes('trước 15')) return { hasLeadTime: true, leadMinutes: 15, isExact: false };
-  if (lower.includes('trước 30')) return { hasLeadTime: true, leadMinutes: 30, isExact: false };
-  if (lower.includes('trước 1 tiếng') || lower.includes('trước 1 giờ')) return { hasLeadTime: true, leadMinutes: 60, isExact: false };
+  if (lower.includes('trước 15') || lower.includes('truoc 15')) return { hasLeadTime: true, leadMinutes: 15, isExact: false };
+  if (lower.includes('trước 30') || lower.includes('truoc 30')) return { hasLeadTime: true, leadMinutes: 30, isExact: false };
+  if (lower.includes('trước 1 tiếng') || lower.includes('trước 1 giờ') || lower.includes('truoc 1 tieng')) return { hasLeadTime: true, leadMinutes: 60, isExact: false };
 
   return { hasLeadTime: false, leadMinutes: 0, isExact: false };
 }

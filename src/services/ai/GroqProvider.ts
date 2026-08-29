@@ -68,6 +68,7 @@ export function normalizeGroqModel(modelInput?: string): GroqModel {
 export interface GroqRequestOptions {
   message: string;
   session?: LifeSession | null;
+  conversationHistory?: { role: string; text: string }[];
   userProfile?: UserProfile | null;
   modelOverride?: string;
   inputMode?: InteractionInputMode;

@@ -217,7 +217,7 @@ export const GlobalChatPage: React.FC<GlobalChatPageProps> = ({
 
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
           <button
-            onClick={() => onCreateSessionFromTemplate('medical')}
+            onClick={() => handleQuickReply('Tạo phiên hỗ trợ đi khám bệnh')}
             className="p-3.5 rounded-[16px] bg-lovira-card hover:bg-lovira-card-hover border border-lovira text-left flex items-center gap-3 transition-all cursor-pointer group shadow-2xs"
           >
             <div className="w-9 h-9 rounded-xl bg-red-500/10 text-red-500 flex items-center justify-center shrink-0">
@@ -232,7 +232,7 @@ export const GlobalChatPage: React.FC<GlobalChatPageProps> = ({
           </button>
 
           <button
-            onClick={() => onCreateSessionFromTemplate('shopping')}
+            onClick={() => handleQuickReply('Tạo phiên hỗ trợ đi chợ mua sắm')}
             className="p-3.5 rounded-[16px] bg-lovira-card hover:bg-lovira-card-hover border border-lovira text-left flex items-center gap-3 transition-all cursor-pointer group shadow-2xs"
           >
             <div className="w-9 h-9 rounded-xl bg-[#E4F0EF] dark:bg-[#203A39] text-[#287C78] dark:text-[#42A39E] flex items-center justify-center shrink-0">
@@ -247,7 +247,7 @@ export const GlobalChatPage: React.FC<GlobalChatPageProps> = ({
           </button>
 
           <button
-            onClick={() => onCreateSessionFromTemplate('administrative')}
+            onClick={() => handleQuickReply('Tạo phiên hỗ trợ làm thủ tục giấy tờ')}
             className="p-3.5 rounded-[16px] bg-lovira-card hover:bg-lovira-card-hover border border-lovira text-left flex items-center gap-3 transition-all cursor-pointer group shadow-2xs"
           >
             <div className="w-9 h-9 rounded-xl bg-amber-500/10 text-amber-500 flex items-center justify-center shrink-0">

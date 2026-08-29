@@ -26,6 +26,7 @@ export class GeminiProvider {
   async chat(options: {
     session?: LifeSession | null;
     message: string;
+    conversationHistory?: { role: string; text: string }[];
     userProfile?: UserProfile | null;
     inputMode?: InteractionInputMode;
     appContext?: AppInteractionContext;

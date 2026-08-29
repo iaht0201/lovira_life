@@ -153,13 +153,15 @@ export const LOCAL_BRAIN_DATASET_GENERATED: LocalBrainDataset = {
         "chào con giúp chú",
         "chào con nghen",
         "alo con nghe không",
-        "lovira ơi nghe chú nói không"
+        "lovira ơi nghe chú nói không",
+        "alo lovira"
       ],
       "negativeExamples": [
         "chú vừa chào bác sĩ rồi",
         "gửi lời chào cho con gái chú",
         "chào bác sĩ giúp chú",
-        "lời chào trong thư viết thế nào"
+        "lời chào trong thư viết thế nào",
+        "chào con nha"
       ],
       "responseTemplate": "{da}, {me} chào {addressing} ạ! Hôm nay {addressing} muốn {me} giúp gì?"
     },
@@ -269,7 +271,9 @@ export const LOCAL_BRAIN_DATASET_GENERATED: LocalBrainDataset = {
         "giúp chú hẹn gặp lại",
         "giúp tôi hẹn gặp lại",
         "làm ơn hẹn gặp lại",
-        "bạn ơi hẹn gặp lại"
+        "bạn ơi hẹn gặp lại",
+        "chào con nha",
+        "tạm biệt con nhé"
       ],
       "negativeExamples": [
         "mở phiên tạm biệt",
@@ -351,7 +355,10 @@ export const LOCAL_BRAIN_DATASET_GENERATED: LocalBrainDataset = {
         "lovira làm được gì nha",
         "lovira làm được gì giúp chú",
         "lovira làm được gì giúp tôi",
-        "lovira ơi bạn có thể làm gì"
+        "lovira ơi bạn có thể làm gì",
+        "lovira giúp được gì",
+        "con có thể giúp chú việc gì",
+        "ứng dụng này làm được gì"
       ],
       "negativeExamples": [
         "làm giúp chú giấy tờ",
@@ -393,7 +400,8 @@ export const LOCAL_BRAIN_DATASET_GENERATED: LocalBrainDataset = {
         "làm ơn lovira là gì",
         "bạn ơi lovira là gì",
         "lovira là gì nhé",
-        "lovira là gì với"
+        "lovira là gì với",
+        "lovira là ai"
       ],
       "negativeExamples": [],
       "responseTemplate": "{da}, {me} là Lovira, trợ lý hỗ trợ {addressing} xử lý công việc đời sống, lịch nhắc và các phiên hướng dẫn trong ứng dụng ạ."
@@ -451,7 +459,8 @@ export const LOCAL_BRAIN_DATASET_GENERATED: LocalBrainDataset = {
         "lovira ơi về màn hình chính",
         "con ơi về màn hình chính",
         "giúp chú về màn hình chính",
-        "giúp tôi về màn hình chính"
+        "giúp tôi về màn hình chính",
+        "cho chú về nhà"
       ],
       "negativeExamples": [
         "chú về nhà rồi",
@@ -573,7 +582,9 @@ export const LOCAL_BRAIN_DATASET_GENERATED: LocalBrainDataset = {
         "mở lịch hẹn giúp tôi",
         "lovira ơi xem danh sách nhắc nhở",
         "con ơi xem danh sách nhắc nhở",
-        "giúp chú xem danh sách nhắc nhở"
+        "giúp chú xem danh sách nhắc nhở",
+        "xem lịch nhắc",
+        "cho chú xem các nhắc nhở"
       ],
       "negativeExamples": [
         "hôm nay có nhắc nhở gì",
@@ -689,7 +700,8 @@ export const LOCAL_BRAIN_DATASET_GENERATED: LocalBrainDataset = {
         "bạn ơi hồ sơ của tôi",
         "hồ sơ của tôi nhé",
         "hồ sơ của tôi với",
-        "hồ sơ của tôi nha"
+        "hồ sơ của tôi nha",
+        "xem thông tin của chú"
       ],
       "negativeExamples": [
         "hồ sơ xin việc của chú",
@@ -777,10 +789,50 @@ export const LOCAL_BRAIN_DATASET_GENERATED: LocalBrainDataset = {
         "không mở camera",
         "chụp ảnh xong rồi",
         "chụp hình rồi",
-        "chưa chụp ảnh"
+        "chưa chụp ảnh",
+        "chú không muốn mở camera",
+        "không cần chụp ảnh nữa",
+        "không muốn mở camera",
+        "không cần chụp ảnh",
+        "không chụp ảnh nữa"
       ],
       "appAction": {
         "type": "OPEN_CAMERA"
+      }
+    },
+    {
+      "id": "nav.vision",
+      "category": "navigation",
+      "handler": "app_action_static",
+      "risk": "none",
+      "priority": 115,
+      "minConfidence": 0.9,
+      "autoExecute": true,
+      "requiresConfirmation": false,
+      "requiresSession": false,
+      "requiredSlots": [],
+      "examples": [
+        "nhìn giúp tôi",
+        "nhìn giúp chú",
+        "nhìn giúp con",
+        "nhìn giúp",
+        "mở nhìn giúp tôi",
+        "bật nhìn giúp tôi",
+        "trợ lý nhìn giúp",
+        "mở trợ lý nhìn giúp",
+        "xem giúp tôi",
+        "đọc đơn thuốc giúp chú",
+        "đọc hóa đơn giúp chú",
+        "đọc chữ giúp tôi",
+        "nhận diện giúp tôi",
+        "lovira ơi nhìn giúp tôi"
+      ],
+      "negativeExamples": [
+        "không nhìn",
+        "không cần nhìn giúp"
+      ],
+      "appAction": {
+        "type": "OPEN_VISION"
       }
     },
     {
@@ -915,7 +967,9 @@ export const LOCAL_BRAIN_DATASET_GENERATED: LocalBrainDataset = {
         "bây giờ là mấy giờ giúp tôi",
         "lovira ơi xem giờ",
         "con ơi xem giờ",
-        "giúp chú xem giờ"
+        "giúp chú xem giờ",
+        "giờ là mấy giờ",
+        "hiện tại mấy giờ"
       ],
       "negativeExamples": [
         "công ty mấy giờ mở cửa",
@@ -969,7 +1023,8 @@ export const LOCAL_BRAIN_DATASET_GENERATED: LocalBrainDataset = {
         "giúp chú thứ mấy rồi",
         "giúp tôi thứ mấy rồi",
         "làm ơn thứ mấy rồi",
-        "bạn ơi thứ mấy rồi"
+        "bạn ơi thứ mấy rồi",
+        "nay thứ mấy"
       ],
       "negativeExamples": [
         "phỏng vấn thứ mấy",
@@ -1096,7 +1151,8 @@ export const LOCAL_BRAIN_DATASET_GENERATED: LocalBrainDataset = {
         "hôm nay tôi có việc gì với",
         "bữa ni tui có lịch chi không",
         "hôm ni có hẹn chi không",
-        "bữa nay chú có lịch gì"
+        "bữa nay chú có lịch gì",
+        "hôm nay chú có việc gì"
       ],
       "negativeExamples": [
         "tạo lịch hôm nay",
@@ -1155,7 +1211,9 @@ export const LOCAL_BRAIN_DATASET_GENERATED: LocalBrainDataset = {
         "mai chú có hẹn gì giúp chú",
         "mai chú có hẹn gì giúp tôi",
         "lovira ơi xem lịch ngày mai",
-        "con ơi xem lịch ngày mai"
+        "con ơi xem lịch ngày mai",
+        "mai chú có việc gì",
+        "mai có lịch chi không"
       ],
       "negativeExamples": [
         "tạo lịch ngày mai",
@@ -1330,7 +1388,10 @@ export const LOCAL_BRAIN_DATASET_GENERATED: LocalBrainDataset = {
       ],
       "negativeExamples": [
         "tạo nhắc nhở mang ô",
-        "mở ứng dụng thời tiết"
+        "mở ứng dụng thời tiết",
+        "tôi vừa xem dự báo thời tiết",
+        "vừa xem dự báo thời tiết",
+        "mới xem dự báo thời tiết"
       ],
       "utilityQuery": "GET_WEATHER"
     },
@@ -1412,13 +1473,19 @@ export const LOCAL_BRAIN_DATASET_GENERATED: LocalBrainDataset = {
         "nhắc chú uống thuốc",
         "nhắc tôi uống thuốc",
         "ngày mai nhắc đi khám",
-        "nhắc nhở đi khám"
+        "nhắc nhở đi khám",
+        "tối nay 9 giờ nhắc tôi gọi cho con",
+        "30 phút nữa nhắc chú tắt bếp"
       ],
       "negativeExamples": [
         "hôm nay có nhắc nhở gì",
         "mở nhắc nhở",
         "xóa nhắc nhở",
-        "nhắc lại câu vừa nói"
+        "nhắc lại câu vừa nói",
+        "đừng nhắc chú uống thuốc",
+        "đừng nhắc chú",
+        "đừng nhắc",
+        "không cần nhắc"
       ]
     },
     {
@@ -2201,7 +2268,9 @@ export const LOCAL_BRAIN_DATASET_GENERATED: LocalBrainDataset = {
         "đi siêu thị giúp tôi",
         "lovira ơi mua thực phẩm",
         "con ơi mua thực phẩm",
-        "giúp chú mua thực phẩm"
+        "giúp chú mua thực phẩm",
+        "chiều nay tôi ra siêu thị mua đồ",
+        "tôi ra siêu thị mua đồ"
       ],
       "negativeExamples": [
         "đã xong việc này",
@@ -2408,7 +2477,9 @@ export const LOCAL_BRAIN_DATASET_GENERATED: LocalBrainDataset = {
         "lovira ơi làm giao dịch ngân hàng",
         "con ơi làm giao dịch ngân hàng",
         "giúp chú làm giao dịch ngân hàng",
-        "giúp tôi làm giao dịch ngân hàng"
+        "giúp tôi làm giao dịch ngân hàng",
+        "chiều mai chú ra ngân hàng",
+        "chú ra ngân hàng"
       ],
       "negativeExamples": [
         "đã xong việc này",
@@ -2477,7 +2548,9 @@ export const LOCAL_BRAIN_DATASET_GENERATED: LocalBrainDataset = {
         "đi làm giúp tôi",
         "lovira ơi chuẩn bị cuộc họp",
         "con ơi chuẩn bị cuộc họp",
-        "giúp chú chuẩn bị cuộc họp"
+        "giúp chú chuẩn bị cuộc họp",
+        "chiều mai tôi có cuộc họp ở công ty",
+        "tôi có cuộc họp ở công ty"
       ],
       "negativeExamples": [
         "đã xong việc này",
@@ -4142,7 +4215,8 @@ export const LOCAL_BRAIN_DATASET_GENERATED: LocalBrainDataset = {
         "lovira ơi đặt xe giúp chú",
         "con ơi đặt xe giúp chú",
         "giúp chú đặt xe giúp chú",
-        "giúp tôi đặt xe giúp chú"
+        "giúp tôi đặt xe giúp chú",
+        "đặt xe giúp tôi"
       ],
       "negativeExamples": [],
       "responseTemplate": "{da}, hiện {me} chưa thể thực hiện trực tiếp việc này trong ứng dụng. {me} có thể hướng dẫn {addressing} từng bước nếu cần ạ.",
@@ -4193,7 +4267,10 @@ export const LOCAL_BRAIN_DATASET_GENERATED: LocalBrainDataset = {
         "lovira ơi trả tiền giúp chú",
         "con ơi trả tiền giúp chú",
         "giúp chú trả tiền giúp chú",
-        "giúp tôi trả tiền giúp chú"
+        "giúp tôi trả tiền giúp chú",
+        "chuyển 5 triệu cho con chú",
+        "chuyển 5 triệu",
+        "chuyển tiền cho con chú"
       ],
       "negativeExamples": [],
       "responseTemplate": "{da}, hiện {me} chưa thể thực hiện trực tiếp việc này trong ứng dụng. {me} có thể hướng dẫn {addressing} từng bước nếu cần ạ.",
@@ -4240,7 +4317,9 @@ export const LOCAL_BRAIN_DATASET_GENERATED: LocalBrainDataset = {
         "con ơi gửi thư điện tử",
         "giúp chú gửi thư điện tử",
         "giúp tôi gửi thư điện tử",
-        "làm ơn gửi thư điện tử"
+        "làm ơn gửi thư điện tử",
+        "gửi mail cho bác sĩ giúp tôi",
+        "gửi email cho bác sĩ"
       ],
       "negativeExamples": [],
       "responseTemplate": "{da}, hiện {me} chưa thể thực hiện trực tiếp việc này trong ứng dụng. {me} có thể hướng dẫn {addressing} từng bước nếu cần ạ.",

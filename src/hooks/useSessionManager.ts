@@ -718,21 +718,35 @@ export function useSessionManager({
 
     const appContext: AppInteractionContext = {
       page: isSessionContext ? 'session' : (pageContext?.page || activeTab || 'dashboard'),
-      activeSessionId: activeSession?.id || pageContext?.sessionId,
-      activeSessionTitle: activeSession?.title,
-      hasActiveSession: !!activeSession,
+      activeSessionId: isSessionContext ? (activeSession?.id || pageContext?.sessionId) : undefined,
+      activeSessionTitle: isSessionContext ? activeSession?.title : undefined,
+      hasActiveSession: isSessionContext && !!activeSession,
       availableSessions: sessionsList,
     };
 
     // A. Check Pending Interaction FIRST
     if (pendingInteraction) {
-      const honorifics = deduceHonorifics(userProfile, trimmedText);
-      const pendingRes = await resolvePendingInteraction(trimmedText, pendingInteraction, honorifics);
-      if (pendingRes.newPending) {
-        setPendingInteraction(pendingRes.newPending);
-      } else if (pendingRes.clearPending) {
+      const pendingScope = pendingInteraction.scope || 'global-chat';
+      const isScopeValid =
+        (pendingScope === 'session' && isSessionContext) ||
+        (pendingScope === 'global-chat' && !isSessionContext) ||
+        pendingScope === 'vision' ||
+        pendingScope === 'easy-understand';
+
+      if (!isScopeValid) {
         setPendingInteraction(null);
-      }
+      } else {
+        const honorifics = deduceHonorifics(userProfile, trimmedText);
+        const pendingRes = await resolvePendingInteraction(trimmedText, pendingInteraction, honorifics);
+        if (pendingRes.newPending) {
+          setPendingInteraction({
+            ...pendingRes.newPending,
+            scope: isSessionContext ? 'session' : 'global-chat',
+            sessionId: isSessionContext ? activeSession?.id : undefined,
+          });
+        } else if (pendingRes.clearPending) {
+          setPendingInteraction(null);
+        }
       if (pendingRes.resolved) {
         let finalReply = pendingRes.reply || '';
         if (pendingRes.appAction) {
@@ -975,6 +989,8 @@ export function useSessionManager({
         const q = fastRoute.clarificationQuestion || 'Chú có thể nói rõ hơn được không ạ?';
         setPendingInteraction({
           type: 'clarification',
+          scope: isSessionContext ? 'session' : 'global-chat',
+          sessionId: isSessionContext ? activeSession?.id : undefined,
           data: {
             actionType: fastRoute.clarificationActionType,
             payload: fastRoute.clarificationPayload || { originalQuery: trimmedText },
@@ -1037,6 +1053,8 @@ export function useSessionManager({
 
         setPendingInteraction({
           type: 'confirm_action',
+          scope: isSessionContext ? 'session' : 'global-chat',
+          sessionId: isSessionContext ? activeSession?.id : undefined,
           data: {
             action: actionWithSkip,
             agentActions: fastRoute.agentActions,
@@ -1331,6 +1349,10 @@ export function useSessionManager({
         body: JSON.stringify({
           session: null,
           message: trimmedText,
+          conversationHistory: globalMessages.slice(-12).map((m) => ({
+            role: m.sender === 'user' ? 'user' : 'assistant',
+            text: m.text,
+          })),
           isDemoMode: aiSettings.demoMode || aiSettings.provider === 'demo',
           provider: aiSettings.provider,
           userProfile,
@@ -1364,7 +1386,10 @@ export function useSessionManager({
           }
         }
       } else if (data.pendingInteraction) {
-        setPendingInteraction(data.pendingInteraction);
+        setPendingInteraction({
+          ...data.pendingInteraction,
+          scope: 'global-chat',
+        });
       } else {
         const hasCreateProposal =
           rawReply.toLowerCase().includes('mở một phiên') ||
@@ -1375,6 +1400,7 @@ export function useSessionManager({
         if (hasCreateProposal) {
           setPendingInteraction({
             type: 'create_session',
+            scope: 'global-chat',
             data: { goal: trimmedText },
             createdAt: new Date().toISOString(),
             expiresAt: Date.now() + 180000,
@@ -1416,6 +1442,7 @@ export function useSessionManager({
     } finally {
       setIsLoading(false);
     }
+  };
   }, [
     isLoading,
     pendingInteraction,

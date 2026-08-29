@@ -15,7 +15,7 @@ import { normalizeVietnameseText, stripVietnameseAccents } from './VietnameseNor
 import { extractSnoozePreset, extractReminderTargetKeyword } from '../localBrain/ReminderTargetResolver.js';
 
 const STRICT_AFFIRMATIVE_REGEX =
-  /^(có|ừ|ừm|ừ nè|ờ|uh|u|ok|oke|okie|dạ có|dạ được|dạ vâng|được|được chứ|được nha|tạo đi|tạo giúp|tạo luôn|đồng ý|đồng ý nha|nhất trí|tạo giúp chú|tạo giúp bác|tạo giúp tôi|tạo giúp cô|tạo giúp anh|tạo giúp chị|làm đi|làm luôn|tiến hành đi|triển luôn|mở đi|mở giúp|xóa đi|xóa giúp|xóa luôn|xóa luôn đi|chắc chắn|chắc cú|đồng ý xóa|ừ xóa đi|ok xóa|hoàn thành đi|kết thúc đi|đúng rồi|chuẩn|chính xác)$/i;
+  /^(có|co|ừ|u|um|ừm|ừ nè|u ne|ờ|o|uh|ok|oke|okie|dạ có|da co|dạ được|da duoc|dạ vâng|da vang|được|duoc|được chứ|duoc chu|được nha|duoc nha|tạo đi|tao di|tạo giúp|tao giup|tạo luôn|tao luon|đồng ý|dong y|đồng ý nha|dong y nha|nhất trí|nhat tri|tạo giúp chú|tạo giúp bác|tạo giúp tôi|tạo giúp cô|tạo giúp anh|tạo giúp chị|làm đi|lam di|làm luôn|lam luon|tiến hành đi|tien hanh di|triển luôn|trien luon|mở đi|mo di|mở giúp|mo giup|xóa đi|xoa di|xóa giúp|xoa giup|xóa luôn|xoa luon|xóa luôn đi|xoa luon di|chắc chắn|chac chan|chắc cú|chac cu|đồng ý xóa|dong y xoa|ừ xóa đi|u xoa di|ok xóa|ok xoa|hoàn thành đi|hoan thanh di|kết thúc đi|ket thuc di|đúng rồi|dung roi|đúng rùi|dung rui|chuẩn|chuan|chính xác|chinh xac)$/i;
 
 const STRICT_NEGATIVE_REGEX =
   /^(không|thôi|hủy|hủy bỏ|hủy kèo|khỏi|không cần|thôi khỏi|bỏ qua|đừng|đừng làm|không tạo|không xóa|đừng xóa|khỏi xóa|giữ lại|giữ lại giúp|thôi nha|thôi nghen|thôi đừng|chưa|chưa đâu|chưa muốn|chưa hoàn thành|không hoàn thành|chưa kết thúc|không kết thúc|ko|k|thôi không xóa|không đồng ý|hổng phải|hổng cần|hổng muốn)$/i;
@@ -31,7 +31,7 @@ export function isNegativeResponse(text: string): boolean {
   if (
     norm.startsWith('khong ') ||
     norm.startsWith('thoi ') ||
-    norm.startsWith('dung ') ||
+    (norm.startsWith('dung ') && !raw.toLowerCase().startsWith('đúng') && !norm.startsWith('dung roi') && !norm.startsWith('dung rui') && !norm.startsWith('dung v') && !norm.startsWith('dung th')) ||
     norm.startsWith('chua ') ||
     norm.startsWith('huy ') ||
     norm.startsWith('ko ') ||
@@ -61,15 +61,24 @@ export function isNegativeResponse(text: string): boolean {
 }
 
 export function isAffirmativeResponse(text: string): boolean {
+  if (!text || !text.trim()) return false;
+
   const raw = text.trim();
+  const nfc = raw.normalize('NFC').toLowerCase();
   const norm = stripVietnameseAccents(normalizeVietnameseText(raw)).toLowerCase();
+  const unaccentedRaw = stripVietnameseAccents(nfc);
 
   // If it's negative, it can NEVER be affirmative
   if (isNegativeResponse(text)) {
     return false;
   }
 
-  if (STRICT_AFFIRMATIVE_REGEX.test(raw) || STRICT_AFFIRMATIVE_REGEX.test(norm)) {
+  if (
+    STRICT_AFFIRMATIVE_REGEX.test(raw) ||
+    STRICT_AFFIRMATIVE_REGEX.test(nfc) ||
+    STRICT_AFFIRMATIVE_REGEX.test(norm) ||
+    STRICT_AFFIRMATIVE_REGEX.test(unaccentedRaw)
+  ) {
     return true;
   }
 
