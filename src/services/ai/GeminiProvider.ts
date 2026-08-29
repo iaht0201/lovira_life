@@ -168,15 +168,22 @@ export class GeminiProvider {
     ];
 
     const startTime = Date.now();
-    const response = await ai.models.generateContent({
-      model: 'gemini-2.5-flash',
-      contents,
-      config: {
-        systemInstruction: systemPrompt,
-        tools,
-        temperature: 0.2,
-      },
-    });
+    const timeoutPromise = new Promise<never>((_, reject) =>
+      setTimeout(() => reject(new Error('Gemini call timed out after 8000ms')), 8000)
+    );
+
+    const response = await Promise.race([
+      ai.models.generateContent({
+        model: 'gemini-2.5-flash',
+        contents,
+        config: {
+          systemInstruction: systemPrompt,
+          tools,
+          temperature: 0.2,
+        },
+      }),
+      timeoutPromise,
+    ]);
 
     const candidate = response.candidates?.[0];
     const functionCalls = candidate?.content?.parts?.filter((p) => p.functionCall).map((p) => p.functionCall);

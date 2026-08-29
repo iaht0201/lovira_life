@@ -239,16 +239,20 @@ export function createApp() {
 
       // 3. Try Gemini Provider if available
       if (geminiProvider.isAvailable() && !isDemoMode) {
-        const geminiRes = await geminiProvider.chat({
-          session,
-          message,
-          conversationHistory,
-          userProfile,
-          inputMode,
-          appContext,
-        });
-        if (geminiRes) {
-          return res.json(geminiRes);
+        try {
+          const geminiRes = await geminiProvider.chat({
+            session,
+            message,
+            conversationHistory,
+            userProfile,
+            inputMode,
+            appContext,
+          });
+          if (geminiRes) {
+            return res.json(geminiRes);
+          }
+        } catch (geminiErr) {
+          console.warn('[Server Chat] Gemini provider failed, falling back to offline response:', geminiErr);
         }
       }
 

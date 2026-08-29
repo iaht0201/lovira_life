@@ -156,6 +156,7 @@ export async function callGroqAgent(
             Authorization: `Bearer ${apiKey}`,
           },
           body: JSON.stringify(payload),
+          signal: AbortSignal.timeout(6000),
         });
 
         // Xử lý lỗi Rate Limit (429)
