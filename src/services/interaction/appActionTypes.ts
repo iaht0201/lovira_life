@@ -37,6 +37,9 @@ export interface AppActionPayload {
   scheduledAt?: string;
   category?: 'medication' | 'appointment' | 'family' | 'general';
   notes?: string;
+  eventTime?: string;
+  eventDate?: string;
+  leadTimeMinutes?: number;
   repeat?: 'once' | 'daily' | 'weekly' | 'monthly';
   priority?: 'normal' | 'high';
   skipConfirmation?: boolean;

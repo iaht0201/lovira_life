@@ -4,7 +4,14 @@ import { AgentAction, LifeSession, UserProfile } from '../../types.js';
 import { deduceHonorifics } from '../conversationStyle.js';
 import { reminderService } from '../reminderService.js';
 import { fetchCurrentWeatherReport } from '../weatherService.js';
-import { parseVietnameseReminderText } from '../../utils/dateTimeResolver.js';
+import {
+  parseVietnameseReminderText,
+  extractSpecificGoal,
+  formatActionVerbDisplay,
+  extractDateFromText,
+  extractTimeFromText,
+  extractLeadTimeFromText,
+} from '../../utils/dateTimeResolver.js';
 import { parseLocalIntent } from '../localIntentEngine.js';
 import { resolveReminderTarget, extractSnoozePreset } from './ReminderTargetResolver.js';
 
@@ -852,26 +859,32 @@ async function _executeLocalBrainInternal(
     case 'create_session_template': {
       const scenarioKey = intent.appAction?.payload?.scenarioKey || 'general';
       const scenarioTitleMap: Record<string, string> = {
-        healthcare: 'Đi khám bệnh & Uống thuốc',
-        administrative: 'Làm thủ tục hành chính & Giấy tờ',
-        shopping: 'Mua sắm & Đi chợ',
-        documents: 'Quản lý giấy tờ tùy thân',
-        mobility: 'Di chuyển & Đi lại an toàn',
-        finance: 'Quản lý chi tiêu & Hóa đơn',
-        work: 'Công việc & Phỏng vấn',
-        education: 'Học tập & Rèn luyện trí não',
-        home: 'Chăm sóc nhà cửa & Sửa chữa',
-        communication: 'Giao tiếp & Kết nối gia đình',
-        technology: 'Sử dụng điện thoại & Công nghệ',
-        travel: 'Chuyến đi & Thăm người thân',
-        safety: 'An toàn & Phòng ngừa rủi ro',
+        healthcare: 'Đi khám bệnh',
+        administrative: 'Làm thủ tục hành chính',
+        shopping: 'Đi mua sắm',
+        documents: 'Quản lý giấy tờ',
+        mobility: 'Đi lại di chuyển',
+        finance: 'Giao dịch ngân hàng',
+        work: 'Đi làm phỏng vấn',
+        education: 'Học tập',
+        home: 'Sửa chữa nhà cửa',
+        communication: 'Gọi điện cho người thân',
+        technology: 'Dùng điện thoại',
+        travel: 'Đi du lịch',
+        safety: 'Phòng ngừa an toàn',
         caregiving: 'Chăm sóc người thân',
         planning: 'Lập kế hoạch sinh hoạt',
-        custom: 'Mục tiêu cá nhân',
+        custom: 'Công việc cá nhân',
       };
 
-      const title = scenarioTitleMap[scenarioKey] || 'Đồng hành cuộc sống';
-      const promptReply = `${da}, ${addressing} sắp làm ${title.toLowerCase()} phải không ạ. ${addressing.charAt(0).toUpperCase() + addressing.slice(1)} muốn ${me} hỗ trợ từng bước khi chuẩn bị và thực hiện, hay tạo nhắc nhở trước giờ đi ạ?`;
+      const fallbackTitle = scenarioTitleMap[scenarioKey] || 'Công việc cá nhân';
+      const specificGoal = extractSpecificGoal(trimmedText) || fallbackTitle;
+      const dateInfo = extractDateFromText(trimmedText);
+      const timeInfo = extractTimeFromText(trimmedText);
+      const leadTimeInfo = extractLeadTimeFromText(trimmedText);
+
+      const actionVerbDisplay = formatActionVerbDisplay(specificGoal);
+      const promptReply = `${da}, ${addressing} sắp ${actionVerbDisplay} phải không ạ. ${addressing.charAt(0).toUpperCase() + addressing.slice(1)} muốn ${me} hỗ trợ từng bước khi chuẩn bị và thực hiện, hay tạo nhắc nhở trước giờ đi ạ?`;
 
       return {
         handled: true,
@@ -885,7 +898,17 @@ async function _executeLocalBrainInternal(
         clarificationPayload: {
           originalText: trimmedText,
           scenarioFamily: scenarioKey,
-          proposedGoal: title,
+          proposedGoal: specificGoal,
+          hasDate: dateInfo.hasDate,
+          dateLabel: dateInfo.dateLabel,
+          dateIso: dateInfo.hasDate ? dateInfo.dateObj.toISOString() : undefined,
+          hasEventTime: timeInfo.hasTime,
+          eventTimeStr: timeInfo.timeStr,
+          eventHour: timeInfo.hour,
+          eventMinute: timeInfo.minute,
+          hasLeadTime: leadTimeInfo.hasLeadTime,
+          leadMinutes: leadTimeInfo.leadMinutes,
+          isExactLead: leadTimeInfo.isExact,
         },
         reply: promptReply,
         speech: `${da}, ${addressing} muốn ${me} hỗ trợ từng bước hay tạo nhắc nhở trước giờ đi ạ?`,

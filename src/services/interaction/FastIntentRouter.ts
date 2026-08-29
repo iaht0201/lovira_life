@@ -6,6 +6,13 @@ import { SCENARIO_REGISTRY, ScenarioRegistryEntry } from '../scenarioRegistry.js
 import { deduceHonorifics } from '../conversationStyle.js';
 import { fetchCurrentWeatherReport } from '../weatherService.js';
 import { executeLocalBrain } from '../localBrain/LocalBrainEngine.js';
+import {
+  extractSpecificGoal,
+  formatActionVerbDisplay,
+  extractDateFromText,
+  extractTimeFromText,
+  extractLeadTimeFromText,
+} from '../../utils/dateTimeResolver.js';
 
 export type FastIntentSource = 'exact' | 'alias' | 'pattern' | 'context' | 'utility';
 
@@ -589,8 +596,14 @@ export async function routeFastIntent(
   // B7. Scenario Match -> Life Event Detection & Support Option Proposal (NO AUTO CREATE)
   const templateMatch = matchScenarioTemplate(normalized, unaccented);
   if (templateMatch) {
-    const cleanTitle = templateMatch.label.replace(/^[\p{Extended_Pictographic}\u{1F300}-\u{1F9FF}\u{2600}-\u{26FF}\u{2700}-\u{27BF}\s]+/gu, '');
-    const promptReply = `${da}, ${addressing} sắp làm ${cleanTitle.toLowerCase()} phải không ạ. ${addressing.charAt(0).toUpperCase() + addressing.slice(1)} muốn ${me} hỗ trợ từng bước khi chuẩn bị và thực hiện, hay tạo nhắc nhở trước giờ đi ạ?`;
+    const fallbackTitle = templateMatch.label.replace(/^[\p{Extended_Pictographic}\u{1F300}-\u{1F9FF}\u{2600}-\u{26FF}\u{2700}-\u{27BF}\s]+/gu, '');
+    const specificGoal = extractSpecificGoal(rawText) || fallbackTitle;
+    const dateInfo = extractDateFromText(rawText);
+    const timeInfo = extractTimeFromText(rawText);
+    const leadTimeInfo = extractLeadTimeFromText(rawText);
+
+    const actionVerbDisplay = formatActionVerbDisplay(specificGoal);
+    const promptReply = `${da}, ${addressing} sắp ${actionVerbDisplay} phải không ạ. ${addressing.charAt(0).toUpperCase() + addressing.slice(1)} muốn ${me} hỗ trợ từng bước khi chuẩn bị và thực hiện, hay tạo nhắc nhở trước giờ đi ạ?`;
 
     return {
       handled: true,
@@ -602,7 +615,17 @@ export async function routeFastIntent(
       clarificationPayload: {
         originalText: rawText,
         scenarioFamily: templateMatch.family,
-        proposedGoal: cleanTitle,
+        proposedGoal: specificGoal,
+        hasDate: dateInfo.hasDate,
+        dateLabel: dateInfo.dateLabel,
+        dateIso: dateInfo.hasDate ? dateInfo.dateObj.toISOString() : undefined,
+        hasEventTime: timeInfo.hasTime,
+        eventTimeStr: timeInfo.timeStr,
+        eventHour: timeInfo.hour,
+        eventMinute: timeInfo.minute,
+        hasLeadTime: leadTimeInfo.hasLeadTime,
+        leadMinutes: leadTimeInfo.leadMinutes,
+        isExactLead: leadTimeInfo.isExact,
       },
       reply: promptReply,
       speech: `${da}, ${addressing} muốn ${me} hỗ trợ từng bước hay tạo nhắc nhở trước giờ đi ạ?`,

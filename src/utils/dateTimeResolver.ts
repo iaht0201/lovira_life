@@ -367,3 +367,211 @@ export function parseClarifiedTime(
 
   return resultDate;
 }
+
+/**
+ * Extracts a specific goal / activity title from a user's prompt,
+ * preserving specific details like "khám tai", "phỏng vấn kế toán", "làm BHYT"
+ */
+export function extractSpecificGoal(text: string): string {
+  if (!text || !text.trim()) return '';
+  let cleaned = text.trim();
+
+  // Remove trailing punctuation
+  cleaned = cleaned.replace(/[?.!;,]+$/, '');
+
+  // Iteratively remove leading temporal words, time expressions, pronouns, and modals
+  let prev = '';
+  while (cleaned !== prev) {
+    prev = cleaned;
+
+    // Remove leading date/time expressions
+    cleaned = cleaned.replace(/^(ngày mai|sáng mai|chiều mai|tối mai|trưa mai|hôm nay|sáng nay|chiều nay|tối nay|ngày mốt|ngày kia|hôm kia|mai này|mai|mốt|tuần sau|thứ\s+[2-7]|chủ\s+nhật)\s*/i, '');
+
+    // Remove leading clock expressions (e.g. lúc 8h, 8:00, 8 giờ sáng, 8h30)
+    cleaned = cleaned.replace(/^(lúc\s+)?\d{1,2}(:\d{2}|\s*h\s*\d{0,2}|\s*giờ\s*\d{0,2})?(\s*(sáng|trưa|chiều|tối|đêm))?\s*/i, '');
+
+    // Remove leading personal pronouns
+    cleaned = cleaned.replace(/^(chú|tôi|bác|cô|bà|ông|anh|chị|em|mình)\s+/i, '');
+
+    // Remove leading modal/intent verbs
+    cleaned = cleaned.replace(/^(phải|cần|sắp|muốn|dự định|sắp sửa|tính|đang|nhớ|tạo|cho|hỗ trợ)\s+/i, '');
+  }
+
+  // Clean trailing polite words or reminder requests
+  cleaned = cleaned.replace(/(nhé|nha|nhen|ạ|nhé con|nha con|giúp chú|giúp bác|giúp tôi)$/i, '').trim();
+
+  if (!cleaned || cleaned.length < 2) {
+    return text.trim();
+  }
+
+  // Capitalize first letter
+  return cleaned.charAt(0).toUpperCase() + cleaned.slice(1);
+}
+
+/**
+ * Formats a specific goal into a clean action verb phrase for speech & replies
+ */
+export function formatActionVerbDisplay(specificGoal: string): string {
+  if (!specificGoal || !specificGoal.trim()) return 'thực hiện công việc này';
+  const lower = specificGoal.trim().toLowerCase();
+
+  if (lower.startsWith('khám')) {
+    return 'đi ' + lower;
+  }
+
+  const commonVerbs = [
+    'đi', 'làm', 'tái', 'ra', 'về', 'mua', 'rút', 'học', 'sửa', 'đổi', 'chụp',
+    'uống', 'gặp', 'đến', 'sang', 'đóng', 'tập', 'nhận', 'nộp', 'ký', 'soạn'
+  ];
+
+  const startsWithVerb = commonVerbs.some((v) => lower.startsWith(v));
+  if (startsWithVerb) {
+    return lower;
+  }
+
+  return 'làm ' + lower;
+}
+
+/**
+ * Extracts date information from text
+ */
+export function extractDateFromText(
+  text: string,
+  baseDate: Date = new Date()
+): { hasDate: boolean; dateObj: Date; dateLabel: string } {
+  const lower = text.toLowerCase();
+  const d = new Date(baseDate.getTime());
+
+  if (
+    lower.includes('ngày mai') ||
+    lower.includes('sáng mai') ||
+    lower.includes('chiều mai') ||
+    lower.includes('tối mai') ||
+    lower.includes('trưa mai') ||
+    /\bmai\b/.test(lower)
+  ) {
+    d.setDate(d.getDate() + 1);
+    return { hasDate: true, dateObj: d, dateLabel: 'ngày mai' };
+  }
+  if (lower.includes('ngày mốt') || lower.includes('ngày kia')) {
+    d.setDate(d.getDate() + 2);
+    return { hasDate: true, dateObj: d, dateLabel: 'ngày kia' };
+  }
+  if (
+    lower.includes('hôm nay') ||
+    lower.includes('sáng nay') ||
+    lower.includes('chiều nay') ||
+    lower.includes('tối nay') ||
+    lower.includes('trưa nay')
+  ) {
+    return { hasDate: true, dateObj: d, dateLabel: 'hôm nay' };
+  }
+
+  // Specific date pattern e.g. 29/8, 30/08
+  const dateSlashMatch = lower.match(/(\d{1,2})\/(\d{1,2})/);
+  if (dateSlashMatch) {
+    const day = parseInt(dateSlashMatch[1], 10);
+    const month = parseInt(dateSlashMatch[2], 10) - 1;
+    d.setMonth(month, day);
+    if (d.getTime() < baseDate.getTime() - 86400000) {
+      d.setFullYear(d.getFullYear() + 1);
+    }
+    return { hasDate: true, dateObj: d, dateLabel: `ngày ${day}/${month + 1}` };
+  }
+
+  return { hasDate: false, dateObj: d, dateLabel: '' };
+}
+
+/**
+ * Extracts event time from text (e.g. 8 giờ, 8h30, 9:00, 7h sáng)
+ */
+export function extractTimeFromText(text: string): {
+  hasTime: boolean;
+  timeStr: string;
+  hour: number | null;
+  minute: number;
+} {
+  const lower = text.toLowerCase();
+  let hour: number | null = null;
+  let minute = 0;
+
+  const timeColonMatch = lower.match(/(\d{1,2}):(\d{2})/);
+  const timeHMatch = lower.match(/(\d{1,2})\s*h\s*(\d{1,2})?/);
+  const timeGioMatch = lower.match(/(\d{1,2})\s*giờ\s*(\d{1,2})?/);
+  const aloneNumMatch = lower.match(/\blúc\s*(\d{1,2})\b/);
+
+  if (timeColonMatch) {
+    hour = parseInt(timeColonMatch[1], 10);
+    minute = parseInt(timeColonMatch[2], 10);
+  } else if (timeHMatch) {
+    hour = parseInt(timeHMatch[1], 10);
+    minute = timeHMatch[2] ? parseInt(timeHMatch[2], 10) : 0;
+  } else if (timeGioMatch) {
+    hour = parseInt(timeGioMatch[1], 10);
+    minute = timeGioMatch[2] ? parseInt(timeGioMatch[2], 10) : 0;
+  } else if (aloneNumMatch) {
+    hour = parseInt(aloneNumMatch[1], 10);
+    minute = 0;
+  }
+
+  if (hour !== null) {
+    const isPM = lower.includes('chiều') || lower.includes('tối') || lower.includes('đêm');
+    const isAM = lower.includes('sáng');
+    const isNoon = lower.includes('trưa');
+
+    if (isPM && hour < 12) {
+      hour += 12;
+    } else if (isAM && hour === 12) {
+      hour = 0;
+    } else if (isNoon && hour < 12 && hour !== 12) {
+      if (hour < 11) hour += 12;
+    }
+
+    const pad = (n: number) => n.toString().padStart(2, '0');
+    return {
+      hasTime: true,
+      timeStr: `${pad(hour)}:${pad(minute)}`,
+      hour,
+      minute,
+    };
+  }
+
+  return { hasTime: false, timeStr: '', hour: null, minute: 0 };
+}
+
+/**
+ * Extracts lead time preference (e.g. "trước 30 phút", "đúng 8 giờ", "trước 15p")
+ */
+export function extractLeadTimeFromText(text: string): {
+  hasLeadTime: boolean;
+  leadMinutes: number;
+  isExact: boolean;
+} {
+  const lower = text.toLowerCase();
+
+  if (
+    lower.includes('đúng giờ') ||
+    lower.includes('đúng ') ||
+    lower.includes('nhắc đúng') ||
+    lower.startsWith('đúng')
+  ) {
+    return { hasLeadTime: true, leadMinutes: 0, isExact: true };
+  }
+
+  const minsMatch = lower.match(/(trước\s*)?(\d+)\s*(phút|p)/);
+  if (minsMatch) {
+    return { hasLeadTime: true, leadMinutes: parseInt(minsMatch[2], 10), isExact: false };
+  }
+
+  const hoursMatch = lower.match(/(trước\s*)?(\d+)\s*(tiếng|giờ|h)/);
+  if (hoursMatch) {
+    return { hasLeadTime: true, leadMinutes: parseInt(hoursMatch[2], 10) * 60, isExact: false };
+  }
+
+  if (lower.includes('trước 15')) return { hasLeadTime: true, leadMinutes: 15, isExact: false };
+  if (lower.includes('trước 30')) return { hasLeadTime: true, leadMinutes: 30, isExact: false };
+  if (lower.includes('trước 1 tiếng') || lower.includes('trước 1 giờ')) return { hasLeadTime: true, leadMinutes: 60, isExact: false };
+
+  return { hasLeadTime: false, leadMinutes: 0, isExact: false };
+}
+

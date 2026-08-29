@@ -1,7 +1,14 @@
 import { PendingInteraction } from './interactionTypes.js';
 import { AppAction } from './appActionTypes.js';
 import { AgentAction } from '../../types.js';
-import { parseClarifiedTime } from '../../utils/dateTimeResolver.js';
+import {
+  parseClarifiedTime,
+  extractSpecificGoal,
+  formatActionVerbDisplay,
+  extractDateFromText,
+  extractTimeFromText,
+  extractLeadTimeFromText,
+} from '../../utils/dateTimeResolver.js';
 import { fetchCurrentWeatherReport } from '../weatherService.js';
 import { reminderService } from '../reminderService.js';
 import { normalizeVietnameseText, stripVietnameseAccents } from './VietnameseNormalizer.js';
@@ -192,11 +199,59 @@ export async function resolvePendingInteraction(
 
     // 2. Action-specific resolvers FIRST
 
+    // Life Event Reminder multi-step clarification
+    if (pending.data.actionType === 'CLARIFY_LIFE_EVENT_REMINDER') {
+      const payload = pending.data.payload || {};
+      const proposedGoal = payload.proposedGoal || 'Công việc này';
+
+      if (isNegativeResponse(trimmed)) {
+        return {
+          resolved: true,
+          reply: `${da} vâng, khi nào cần hỗ trợ ${addressing} cứ nói với ${me} nhé!`,
+          clearPending: true,
+        };
+      }
+
+      const inputDate = extractDateFromText(trimmed);
+      const inputTime = extractTimeFromText(trimmed);
+      const inputLead = extractLeadTimeFromText(trimmed);
+
+      const hasDate = Boolean(payload.hasDate || inputDate.hasDate);
+      const dateLabel = inputDate.hasDate ? inputDate.dateLabel : (payload.dateLabel || 'ngày mai');
+      const dateIso = inputDate.hasDate ? inputDate.dateObj.toISOString() : payload.dateIso;
+
+      const hasEventTime = Boolean(payload.hasEventTime || inputTime.hasTime);
+      const eventTimeStr = inputTime.hasTime ? inputTime.timeStr : (payload.eventTimeStr || '');
+      const eventHour = inputTime.hasTime ? inputTime.hour : (payload.eventHour ?? null);
+      const eventMinute = inputTime.hasTime ? inputTime.minute : (payload.eventMinute || 0);
+
+      const hasLeadTime = Boolean(payload.hasLeadTime || inputLead.hasLeadTime);
+      const leadMinutes = inputLead.hasLeadTime ? inputLead.leadMinutes : (payload.leadMinutes ?? 0);
+
+      const updatedState = {
+        proposedGoal,
+        hasDate,
+        dateLabel,
+        dateIso,
+        hasEventTime,
+        eventTimeStr,
+        eventHour,
+        eventMinute,
+        hasLeadTime,
+        leadMinutes,
+        scenarioFamily: payload.scenarioFamily,
+      };
+
+      // Helper to evaluate steps
+      return evaluateLifeEventReminderStep(updatedState, addressing, me, da, a);
+    }
+
     // Support choice clarification (Life Event support mode selection)
     if (pending.data.actionType === 'CHOOSE_SUPPORT_MODE' || pending.data.actionType === 'support_choice') {
       const normInput = stripVietnameseAccents(normalizeVietnameseText(trimmed)).toLowerCase();
-      const proposedGoal = pending.data.payload?.proposedGoal || pending.data.payload?.originalText || 'Công việc này';
-      const scenarioFamily = pending.data.payload?.scenarioFamily || 'general';
+      const payload = pending.data.payload || {};
+      const proposedGoal = payload.proposedGoal || payload.originalText || 'Công việc này';
+      const scenarioFamily = payload.scenarioFamily || 'general';
 
       // Negative response
       if (isNegativeResponse(trimmed)) {
@@ -207,48 +262,39 @@ export async function resolvePendingInteraction(
         };
       }
 
-      // Check if user answered with a time directly
-      const resolvedDate = parseClarifiedTime(trimmed);
-      if (resolvedDate && !isNaN(resolvedDate.getTime())) {
-        const scheduledAt = resolvedDate.toISOString();
-        const timeFormatted = resolvedDate.toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' });
-        const dateFormatted = resolvedDate.toLocaleDateString('vi-VN');
-        return {
-          resolved: true,
-          appAction: {
-            type: 'CREATE_REMINDER',
-            payload: {
-              title: proposedGoal,
-              scheduledAt,
-            },
-          },
-          reply: `${da}, ${me} đã lên lịch nhắc nhở "${proposedGoal}" vào lúc ${timeFormatted} (${dateFormatted}) rồi${a}.`,
-          clearPending: true,
-        };
-      }
-
-      // Check if user chose Reminder
+      // Check if user chose Reminder (or mentioned reminder keywords)
       if (normInput.includes('nhac nho') || normInput.includes('nhac') || normInput.includes('lich hen')) {
-        const askTimePrompt = `${da}, ${addressing} muốn ${me} nhắc nhở "${proposedGoal}" vào lúc mấy giờ ạ?`;
-        return {
-          resolved: true,
-          reply: askTimePrompt,
-          clearPending: false,
-          newPending: {
-            type: 'clarification',
-            data: {
-              actionType: 'CREATE_REMINDER',
-              payload: {
-                title: proposedGoal,
-                originalText: pending.data.payload?.originalText,
-              },
-              question: askTimePrompt,
-              suggestedReplies: ['7 giờ sáng', '8 giờ sáng', '2 giờ chiều', '7 giờ tối'],
-            },
-            createdAt: new Date().toISOString(),
-            expiresAt: Date.now() + 180000,
-          },
+        const inputDate = extractDateFromText(trimmed);
+        const inputTime = extractTimeFromText(trimmed);
+        const inputLead = extractLeadTimeFromText(trimmed);
+
+        const hasDate = Boolean(payload.hasDate || inputDate.hasDate);
+        const dateLabel = inputDate.hasDate ? inputDate.dateLabel : (payload.dateLabel || '');
+        const dateIso = inputDate.hasDate ? inputDate.dateObj.toISOString() : payload.dateIso;
+
+        const hasEventTime = Boolean(payload.hasEventTime || inputTime.hasTime);
+        const eventTimeStr = inputTime.hasTime ? inputTime.timeStr : (payload.eventTimeStr || '');
+        const eventHour = inputTime.hasTime ? inputTime.hour : (payload.eventHour ?? null);
+        const eventMinute = inputTime.hasTime ? inputTime.minute : (payload.eventMinute || 0);
+
+        const hasLeadTime = Boolean(payload.hasLeadTime || inputLead.hasLeadTime);
+        const leadMinutes = inputLead.hasLeadTime ? inputLead.leadMinutes : (payload.leadMinutes ?? 0);
+
+        const state = {
+          proposedGoal,
+          hasDate,
+          dateLabel,
+          dateIso,
+          hasEventTime,
+          eventTimeStr,
+          eventHour,
+          eventMinute,
+          hasLeadTime,
+          leadMinutes,
+          scenarioFamily,
         };
+
+        return evaluateLifeEventReminderStep(state, addressing, me, da, a);
       }
 
       // Otherwise, assume user chose Step-by-Step Support -> Ask for explicit confirmation to create session
@@ -567,4 +613,135 @@ export async function resolvePendingInteraction(
   }
 
   return { resolved: false, clearPending: false };
+}
+
+function evaluateLifeEventReminderStep(
+  state: {
+    proposedGoal: string;
+    hasDate: boolean;
+    dateLabel: string;
+    dateIso?: string;
+    hasEventTime: boolean;
+    eventTimeStr: string;
+    eventHour: number | null;
+    eventMinute: number;
+    hasLeadTime: boolean;
+    leadMinutes: number;
+    scenarioFamily?: string;
+  },
+  addressing: string,
+  me: string,
+  da: string,
+  a: string
+): PendingResolution {
+  const actionVerb = formatActionVerbDisplay(state.proposedGoal);
+
+  // Step 1: Check Date
+  if (!state.hasDate) {
+    const askDatePrompt = `${da}, ${addressing} ${actionVerb} vào ngày nào ạ?`;
+    return {
+      resolved: true,
+      reply: askDatePrompt,
+      clearPending: false,
+      newPending: {
+        type: 'clarification',
+        data: {
+          actionType: 'CLARIFY_LIFE_EVENT_REMINDER',
+          payload: { ...state, missingStep: 'date' },
+          question: askDatePrompt,
+          suggestedReplies: ['Hôm nay', 'Ngày mai', 'Ngày kia'],
+        },
+        createdAt: new Date().toISOString(),
+        expiresAt: Date.now() + 180000,
+      },
+    };
+  }
+
+  // Step 2: Check Event Time
+  if (!state.hasEventTime || state.eventHour === null) {
+    const askTimePrompt = `${da}, ${state.dateLabel || 'ngày mai'} ${addressing} ${actionVerb} lúc mấy giờ ạ?`;
+    return {
+      resolved: true,
+      reply: askTimePrompt,
+      clearPending: false,
+      newPending: {
+        type: 'clarification',
+        data: {
+          actionType: 'CLARIFY_LIFE_EVENT_REMINDER',
+          payload: { ...state, missingStep: 'eventTime' },
+          question: askTimePrompt,
+          suggestedReplies: ['7:00 sáng', '8:00 sáng', '9:00 sáng', '2:00 chiều'],
+        },
+        createdAt: new Date().toISOString(),
+        expiresAt: Date.now() + 180000,
+      },
+    };
+  }
+
+  // Step 3: Check Lead Time (Thời gian nhắc trước)
+  if (!state.hasLeadTime) {
+    const eventTimeDisplay = state.eventTimeStr || `${state.eventHour}:00`;
+    const askLeadPrompt = `${addressing.charAt(0).toUpperCase() + addressing.slice(1)} muốn ${me} nhắc đúng ${eventTimeDisplay}, hay nhắc trước để ${addressing} có thời gian chuẩn bị ạ?`;
+    return {
+      resolved: true,
+      reply: askLeadPrompt,
+      clearPending: false,
+      newPending: {
+        type: 'clarification',
+        data: {
+          actionType: 'CLARIFY_LIFE_EVENT_REMINDER',
+          payload: { ...state, missingStep: 'leadTime' },
+          question: askLeadPrompt,
+          suggestedReplies: [
+            `Đúng ${eventTimeDisplay}`,
+            'Trước 15 phút',
+            'Trước 30 phút',
+            'Trước 1 giờ',
+          ],
+        },
+        createdAt: new Date().toISOString(),
+        expiresAt: Date.now() + 180000,
+      },
+    };
+  }
+
+  // Step 4: ALL 3 ARE KNOWN! -> Issue CREATE_REMINDER
+  const baseDate = state.dateIso ? new Date(state.dateIso) : new Date();
+  const eventDateTime = new Date(baseDate.getTime());
+  eventDateTime.setHours(state.eventHour, state.eventMinute, 0, 0);
+
+  // If eventDateTime is in the past, roll forward 1 day
+  if (eventDateTime.getTime() <= Date.now() && !state.dateLabel.includes('hôm nay')) {
+    eventDateTime.setDate(eventDateTime.getDate() + 1);
+  }
+
+  // reminderDateTime = eventDateTime - leadMinutes
+  const reminderDateTime = new Date(eventDateTime.getTime() - state.leadMinutes * 60 * 1000);
+
+  const timeFormatted = reminderDateTime.toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' });
+  const dateFormatted = reminderDateTime.toLocaleDateString('vi-VN', { day: '2-digit', month: '2-digit' });
+  const dateDisplay = state.dateLabel || dateFormatted;
+
+  const replyText = state.leadMinutes > 0
+    ? `${da}, ${me} đã tạo nhắc nhở "${state.proposedGoal}" cho ${addressing} vào lúc ${timeFormatted} ${dateDisplay} (trước ${state.leadMinutes} phút so với giờ đi lúc ${state.eventTimeStr}) rồi${a}.`
+    : `${da}, ${me} đã tạo nhắc nhở "${state.proposedGoal}" cho ${addressing} vào lúc ${state.eventTimeStr} ${dateDisplay} rồi${a}.`;
+
+  return {
+    resolved: true,
+    appAction: {
+      type: 'CREATE_REMINDER',
+      payload: {
+        title: state.proposedGoal,
+        scheduledAt: reminderDateTime.toISOString(),
+        eventTime: state.eventTimeStr,
+        eventDate: dateDisplay,
+        leadTimeMinutes: state.leadMinutes,
+        category: 'appointment',
+        repeat: 'once',
+        notes: state.leadMinutes > 0 ? `Giờ đi: ${state.eventTimeStr} (Nhắc trước ${state.leadMinutes} phút)` : `Giờ đi: ${state.eventTimeStr}`,
+      },
+    },
+    reply: replyText,
+    clearPending: true,
+  };
 }
