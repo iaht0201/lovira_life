@@ -1,10 +1,10 @@
 import avatarImg from './images/avatar.png';
 import logoImg from './images/logo.png';
 import logoClientImg from './images/logo_client.png';
-import bannerTxt from './banner.txt?raw';
-import avatarTxt from './avatar.txt?raw';
-import logoTxt from './logo.txt?raw';
-import logoFullTxt from './logo_full.txt?raw';
+import bannerTxt from '../../public/banner.txt?raw';
+import avatarTxt from '../../public/avatar.txt?raw';
+import logoTxt from '../../public/logo.txt?raw';
+import logoFullTxt from '../../public/logo_full.txt?raw';
 
 const formatImg = (raw: string | undefined, fallback: string): string => {
   if (!raw) return fallback;

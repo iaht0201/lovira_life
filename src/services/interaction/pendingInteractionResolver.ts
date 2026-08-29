@@ -724,15 +724,16 @@ function evaluateLifeEventReminderStep(
     eventDateTime.setDate(eventDateTime.getDate() + 1);
   }
 
-  // reminderDateTime = eventDateTime - leadMinutes
-  const reminderDateTime = new Date(eventDateTime.getTime() - state.leadMinutes * 60 * 1000);
+  // reminderDateTime = eventDateTime - safeLeadMinutes
+  const safeLeadMinutes = Math.min(Math.max(0, state.leadMinutes || 0), 180);
+  const reminderDateTime = new Date(eventDateTime.getTime() - safeLeadMinutes * 60 * 1000);
 
   const timeFormatted = reminderDateTime.toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' });
   const dateFormatted = reminderDateTime.toLocaleDateString('vi-VN', { day: '2-digit', month: '2-digit' });
   const dateDisplay = state.dateLabel || dateFormatted;
 
-  const replyText = state.leadMinutes > 0
-    ? `${da}, ${me} đã tạo nhắc nhở "${state.proposedGoal}" cho ${addressing} vào lúc ${timeFormatted} ${dateDisplay} (trước ${state.leadMinutes} phút so với giờ đi lúc ${state.eventTimeStr}) rồi${a}.`
+  const replyText = safeLeadMinutes > 0
+    ? `${da}, ${me} đã tạo nhắc nhở "${state.proposedGoal}" cho ${addressing} vào lúc ${timeFormatted} ${dateDisplay} (trước ${safeLeadMinutes} phút so với giờ đi lúc ${state.eventTimeStr}) rồi${a}.`
     : `${da}, ${me} đã tạo nhắc nhở "${state.proposedGoal}" cho ${addressing} vào lúc ${state.eventTimeStr} ${dateDisplay} rồi${a}.`;
 
   return {
@@ -744,10 +745,10 @@ function evaluateLifeEventReminderStep(
         scheduledAt: reminderDateTime.toISOString(),
         eventTime: state.eventTimeStr,
         eventDate: dateDisplay,
-        leadTimeMinutes: state.leadMinutes,
+        leadTimeMinutes: safeLeadMinutes,
         category: 'appointment',
         repeat: 'once',
-        notes: state.leadMinutes > 0 ? `Giờ đi: ${state.eventTimeStr} (Nhắc trước ${state.leadMinutes} phút)` : `Giờ đi: ${state.eventTimeStr}`,
+        notes: safeLeadMinutes > 0 ? `Giờ đi: ${state.eventTimeStr} (Nhắc trước ${safeLeadMinutes} phút)` : `Giờ đi: ${state.eventTimeStr}`,
       },
     },
     reply: replyText,

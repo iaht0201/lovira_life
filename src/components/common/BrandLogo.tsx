@@ -18,13 +18,13 @@ export const BrandLogo: React.FC<BrandLogoProps> = ({
 
   const getDimensions = () => {
     if (variant === 'icon') {
-      if (size === 'sm') return { box: 'w-7 h-7', heart: 'w-3.5 h-3.5', height: 'h-7' };
-      if (size === 'lg') return { box: 'w-11 h-11', heart: 'w-5 h-5', height: 'h-11' };
-      return { box: 'w-9 h-9', heart: 'w-4 h-4', height: 'h-9' };
+      if (size === 'sm') return { box: 'w-8 h-8', heart: 'w-4 h-4', height: 'h-8' };
+      if (size === 'lg') return { box: 'w-12 h-12', heart: 'w-6 h-6', height: 'h-12' };
+      return { box: 'w-10 h-10', heart: 'w-5 h-5', height: 'h-10' };
     }
-    if (size === 'sm') return { text: 'text-lg', badge: 'w-6 h-6', heart: 'w-3 h-3', height: 'h-7' };
-    if (size === 'lg') return { text: 'text-2xl', badge: 'w-9 h-9', heart: 'w-4.5 h-4.5', height: 'h-10' };
-    return { text: 'text-xl', badge: 'w-7 h-7', heart: 'w-3.5 h-3.5', height: 'h-8' };
+    if (size === 'sm') return { text: 'text-lg', badge: 'w-7 h-7', heart: 'w-3.5 h-3.5', height: 'h-8 sm:h-9 max-h-[36px]' };
+    if (size === 'lg') return { text: 'text-2xl', badge: 'w-10 h-10', heart: 'w-5 h-5', height: 'h-11 sm:h-12 max-h-[48px]' };
+    return { text: 'text-xl', badge: 'w-8 h-8', heart: 'w-4 h-4', height: 'h-9 sm:h-10 max-h-[40px]' };
   };
 
   const dims = getDimensions();

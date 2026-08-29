@@ -540,37 +540,84 @@ export function extractTimeFromText(text: string): {
 }
 
 /**
- * Extracts lead time preference (e.g. "trước 30 phút", "đúng 8 giờ", "trước 15p")
+ * Extracts lead time preference (e.g. "trước 15 phút", "báo trước 15p", "15 phút", "đúng giờ", "trước 1 tiếng")
  */
 export function extractLeadTimeFromText(text: string): {
   hasLeadTime: boolean;
   leadMinutes: number;
   isExact: boolean;
 } {
-  const lower = text.toLowerCase();
+  const lower = text.trim().toLowerCase();
 
+  // 1. Explicit Exact / On-time requests
   if (
     lower.includes('đúng giờ') ||
     lower.includes('nhắc đúng') ||
+    lower.includes('đúng lúc') ||
+    lower.includes('không cần trước') ||
+    lower.includes('khong can truoc') ||
     lower.startsWith('đúng ') ||
-    lower === 'đúng'
+    lower.startsWith('dung ') ||
+    lower === 'đúng' ||
+    lower === 'dung'
   ) {
     return { hasLeadTime: true, leadMinutes: 0, isExact: true };
   }
 
-  const minsMatch = lower.match(/(trước\s*|truoc\s*)(\d+)\s*(phút|p)/i);
+  // 2. Explicit Minutes match (e.g. "báo trước 15 phút", "trước 15p", "15 phút", "30p", "10 phút", "15")
+  const minsMatch = lower.match(/(?:báo\s*trước|nhắc\s*trước|bao\s*truoc|nhac\s*truoc|trước\s*|truoc\s*)?(\d+)\s*(?:phút|phut|p)\b/i);
   if (minsMatch) {
-    return { hasLeadTime: true, leadMinutes: parseInt(minsMatch[2], 10), isExact: false };
+    const mins = parseInt(minsMatch[1], 10);
+    if (!isNaN(mins) && mins >= 0 && mins <= 180) {
+      return { hasLeadTime: true, leadMinutes: mins, isExact: mins === 0 };
+    }
   }
 
-  const hoursMatch = lower.match(/(trước\s*|truoc\s*)(\d+)\s*(tiếng|giờ|h)/i);
+  // 3. Short standalone number when answering lead time prompt (e.g., "15", "30", "10", "45", "5", "20")
+  if (/^(\d{1,2})$/.test(lower)) {
+    const mins = parseInt(lower, 10);
+    if (mins >= 1 && mins <= 60) {
+      return { hasLeadTime: true, leadMinutes: mins, isExact: false };
+    }
+  }
+
+  // 4. Hours match ONLY for small offsets (1-3 hours / tiếng, e.g. "trước 1 tiếng", "trước 1 giờ", "1 tiếng")
+  const hoursMatch = lower.match(/(?:báo\s*trước|nhắc\s*trước|bao\s*truoc|nhac\s*truoc|trước\s*|truoc\s*)?([1-3]|một|hai|ba)\s*(?:tiếng|tieng|giờ|gio|h)\b/i);
   if (hoursMatch) {
-    return { hasLeadTime: true, leadMinutes: parseInt(hoursMatch[2], 10) * 60, isExact: false };
+    let hrs = 1;
+    const rawVal = hoursMatch[1].toLowerCase();
+    if (rawVal === 'một' || rawVal === 'mot' || rawVal === '1') hrs = 1;
+    else if (rawVal === 'hai' || rawVal === '2') hrs = 2;
+    else if (rawVal === 'ba' || rawVal === '3') hrs = 3;
+    else hrs = parseInt(rawVal, 10) || 1;
+
+    return { hasLeadTime: true, leadMinutes: hrs * 60, isExact: false };
   }
 
-  if (lower.includes('trước 15') || lower.includes('truoc 15')) return { hasLeadTime: true, leadMinutes: 15, isExact: false };
-  if (lower.includes('trước 30') || lower.includes('truoc 30')) return { hasLeadTime: true, leadMinutes: 30, isExact: false };
-  if (lower.includes('trước 1 tiếng') || lower.includes('trước 1 giờ') || lower.includes('truoc 1 tieng')) return { hasLeadTime: true, leadMinutes: 60, isExact: false };
+  // 5. Common Vietnamese phrase matches
+  if (lower.includes('trước 15') || lower.includes('truoc 15') || lower.includes('15p') || lower.includes('15 phút')) {
+    return { hasLeadTime: true, leadMinutes: 15, isExact: false };
+  }
+  if (lower.includes('trước 30') || lower.includes('truoc 30') || lower.includes('30p') || lower.includes('30 phút') || lower.includes('nửa tiếng') || lower.includes('nua tieng')) {
+    return { hasLeadTime: true, leadMinutes: 30, isExact: false };
+  }
+  if (lower.includes('trước 1 tiếng') || lower.includes('trước 1 giờ') || lower.includes('truoc 1 tieng') || lower.includes('truoc 1 gio') || lower.includes('1 tiếng') || lower.includes('1 giờ')) {
+    return { hasLeadTime: true, leadMinutes: 60, isExact: false };
+  }
+
+  // 6. Generic "báo trước" / "nhắc trước" without specifying duration -> default to 15 minutes
+  if (
+    lower.includes('báo trước') ||
+    lower.includes('bao truoc') ||
+    lower.includes('nhắc trước') ||
+    lower.includes('nhac truoc') ||
+    lower.includes('trước đó') ||
+    lower.includes('truoc do') ||
+    lower.includes('trước đi') ||
+    lower.includes('truoc di')
+  ) {
+    return { hasLeadTime: true, leadMinutes: 15, isExact: false };
+  }
 
   return { hasLeadTime: false, leadMinutes: 0, isExact: false };
 }

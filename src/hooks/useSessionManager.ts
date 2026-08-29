@@ -754,17 +754,18 @@ export function useSessionManager({
         } else if (pendingRes.clearPending) {
           setPendingInteraction(null);
         }
-      if (pendingRes.resolved) {
-        let finalReply = pendingRes.reply || '';
-        if (pendingRes.appAction) {
-          const execRes = await executeValidatedAppAction(pendingRes.appAction, appContext, runtimeContext, { trustedSource: true });
-          if (execRes.executed) {
-            finalReply = pendingRes.reply || 'Dạ vâng, con đã thực hiện xong rồi ạ.';
-          } else {
-            finalReply = execRes.reason || 'Dạ, con chưa thực hiện được thao tác này do có lỗi xảy ra.';
+
+        if (pendingRes.resolved) {
+          let finalReply = pendingRes.reply || '';
+          if (pendingRes.appAction) {
+            const execRes = await executeValidatedAppAction(pendingRes.appAction, appContext, runtimeContext, { trustedSource: true });
+            if (execRes.executed) {
+              finalReply = pendingRes.reply || 'Dạ vâng, con đã thực hiện xong rồi ạ.';
+            } else {
+              finalReply = execRes.reason || 'Dạ, con chưa thực hiện được thao tác này do có lỗi xảy ra.';
+            }
           }
-        }
-        let sessionAfterPending = activeSession;
+          let sessionAfterPending = activeSession;
 
         if (pendingRes.agentActions && pendingRes.agentActions.length > 0 && sessionAfterPending) {
           const batchTrigger = inputMode === 'voice' ? 'voice' : 'chat';
@@ -816,8 +817,9 @@ export function useSessionManager({
         return;
       }
     }
+  }
 
-    // A2. Fast Deterministic Vietnamese Reminder Parsing
+  // A2. Fast Deterministic Vietnamese Reminder Parsing
     const parseRes = parseVietnameseReminderText(trimmedText);
     if (parseRes.status === 'needs_clarification') {
       const hasDateStr = parseRes.targetDateStr;
@@ -996,8 +998,6 @@ export function useSessionManager({
         const q = fastRoute.clarificationQuestion || 'Chú có thể nói rõ hơn được không ạ?';
         setPendingInteraction({
           type: 'clarification',
-          scope: isSessionContext ? 'session' : 'global-chat',
-          sessionId: isSessionContext ? activeSession?.id : undefined,
           data: {
             actionType: fastRoute.clarificationActionType,
             payload: fastRoute.clarificationPayload || { originalQuery: trimmedText },
@@ -1060,8 +1060,6 @@ export function useSessionManager({
 
         setPendingInteraction({
           type: 'confirm_action',
-          scope: isSessionContext ? 'session' : 'global-chat',
-          sessionId: isSessionContext ? activeSession?.id : undefined,
           data: {
             action: actionWithSkip,
             agentActions: fastRoute.agentActions,
@@ -1449,21 +1447,23 @@ export function useSessionManager({
     } finally {
       setIsLoading(false);
     }
-  };
   }, [
     isLoading,
     pendingInteraction,
     activeSession,
-    sessionsList,
-    aiSettings,
+    authUser,
     userProfile,
+    aiSettings,
     accessibilitySettings,
-    setActiveTab,
+    syncSettings,
+    sessionsList,
     onNavigate,
+    setActiveTab,
     onGoBack,
     setProfileSetupOpen,
     handleOpenSession,
     handleCreateSessionFromTemplate,
+    handleCreateSessionFromScenario,
     setCameraModalOpen,
     setAccessibility,
     showToast,
@@ -1474,6 +1474,7 @@ export function useSessionManager({
     setPendingInteraction,
     speakWithVoiceStatus,
     saveUpdatedSession,
+    refreshSessionsList,
   ]);
 
   const handleCaptureCameraImage = useCallback(async (dataUrl: string) => {

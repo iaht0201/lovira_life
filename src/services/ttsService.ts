@@ -138,22 +138,25 @@ export function speakText(
 
   const preferredEngine = options.preferEngine || getTTSEnginePreference();
 
-  // 1. Nếu ưu tiên giọng đọc máy (Mặc định)
+  // Nếu người dùng chọn giọng đọc thiết bị (Native WebSpeech)
   if (preferredEngine === 'native') {
-    if (typeof window !== 'undefined' && 'speechSynthesis' in window) {
-      console.log(`[TTS] Prioritizing Device Native Voice for: "${cleanText.substring(0, 40)}..."`);
-      return speakWebSpeech(cleanText, options, () => {
-        console.warn('[TTS] WebSpeech fallback to Edge-TTS...');
-        speakEdgeTTS(cleanText, options);
-      });
-    } else {
-      // Thiết bị không hỗ trợ WebSpeech -> chuyển sang Edge-TTS
-      console.log(`[TTS] Device has no SpeechSynthesis, falling back to Edge-TTS...`);
-      return speakEdgeTTS(cleanText, options);
+    const hasViVoice = typeof window !== 'undefined' && 'speechSynthesis' in window &&
+      window.speechSynthesis.getVoices().some((v) => v.lang.toLowerCase().startsWith('vi'));
+
+    // Nếu máy không có giọng tiếng Việt, tự động chuyển sang Edge Neural để không bị câm tiếng
+    if (!hasViVoice) {
+      console.log(`[TTS] Device lacks Vietnamese native voice, automatically routing to Edge-TTS Neural...`);
+      return speakEdgeTTS(cleanText, options, () => speakWebSpeech(cleanText, options));
     }
+
+    console.log(`[TTS] Prioritizing Device Native Voice for: "${cleanText.substring(0, 40)}..."`);
+    return speakWebSpeech(cleanText, options, () => {
+      console.warn('[TTS] WebSpeech fallback to Edge-TTS...');
+      speakEdgeTTS(cleanText, options);
+    });
   }
 
-  // 2. Nếu ưu tiên Edge TTS Neural
+  // Mặc định: Ưu tiên Edge TTS Neural cực chuẩn (với WebSpeech fallback)
   return speakEdgeTTS(cleanText, options, () => {
     console.warn('[TTS] Edge-TTS failed, falling back to Native WebSpeech...');
     speakWebSpeech(cleanText, options);
@@ -250,36 +253,26 @@ function speakEdgeTTS(
     .then((data: { audioBase64?: string; voice?: string; engine?: string }) => {
       if (!data.audioBase64) throw new Error('Missing audioBase64 from Edge TTS response');
 
-      const base64Data = data.audioBase64.replace(/^data:audio\/\w+;base64,/, '');
-      const binaryString = atob(base64Data);
-      const bytes = new Uint8Array(binaryString.length);
-      for (let i = 0; i < binaryString.length; i++) {
-        bytes[i] = binaryString.charCodeAt(i);
-      }
-      const audioBlob = new Blob([bytes], { type: 'audio/mpeg' });
-      const blobUrl = URL.createObjectURL(audioBlob);
-      activeBlobUrl = blobUrl;
-
-      const audio = new Audio(blobUrl);
+      console.log(`[TTS] Received audio from server (engine: ${data.engine || 'unknown'}), playing sound...`);
+      
+      const audio = new Audio(data.audioBase64);
       activeAudio = audio;
 
+      audio.onplay = () => {
+        console.log('[TTS] Audio playing successfully! 🔊');
+      };
+
       audio.onended = () => {
+        console.log('[TTS] Audio playback finished.');
         speakingActive = false;
         activeAudio = null;
-        if (activeBlobUrl) {
-          URL.revokeObjectURL(activeBlobUrl);
-          activeBlobUrl = null;
-        }
         options.onEnd?.();
       };
 
       audio.onerror = (e) => {
+        console.warn('[TTS Playback Error], falling back to WebSpeech:', e);
         speakingActive = false;
         activeAudio = null;
-        if (activeBlobUrl) {
-          URL.revokeObjectURL(activeBlobUrl);
-          activeBlobUrl = null;
-        }
         if (onFallback) {
           onFallback();
         } else {
@@ -290,6 +283,7 @@ function speakEdgeTTS(
       const playPromise = audio.play();
       if (playPromise !== undefined) {
         playPromise.catch((playErr) => {
+          console.warn('[TTS Play Promise Rejected]:', playErr);
           if (onFallback) {
             onFallback();
           } else {
@@ -299,6 +293,7 @@ function speakEdgeTTS(
       }
     })
     .catch((err) => {
+      console.warn('[TTS Request Error], falling back to WebSpeech:', err);
       if (onFallback) {
         onFallback();
       } else {

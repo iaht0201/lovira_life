@@ -1,4 +1,4 @@
-const CACHE_NAME = 'lovira-life-pwa-v6';
+const CACHE_NAME = 'lovira-life-pwa-v7';
 const STATIC_ASSETS = [
   '/',
   '/index.html',
