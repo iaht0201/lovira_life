@@ -270,7 +270,7 @@ function AppContent() {
       <AppShell
         activeTab={activeTab}
         onTabChange={handleTabChange}
-        onCreateSession={() => handleCreateSessionFromTemplate('medical')}
+        onCreateSession={() => navigate('/chat')}
         onOpenAuthModal={handleOpenAuthModal}
         userName={userProfile?.preferredName || (user?.displayName ? user.displayName : '')}
         planName={getUserPlanName(userProfile)}
@@ -320,7 +320,7 @@ function AppContent() {
             }
           />
 
-          {/* Route 2: Global Chat */}
+          {/* Route 2: Global Chat & Unified Topic Creation */}
           <Route
             path="/chat"
             element={
@@ -341,6 +341,10 @@ function AppContent() {
                 isLoading={isLoading}
                 pendingInteraction={pendingInteraction}
                 userName={userProfile?.preferredName || ''}
+                onOpenCamera={() => setCameraModalOpen(true)}
+                onStartVoice={() => startListening(handleVoiceInput)}
+                voiceStatus={voiceStatus}
+                interimTranscript={interimTranscript}
               />
             }
           />
@@ -368,7 +372,7 @@ function AppContent() {
                 sessionsList={sessionsList}
                 onSetSession={setActiveSession}
                 onOpenSession={handleOpenSession}
-                onCreateNewSession={() => handleCreateSessionFromTemplate('medical')}
+                onCreateNewSession={() => navigate('/chat')}
                 onDeleteSession={(id) => handleDeleteSession(id, setConfirmModal)}
                 onUpdateStatus={handleUpdateStatus}
                 onCompleteCurrentTask={handleCompleteCurrentTask}
@@ -399,6 +403,20 @@ function AppContent() {
                 onStartVoice={() => startListening(handleVoiceInput)}
                 onStopVoice={stopListening}
                 onCancelVoice={cancelListening}
+              />
+            }
+          />
+
+          {/* Route: Vision ("Nhìn giúp tôi") */}
+          <Route
+            path="/vision"
+            element={
+              <VisionView
+                userProfile={userProfile}
+                settings={accessibility}
+                onCreateSessionFromTemplate={handleCreateSessionFromTemplate}
+                onOpenSession={handleOpenSession}
+                onShowToast={showToast}
               />
             }
           />
@@ -435,7 +453,11 @@ function AppContent() {
             }
           />
 
-          {/* Route 6: Reminders */}
+          {/* Route 6: Calendar & Reminders */}
+          <Route
+            path="/calendar"
+            element={<RemindersPage onOpenSession={handleOpenSession} onShowToast={showToast} />}
+          />
           <Route
             path="/reminders"
             element={<RemindersPage onOpenSession={handleOpenSession} onShowToast={showToast} />}

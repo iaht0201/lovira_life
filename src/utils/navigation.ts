@@ -5,8 +5,9 @@ export const TAB_ROUTES: Record<NavTab, string> = {
   chat: '/chat',
   vision: '/vision',
   tasks: '/tasks',
+  calendar: '/calendar',
   history: '/history',
-  reminders: '/reminders',
+  reminders: '/calendar',
   settings: '/settings',
   profile: '/profile',
 };
@@ -16,8 +17,8 @@ export function getTabFromPathname(pathname: string): NavTab {
   if (pathname === '/chat' || pathname.startsWith('/session/')) return 'chat';
   if (pathname.startsWith('/vision')) return 'vision';
   if (pathname.startsWith('/tasks')) return 'tasks';
+  if (pathname.startsWith('/calendar') || pathname.startsWith('/reminders')) return 'reminders';
   if (pathname.startsWith('/history')) return 'history';
-  if (pathname.startsWith('/reminders')) return 'reminders';
   if (pathname.startsWith('/settings')) return 'settings';
   if (pathname.startsWith('/profile')) return 'profile';
   return 'dashboard';

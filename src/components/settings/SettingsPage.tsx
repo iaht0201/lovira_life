@@ -114,12 +114,12 @@ export const SettingsPage: React.FC<SettingsPageProps> = ({
     e.preventDefault();
     onUpdateAISettings({
       ...aiSettings,
-      provider: 'gemini',
-      selectedModel: 'gemini-2.5-flash',
+      provider,
+      selectedModel,
       apiKey: apiKeyInput.trim(),
       demoMode: false,
     });
-    setTestResult('Đã lưu Gemini API Key thành công!');
+    setTestResult(`Đã lưu cấu hình AI (${provider === 'groq' ? 'Groq Cloud' : 'Google Gemini'}) thành công!`);
     setTimeout(() => setTestResult(null), 3000);
   };
 
@@ -492,33 +492,111 @@ export const SettingsPage: React.FC<SettingsPageProps> = ({
         </div>
       </section>
 
-      {/* 4. GEMINI API KEY SECTION */}
+      {/* 4. AI CONFIGURATION SECTION */}
       <section className="p-6 rounded-[22px] bg-lovira-card border border-lovira shadow-2xs space-y-4">
-        <div className="flex items-center gap-2.5 border-b border-lovira-subtle pb-3.5">
-          <div className="w-[36px] h-[36px] rounded-[12px] bg-[#E4F0EF] dark:bg-[#203A39] text-[#287C78] dark:text-[#42A39E] flex items-center justify-center font-[700]">
-            <Key className="w-[18px] h-[18px]" />
+        <div className="flex items-center justify-between border-b border-lovira-subtle pb-3.5">
+          <div className="flex items-center gap-2.5">
+            <div className="w-[36px] h-[36px] rounded-[12px] bg-[#E4F0EF] dark:bg-[#203A39] text-[#287C78] dark:text-[#42A39E] flex items-center justify-center font-[700]">
+              <Key className="w-[18px] h-[18px]" />
+            </div>
+            <div>
+              <h3 className="text-[16px] font-[800] text-lovira-title">
+                Cấu hình Động cơ Trí tuệ Nhân tạo (AI)
+              </h3>
+              <p className="text-[12px] font-[500] text-lovira-muted">
+                Tùy chọn nhà cung cấp AI (Groq siêu tốc độ hoặc Google Gemini) và mô hình suy luận
+              </p>
+            </div>
           </div>
-          <div>
-            <h3 className="text-[16px] font-[800] text-lovira-title">
-              Cấu hình khóa Google Gemini API
-            </h3>
-            <p className="text-[12px] font-[500] text-lovira-muted">
-              Nhập API Key để Lovira hỗ trợ phân tích đơn thuốc, đọc ảnh và suy luận trí tuệ nhân tạo
-            </p>
-          </div>
+          <span className="text-[11px] font-[700] px-3 py-1 rounded-full border bg-[#ECFDF5] text-[#047857] border-[#A7F3D0] dark:bg-[#064E3B] dark:text-[#34D399] dark:border-[#047857]">
+            {provider === 'groq' ? '⚡ Groq Cloud (Mặc định)' : '✨ Google Gemini'}
+          </span>
         </div>
 
         <form onSubmit={handleSaveAI} className="space-y-4">
+          {/* Provider Selector */}
           <div className="space-y-1.5">
             <label className="text-[12px] font-[700] text-lovira-title block">
-              Khóa Gemini API Secret Key:
+              Nhà cung cấp AI:
+            </label>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <button
+                type="button"
+                onClick={() => {
+                  setProvider('groq');
+                  setSelectedModel('openai/gpt-oss-20b');
+                }}
+                className={`p-3.5 rounded-[14px] border text-left transition-all cursor-pointer ${
+                  provider === 'groq'
+                    ? 'bg-[#E4F0EF] dark:bg-[#203A39] border-[#287C78] ring-1 ring-[#287C78]'
+                    : 'bg-lovira-input border-lovira hover:border-[#287C78]/50'
+                }`}
+              >
+                <div className="flex items-center justify-between mb-1">
+                  <span className="text-[13px] font-[800] text-lovira-title">⚡ Groq Cloud AI</span>
+                  <span className="text-[10px] font-[800] px-2 py-0.5 rounded-full bg-[#ECFDF5] text-[#047857] dark:bg-[#064E3B] dark:text-[#34D399]">
+                    Khuyên dùng
+                  </span>
+                </div>
+                <p className="text-[11px] font-[500] text-lovira-muted">
+                  Phản hồi siêu tốc (LPU), hỗ trợ gpt-oss-20b, gpt-oss-120b, qwen 3.6 và whisper.
+                </p>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => {
+                  setProvider('gemini');
+                  setSelectedModel('gemini-3.7-flash');
+                }}
+                className={`p-3.5 rounded-[14px] border text-left transition-all cursor-pointer ${
+                  provider === 'gemini'
+                    ? 'bg-[#E4F0EF] dark:bg-[#203A39] border-[#287C78] ring-1 ring-[#287C78]'
+                    : 'bg-lovira-input border-lovira hover:border-[#287C78]/50'
+                }`}
+              >
+                <div className="flex items-center justify-between mb-1">
+                  <span className="text-[13px] font-[800] text-lovira-title">✨ Google Gemini</span>
+                  <span className="text-[10px] font-[800] px-2 py-0.5 rounded-full bg-blue-100 text-blue-700 dark:bg-blue-950/50 dark:text-blue-300">
+                    Multimodal
+                  </span>
+                </div>
+                <p className="text-[11px] font-[500] text-lovira-muted">
+                  Google Gemini 3.7 Flash, suy luận mạnh mẽ, phân tích thị giác và tài liệu chuyên sâu.
+                </p>
+              </button>
+            </div>
+          </div>
+
+          {/* Model Selector */}
+          <div className="space-y-1.5">
+            <label className="text-[12px] font-[700] text-lovira-title block">
+              Mô hình ({provider === 'groq' ? 'Groq Models' : 'Gemini Models'}):
+            </label>
+            <select
+              value={selectedModel}
+              onChange={(e) => setSelectedModel(e.target.value)}
+              className="w-full p-3 rounded-[12px] border border-lovira bg-lovira-input text-lovira-title text-[12px] font-[600] focus:outline-none focus:border-[#287C78] cursor-pointer"
+            >
+              {MODEL_POOL.filter((m) => m.provider === provider).map((m) => (
+                <option key={m.id} value={m.id}>
+                  {m.id} ({m.capability === 'fast' ? '⚡ Tốc độ cao' : m.capability === 'reasoning' ? '🧠 Suy luận sâu' : '💬 Hội thoại'})
+                </option>
+              ))}
+            </select>
+          </div>
+
+          {/* API Key Input */}
+          <div className="space-y-1.5">
+            <label className="text-[12px] font-[700] text-lovira-title block">
+              Khóa API Key ({provider === 'groq' ? 'Groq API Key' : 'Gemini API Key'}):
             </label>
             <div className="relative">
               <input
                 type="password"
                 value={apiKeyInput}
                 onChange={(e) => setApiKeyInput(e.target.value)}
-                placeholder="Nhập Gemini API Key (AIzaSy...)..."
+                placeholder={provider === 'groq' ? 'Nhập Groq API Key (gsk_...)...' : 'Nhập Gemini API Key (AIzaSy...)...'}
                 className="w-full p-3 pr-10 rounded-[12px] border border-lovira bg-lovira-input text-lovira-title text-[12px] font-mono focus:outline-none focus:border-[#287C78]"
               />
               <Key className="w-[16px] h-[16px] absolute right-3 top-3.5 text-lovira-muted pointer-events-none" />
@@ -540,7 +618,7 @@ export const SettingsPage: React.FC<SettingsPageProps> = ({
               className="min-h-[42px] px-6 py-2 rounded-[12px] bg-[#287C78] text-white font-[700] text-[12px] shadow-xs hover:opacity-90 transition-opacity cursor-pointer flex items-center gap-2"
             >
               <ShieldCheck className="w-4 h-4" />
-              <span>Lưu khóa Gemini API Key</span>
+              <span>Lưu cấu hình AI</span>
             </button>
           </div>
         </form>

@@ -12,6 +12,8 @@ import { parseLocalIntent } from './services/localIntentEngine.js';
 import { generateFallbackCustomSessionPlan } from './services/fallbackPlanner.js';
 import { deduceHonorifics } from './services/conversationStyle.js';
 import { buildClarificationPrompt } from './services/ai/prompts/clarificationPrompt.js';
+import { callGroqAgent, GroqModel } from './services/ai/GroqProvider.js';
+import { selectGroqModel } from './services/ai/AIRouter.js';
 import { routeScenario } from './services/scenarioRouter.js';
 import { normalizeGeneratedLifePlan, validateGeneratedLifePlan } from './services/planValidator.js';
 import { geminiProvider } from './services/ai/GeminiProvider.js';
@@ -19,7 +21,8 @@ import { geminiProvider } from './services/ai/GeminiProvider.js';
 export function createApp() {
   const app = express();
 
-  app.use(express.json({ limit: '10mb' }));
+  app.use(express.json({ limit: '25mb' }));
+  app.use(express.urlencoded({ limit: '25mb', extended: true }));
 
   // Enable CORS headers
   app.use((req, res, next) => {
@@ -37,45 +40,87 @@ export function createApp() {
     res.json({
       status: 'ok',
       timestamp: new Date().toISOString(),
+      hasGroqKey: !!process.env.GROQ_API_KEY,
       hasGeminiKey: !!process.env.GEMINI_API_KEY,
     });
   });
 
-  // 1.5 Audio Transcription Endpoint (Google Gemini Speech Transcription)
+  // 1.5 Audio Transcription Endpoint (Groq Whisper AI with Gemini Fallback)
   app.post('/api/transcribe', async (req, res) => {
     try {
       console.log('[API /api/transcribe] Received audio transcription request...');
-      const apiKey = process.env.GEMINI_API_KEY;
-      if (!apiKey) {
-        console.warn('[API /api/transcribe] GEMINI_API_KEY is missing');
-        return res.status(400).json({ error: 'Chưa cấu hình GEMINI_API_KEY' });
-      }
-
       const { audioBase64, mimeType } = req.body as { audioBase64: string; mimeType?: string };
       if (!audioBase64) {
         return res.status(400).json({ error: 'Thiếu dữ liệu audioBase64' });
       }
 
-      const cleanB64 = audioBase64.replace(/^data:audio\/[a-zA-Z0-9+-]+;base64,/, '');
-      const ai = new GoogleGenAI({ apiKey });
-      const response = await ai.models.generateContent({
-        model: 'gemini-3.7-flash',
-        contents: [
-          {
-            role: 'user',
-            parts: [
-              { inlineData: { mimeType: mimeType || 'audio/webm', data: cleanB64 } },
-              {
-                text: 'Hãy chuyển đổi chính xác đoạn âm thanh tiếng Việt này thành văn bản thuần túy. Chỉ trả về đúng nội dung câu nói được nhận diện, không thêm bất kỳ lời giải thích hay ký hiệu markdown nào.',
-              },
-            ],
-          },
-        ],
-      });
+      // Priority 1: Groq Whisper API
+      const groqKey = process.env.GROQ_API_KEY;
+      if (groqKey) {
+        try {
+          const audioBuffer = Buffer.from(audioBase64.replace(/^data:audio\/[a-zA-Z0-9+-]+;base64,/, ''), 'base64');
+          const boundary = '----WebKitFormBoundary' + Math.random().toString(36).substring(2);
+          const filename = 'recording.webm';
 
-      const recognizedText = response.text?.trim() || '';
-      console.log('[Gemini Transcribe Success]:', recognizedText);
-      return res.json({ text: recognizedText });
+          const multipartBuffer = Buffer.concat([
+            Buffer.from(
+              `--${boundary}\r\nContent-Disposition: form-data; name="file"; filename="${filename}"\r\nContent-Type: ${
+                mimeType || 'audio/webm'
+              }\r\n\r\n`
+            ),
+            audioBuffer,
+            Buffer.from(
+              `\r\n--${boundary}\r\nContent-Disposition: form-data; name="model"\r\n\r\nwhisper-large-v3-turbo` +
+                `\r\n--${boundary}\r\nContent-Disposition: form-data; name="language"\r\n\r\nvi` +
+                `\r\n--${boundary}--\r\n`
+            ),
+          ]);
+
+          const whisperRes = await fetch('https://api.groq.com/openai/v1/audio/transcriptions', {
+            method: 'POST',
+            headers: {
+              Authorization: `Bearer ${groqKey}`,
+              'Content-Type': `multipart/form-data; boundary=${boundary}`,
+            },
+            body: multipartBuffer,
+          });
+
+          if (whisperRes.ok) {
+            const data = (await whisperRes.json()) as { text?: string };
+            console.log('[Groq Whisper Transcribe Success]:', data.text);
+            return res.json({ text: data.text || '' });
+          }
+        } catch (whisperErr) {
+          console.warn('[Whisper API Failed, falling back to Gemini]:', whisperErr);
+        }
+      }
+
+      // Priority 2: Gemini Audio Transcription
+      const geminiApiKey = process.env.GEMINI_API_KEY;
+      if (geminiApiKey) {
+        const cleanB64 = audioBase64.replace(/^data:audio\/[a-zA-Z0-9+-]+;base64,/, '');
+        const ai = new GoogleGenAI({ apiKey: geminiApiKey });
+        const response = await ai.models.generateContent({
+          model: 'gemini-3.7-flash',
+          contents: [
+            {
+              role: 'user',
+              parts: [
+                { inlineData: { mimeType: mimeType || 'audio/webm', data: cleanB64 } },
+                {
+                  text: 'Hãy chuyển đổi chính xác đoạn âm thanh tiếng Việt này thành văn bản thuần túy. Chỉ trả về đúng nội dung câu nói được nhận diện, không thêm bất kỳ lời giải thích hay ký hiệu markdown nào.',
+                },
+              ],
+            },
+          ],
+        });
+
+        const recognizedText = response.text?.trim() || '';
+        console.log('[Gemini Transcribe Success]:', recognizedText);
+        return res.json({ text: recognizedText });
+      }
+
+      return res.status(400).json({ error: 'Chưa cấu hình GROQ_API_KEY hoặc GEMINI_API_KEY cho chuyển đổi âm thanh' });
     } catch (err: any) {
       console.error('[Transcribe API Exception]:', err);
       return res.status(500).json({ error: err.message || 'Lỗi xử lý âm thanh' });
@@ -175,16 +220,16 @@ export function createApp() {
     }
   });
 
-  // 2. Chat Endpoint with Gemini Provider (Structured JSON Output)
+  // 2. Chat Endpoint with Groq & Gemini Providers (Structured Output)
   app.post('/api/chat', async (req, res) => {
     try {
-      const { session, message, conversationHistory, isDemoMode, userProfile, provider, inputMode, appContext } = req.body as {
+      const { session, message, conversationHistory, isDemoMode, userProfile, provider = 'groq', inputMode, appContext } = req.body as {
         session?: LifeSession | null;
         message: string;
         conversationHistory?: Array<{ role: 'user' | 'assistant'; text: string }>;
         isDemoMode?: boolean;
         userProfile?: any;
-        provider?: 'gemini' | 'demo';
+        provider?: 'groq' | 'gemini' | 'demo';
         inputMode?: 'text' | 'voice';
         appContext?: any;
       };
@@ -201,7 +246,25 @@ export function createApp() {
         }
       }
 
-      // 2. Primary: Google Gemini Provider (Gemini 3.7 Flash with Strict Structured JSON Schema)
+      const groqKey = process.env.GROQ_API_KEY;
+
+      // 2. Priority 1: Groq Provider when provider is 'groq' (or when GROQ_API_KEY is available and provider is not 'gemini')
+      if (groqKey && !isDemoMode && provider !== 'gemini') {
+        try {
+          const selectedModel = selectGroqModel(message, session);
+          const groqRes = await callGroqAgent(
+            { message, session, conversationHistory, userProfile, modelOverride: selectedModel, inputMode, appContext },
+            groqKey
+          );
+          if (groqRes) {
+            return res.json(groqRes);
+          }
+        } catch (groqErr) {
+          console.warn('[Server Chat] Groq agent call failed, attempting Gemini fallback:', groqErr);
+        }
+      }
+
+      // 3. Priority 2: Google Gemini Provider (Gemini 3.7 Flash)
       if (geminiProvider.isAvailable() && !isDemoMode) {
         try {
           const geminiRes = await geminiProvider.chat({
@@ -216,11 +279,27 @@ export function createApp() {
             return res.json(geminiRes);
           }
         } catch (geminiErr) {
-          console.warn('[Server Chat] Gemini provider failed, falling back to offline response:', geminiErr);
+          console.warn('[Server Chat] Gemini provider failed:', geminiErr);
         }
       }
 
-      // 3. Offline Fallback Response
+      // 4. Retry Groq Provider if provider was 'gemini' and Gemini failed
+      if (groqKey && !isDemoMode && provider === 'gemini') {
+        try {
+          const selectedModel = selectGroqModel(message, session);
+          const groqRes = await callGroqAgent(
+            { message, session, conversationHistory, userProfile, modelOverride: selectedModel, inputMode, appContext },
+            groqKey
+          );
+          if (groqRes) {
+            return res.json(groqRes);
+          }
+        } catch (groqErr) {
+          console.warn('[Server Chat] Groq fallback agent failed:', groqErr);
+        }
+      }
+
+      // 5. Offline Fallback Response
       const honorifics = deduceHonorifics(userProfile, message);
       const { addressing, da } = honorifics;
       const prefix = da ? `${da}, ` : '';
@@ -283,8 +362,42 @@ export function createApp() {
         });
       }
 
-      const apiKey = process.env.GEMINI_API_KEY;
+      const groqKey = process.env.GROQ_API_KEY;
 
+      // Priority 1: Groq
+      if (groqKey && !isDemoMode) {
+        try {
+          const clarificationPrompt = buildClarificationPrompt(prompt);
+          const groqRes = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              Authorization: `Bearer ${groqKey}`,
+            },
+            body: JSON.stringify({
+              model: GroqModel.GPT_OSS_20B,
+              messages: [{ role: 'user', content: clarificationPrompt }],
+              temperature: 0.1,
+            }),
+          });
+          if (groqRes.ok) {
+            const data = (await groqRes.json()) as any;
+            const textContent = data.choices?.[0]?.message?.content || '';
+            const cleanJson = textContent.replace(/```json/g, '').replace(/```/g, '').trim();
+            const result = JSON.parse(cleanJson);
+            return res.json({
+              isSpecificEnough: !!result.isSpecificEnough,
+              missingInfo: result.missingInfo || [],
+              clarifyingQuestion: result.clarifyingQuestion || '',
+            });
+          }
+        } catch (e) {
+          console.warn('Groq clarification check failed:', e);
+        }
+      }
+
+      // Priority 2: Gemini
+      const apiKey = process.env.GEMINI_API_KEY;
       if (apiKey && !isDemoMode) {
         try {
           const clarificationPrompt = buildClarificationPrompt(prompt);
@@ -345,9 +458,76 @@ export function createApp() {
       }
 
       const routing = routeScenario(prompt);
-      const apiKey = process.env.GEMINI_API_KEY;
+      const groqKey = process.env.GROQ_API_KEY;
 
-      // Priority 1: Google Gemini 3.7 Flash with Strict Structured Schema
+      // Priority 1: Groq if GROQ_API_KEY is configured
+      if (groqKey && !isDemoMode) {
+        try {
+          const groqRes = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              Authorization: `Bearer ${groqKey}`,
+            },
+            body: JSON.stringify({
+              model: GroqModel.GPT_OSS_20B,
+              messages: [
+                {
+                  role: 'system',
+                  content: `Bạn là Trợ lý Lovira Life Planner. Hãy lập kế hoạch cho mục tiêu của người dùng: "${prompt}".
+QUY TẮC NGÔN NGỮ BẮT BUỘC:
+1. TẤT CẢ VĂN BẢN BẮT BUỘC 100% BẰNG TIẾNG VIỆT (VIETNAMESE). TUYỆT ĐỐI KHÔNG DÙNG TIẾNG ANH.
+2. Nhiệm vụ và bước con phải là HÀNH ĐỘNG CỤ THỂ THỰC TẾ tiếng Việt.
+3. Trả về DUY NHẤT JSON đúng schema:
+{
+  "title": "Tiêu đề ngắn gọn bằng tiếng Việt kèm icon",
+  "goal": "Mục tiêu đầy đủ bằng tiếng Việt",
+  "scenarioType": "custom",
+  "scenarioFamily": "${routing.family}",
+  "secondaryFamilies": [],
+  "tags": [],
+  "tasks": [
+    {
+      "title": "Tên công việc chính bằng tiếng Việt",
+      "order": 1,
+      "important": true,
+      "subtasks": [
+        { "title": "Tên bước con bằng tiếng Việt", "order": 1 }
+      ]
+    }
+  ],
+  "importantFacts": [
+    { "type": "requirement", "title": "Tiêu đề bằng tiếng Việt", "value": "Nội dung bằng tiếng Việt" }
+  ],
+  "firstRecommendedAction": "Tên bước con đầu tiên bằng tiếng Việt"
+}`,
+                },
+                { role: 'user', content: prompt },
+              ],
+              temperature: 0.2,
+            }),
+          });
+
+          if (groqRes.ok) {
+            const data = (await groqRes.json()) as any;
+            const textContent = data.choices?.[0]?.message?.content || '';
+            const cleanJson = textContent.replace(/```json/g, '').replace(/```/g, '').trim();
+            const parsed = JSON.parse(cleanJson);
+            if (parsed && Array.isArray(parsed.tasks) && parsed.tasks.length > 0) {
+              const normalized = normalizeGeneratedLifePlan(parsed, prompt, routing);
+              const validation = validateGeneratedLifePlan(normalized);
+              if (validation.valid) {
+                return res.json(normalized);
+              }
+            }
+          }
+        } catch (e) {
+          console.warn('Groq plan generation failed:', e);
+        }
+      }
+
+      // Priority 2: Google Gemini 3.7 Flash with Strict Structured Schema
+      const apiKey = process.env.GEMINI_API_KEY;
       if (apiKey && !isDemoMode) {
         try {
           const ai = new GoogleGenAI({ apiKey });
@@ -435,7 +615,7 @@ QUY TẮC NGÔN NGỮ BẮT BUỘC:
         }
       }
 
-      // Priority 2: Fallback planner
+      // Priority 3: Fallback planner
       const fallback = generateFallbackCustomSessionPlan(prompt);
       return res.json(fallback);
     } catch (e) {
@@ -446,7 +626,7 @@ QUY TẮC NGÔN NGỮ BẮT BUỘC:
     }
   });
 
-  // 5. Vision Endpoint (Google Gemini 3.7 Flash Multimodal Vision)
+  // 5. Vision Endpoint (Groq Qwen Vision Primary, Gemini Fallback)
   app.post('/api/vision', async (req, res) => {
     try {
       const { imageBase64, mode = 'scene', customApiKey } = req.body;
@@ -464,12 +644,66 @@ Hãy phân tích hình ảnh này theo chế độ "${mode}" (${
           ? 'Định danh các đồ vật và vị trí'
           : 'Tóm tắt siêu ngắn gọn'
       }).
+QUY TẮC BẮT BUỘC: 100% TIẾNG VIỆT, KHÔNG DÙNG TIẾNG ANH.
 Trả về kết quả bằng định dạng JSON thuần túy (JSON object) gồm các trường:
 - summary: (string) Lời mô tả tổng quan, ân cần, ngắn gọn, dễ hiểu.
 - details: (string array) 2-4 chi tiết đồ vật, nhãn mác hoặc đặc điểm nổi bật.
 - detectedText: (string array) Các đoạn văn bản hoặc chữ ghi trên hình ảnh (nếu có).
 - possibleHazards: (string array) Các lưu ý hoặc nguy cơ chướng ngại vật/an toàn (nếu có).`;
 
+      // Priority 1: Groq Vision Models (Groq Qwen / Vision models)
+      const groqKey = customApiKey || process.env.GROQ_API_KEY;
+      if (groqKey) {
+        const groqVisionModels = ['llama-3.2-11b-vision-preview', 'llama-3.2-90b-vision-preview', 'qwen-2.5-32b'];
+        const formattedImage = imageBase64.startsWith('data:')
+          ? imageBase64
+          : `data:image/jpeg;base64,${imageBase64}`;
+
+        for (const modelName of groqVisionModels) {
+          try {
+            const groqRes = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+              method: 'POST',
+              headers: {
+                Authorization: `Bearer ${groqKey}`,
+                'Content-Type': 'application/json',
+              },
+              body: JSON.stringify({
+                model: modelName,
+                messages: [
+                  {
+                    role: 'user',
+                    content: [
+                      { type: 'text', text: promptText },
+                      { type: 'image_url', image_url: { url: formattedImage } },
+                    ],
+                  },
+                ],
+                response_format: { type: 'json_object' },
+                temperature: 0.2,
+              }),
+            });
+
+            if (groqRes.ok) {
+              const data = (await groqRes.json()) as any;
+              const content = data.choices?.[0]?.message?.content;
+              if (content) {
+                const parsed = JSON.parse(content);
+                return res.json({
+                  summary: parsed.summary || 'Lovira đã nhận diện xong ảnh.',
+                  details: parsed.details || [],
+                  detectedText: parsed.detectedText || [],
+                  possibleHazards: parsed.possibleHazards || [],
+                  engine: 'groq-vision',
+                });
+              }
+            }
+          } catch (groqErr) {
+            console.warn(`[Vision API] Groq model ${modelName} call failed, trying next:`, groqErr);
+          }
+        }
+      }
+
+      // Priority 2: Gemini 3.7 Flash Vision
       const apiKey = customApiKey || process.env.GEMINI_API_KEY;
       if (apiKey && apiKey !== 'MY_GEMINI_API_KEY') {
         const ai = new GoogleGenAI({ apiKey });
@@ -539,10 +773,46 @@ Trả về kết quả bằng định dạng JSON thuần túy (JSON object) g�
     }
   });
 
-  // 5.5. Document / Image Q&A Endpoint (Gemini 3.7 Flash)
+  // 5.5. Document / Image Q&A Endpoint (Groq Qwen Primary, Gemini Fallback)
   app.post('/api/gemini/document-qa', async (req, res) => {
     try {
       const { documentText, question, customApiKey } = req.body;
+      const groqKey = customApiKey || process.env.GROQ_API_KEY;
+
+      if (groqKey) {
+        try {
+          const groqRes = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+            method: 'POST',
+            headers: {
+              Authorization: `Bearer ${groqKey}`,
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+              model: 'qwen/qwen3.6-27b',
+              messages: [
+                {
+                  role: 'system',
+                  content: 'Bạn là trợ lý ân cần Lovira dành cho người lớn tuổi. Trả lời câu hỏi dựa trên nội dung hình ảnh/tài liệu bằng tiếng Việt.',
+                },
+                {
+                  role: 'user',
+                  content: `Dựa vào ngữ cảnh phân tích hình ảnh/tài liệu sau:\n"${documentText}"\n\nHãy trả lời câu hỏi: "${question}".`,
+                },
+              ],
+              temperature: 0.3,
+            }),
+          });
+
+          if (groqRes.ok) {
+            const data = (await groqRes.json()) as any;
+            const reply = data.choices?.[0]?.message?.content;
+            if (reply) return res.json({ answer: reply });
+          }
+        } catch (groqErr) {
+          console.warn('[Document QA] Groq call failed, trying Gemini:', groqErr);
+        }
+      }
+
       const geminiApiKey = customApiKey || process.env.GEMINI_API_KEY;
       if (geminiApiKey && geminiApiKey !== 'MY_GEMINI_API_KEY') {
         const ai = new GoogleGenAI({ apiKey: geminiApiKey });

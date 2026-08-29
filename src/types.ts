@@ -287,14 +287,14 @@ export interface AccessibilitySettings {
 
 export interface ModelProfile {
   id: string;
-  provider: 'gemini';
+  provider: 'groq' | 'gemini';
   capability: 'fast' | 'reasoning' | 'conversation' | 'vision' | 'lite';
   supportsVision: boolean;
   supportsToolCalling: boolean;
 }
 
 export interface AISettings {
-  provider: 'gemini' | 'demo';
+  provider: 'groq' | 'gemini' | 'demo';
   apiKey?: string;
   selectedModel: string;
   demoMode: boolean;

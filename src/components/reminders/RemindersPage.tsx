@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react';
+import { useLocation } from 'react-router-dom';
 import {
   Bell,
   Plus,
@@ -19,6 +20,7 @@ import {
   Trash2,
   ChevronLeft,
   ChevronRight,
+  CalendarDays,
 } from 'lucide-react';
 import { DetailedReminderModal } from './DetailedReminderModal';
 import { ReminderCalendarView } from './ReminderCalendarView';
@@ -31,13 +33,19 @@ import { sfx } from '../../utils/sfx';
 interface RemindersPageProps {
   onOpenSession?: (sessionId: string) => void;
   onShowToast?: (msg: string) => void;
+  defaultView?: 'calendar' | 'upcoming';
 }
 
 export const RemindersPage: React.FC<RemindersPageProps> = ({
   onOpenSession,
   onShowToast,
+  defaultView,
 }) => {
-  const [activeTab, setActiveTab] = useState<'upcoming' | 'calendar'>('upcoming');
+  const location = useLocation();
+  const isCalendarRoute = location.pathname.startsWith('/calendar') || defaultView === 'calendar';
+  const [activeTab, setActiveTab] = useState<'calendar' | 'upcoming'>(
+    isCalendarRoute ? 'calendar' : 'calendar'
+  );
   const [reminders, setReminders] = useState<Reminder[]>(() => reminderService.getReminders());
   const [sessions, setSessions] = useState<BriefSessionHeader[]>(() =>
     storageService.getSessionsList()
@@ -301,8 +309,23 @@ export const RemindersPage: React.FC<RemindersPageProps> = ({
         </div>
       </div>
 
-      {/* Tab Switcher: [ Sắp tới ] [ Lịch ] */}
-      <div className="flex items-center gap-2 border-b border-gray-200 dark:border-gray-800 pb-2 overflow-x-auto no-scrollbar w-full min-w-0">
+      {/* Tab Switcher: [ 📅 Lịch biểu & Lịch tháng ] [ ⏰ Danh sách Sắp tới ] */}
+      <div className="flex items-center gap-2 border-b border-lovira-subtle pb-2 overflow-x-auto no-scrollbar w-full min-w-0">
+        <button
+          onClick={() => {
+            setActiveTab('calendar');
+            sfx.playTap();
+          }}
+          className={`flex items-center gap-2 px-3.5 sm:px-4 py-2 text-xs sm:text-sm font-[800] rounded-xl transition-all cursor-pointer whitespace-nowrap shrink-0 ${
+            activeTab === 'calendar'
+              ? 'bg-[#287C78] text-white shadow-2xs'
+              : 'text-lovira-muted hover:text-lovira-title hover:bg-lovira-subtle'
+          }`}
+        >
+          <CalendarDays className="w-4 h-4" />
+          <span>Lịch biểu & Lịch tháng</span>
+        </button>
+
         <button
           onClick={() => {
             setActiveTab('upcoming');
@@ -310,8 +333,8 @@ export const RemindersPage: React.FC<RemindersPageProps> = ({
           }}
           className={`flex items-center gap-2 px-3.5 sm:px-4 py-2 text-xs sm:text-sm font-[800] rounded-xl transition-all cursor-pointer whitespace-nowrap shrink-0 ${
             activeTab === 'upcoming'
-              ? 'bg-[#287C78] text-white shadow-xs'
-              : 'text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800'
+              ? 'bg-[#287C78] text-white shadow-2xs'
+              : 'text-lovira-muted hover:text-lovira-title hover:bg-lovira-subtle'
           }`}
         >
           <ListFilter className="w-4 h-4" />
@@ -320,26 +343,11 @@ export const RemindersPage: React.FC<RemindersPageProps> = ({
             className={`px-2 py-0.5 text-[11px] font-black rounded-full ${
               activeTab === 'upcoming'
                 ? 'bg-white/20 text-white'
-                : 'bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300'
+                : 'bg-lovira-subtle text-lovira-muted'
             }`}
           >
             {counts.all}
           </span>
-        </button>
-
-        <button
-          onClick={() => {
-            setActiveTab('calendar');
-            sfx.playTap();
-          }}
-          className={`flex items-center gap-2 px-3.5 sm:px-4 py-2 text-xs sm:text-sm font-[800] rounded-xl transition-all cursor-pointer whitespace-nowrap shrink-0 ${
-            activeTab === 'calendar'
-              ? 'bg-[#287C78] text-white shadow-xs'
-              : 'text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800'
-          }`}
-        >
-          <CalendarIcon className="w-4 h-4" />
-          <span>Lịch tháng</span>
         </button>
       </div>
 

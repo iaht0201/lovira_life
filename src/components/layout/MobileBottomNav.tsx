@@ -1,5 +1,5 @@
 import React from 'react';
-import { LayoutDashboard, MessageSquare, Eye, Mic, CheckSquare, Settings, Sparkles, Volume2, AlertCircle } from 'lucide-react';
+import { LayoutDashboard, MessageSquare, CalendarDays, Eye, Mic, Settings, Sparkles, Volume2, AlertCircle } from 'lucide-react';
 import { NavTab } from './DesktopSidebar';
 import { VoiceInteractionState } from '../../types';
 
@@ -68,7 +68,7 @@ export const MobileBottomNav: React.FC<MobileBottomNavProps> = ({
       <button
         onClick={() => onTabChange('dashboard')}
         aria-current={activeTab === 'dashboard' ? 'page' : undefined}
-        className={`flex flex-col items-center justify-center min-w-[56px] min-h-[48px] px-1 py-1 rounded-[12px] text-[11px] font-[600] transition-colors cursor-pointer ${
+        className={`flex flex-col items-center justify-center min-w-[50px] min-h-[48px] px-1 py-1 rounded-[12px] text-[11px] font-[600] transition-colors cursor-pointer ${
           activeTab === 'dashboard' ? 'text-[#287C78] dark:text-[#42A39E] font-[700]' : 'text-lovira-muted'
         }`}
       >
@@ -103,23 +103,23 @@ export const MobileBottomNav: React.FC<MobileBottomNavProps> = ({
         </button>
       </div>
 
-      {/* 4. Nhìn giúp tôi */}
+      {/* 4. Lịch & Nhắc nhở */}
       <button
-        onClick={() => onTabChange('vision')}
-        aria-current={activeTab === 'vision' ? 'page' : undefined}
-        className={`flex flex-col items-center justify-center min-w-[56px] min-h-[48px] px-1 py-1 rounded-[12px] text-[11px] font-[600] transition-colors cursor-pointer ${
-          activeTab === 'vision' ? 'text-[#287C78] dark:text-[#42A39E] font-[700]' : 'text-lovira-muted'
+        onClick={() => onTabChange('reminders')}
+        aria-current={activeTab === 'reminders' || activeTab === 'calendar' ? 'page' : undefined}
+        className={`flex flex-col items-center justify-center min-w-[50px] min-h-[48px] px-1 py-1 rounded-[12px] text-[11px] font-[600] transition-colors cursor-pointer ${
+          activeTab === 'reminders' || activeTab === 'calendar' ? 'text-[#287C78] dark:text-[#42A39E] font-[700]' : 'text-lovira-muted'
         }`}
       >
-        <Eye className="w-[22px] h-[22px] mb-0.5" />
-        <span className="truncate">Nhìn giúp</span>
+        <CalendarDays className="w-[22px] h-[22px] mb-0.5" />
+        <span className="truncate">Lịch</span>
       </button>
 
       {/* 5. Cài đặt */}
       <button
         onClick={() => onTabChange('settings')}
         aria-current={activeTab === 'settings' ? 'page' : undefined}
-        className={`flex flex-col items-center justify-center min-w-[56px] min-h-[48px] px-1 py-1 rounded-[12px] text-[11px] font-[600] transition-colors cursor-pointer ${
+        className={`flex flex-col items-center justify-center min-w-[50px] min-h-[48px] px-1 py-1 rounded-[12px] text-[11px] font-[600] transition-colors cursor-pointer ${
           activeTab === 'settings' ? 'text-[#287C78] dark:text-[#42A39E] font-[700]' : 'text-lovira-muted'
         }`}
       >
