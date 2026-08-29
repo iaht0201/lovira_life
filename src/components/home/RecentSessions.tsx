@@ -25,7 +25,7 @@ export const RecentSessions: React.FC<RecentSessionsProps> = ({
       {/* Header */}
       <div className="flex items-center justify-between mb-4">
         <h3 className="text-[18px] sm:text-[20px] font-[800] text-lovira-title">
-          Phiên gần đây
+          Mục hỗ trợ gần đây
         </h3>
         {activeSessions.length > 0 && (
           <button
@@ -58,10 +58,10 @@ export const RecentSessions: React.FC<RecentSessionsProps> = ({
           </div>
           <div className="max-w-sm space-y-1">
             <h4 className="text-[16px] font-[700] text-lovira-title">
-              Chưa có phiên nào
+              Chưa có mục hỗ trợ nào
             </h4>
             <p className="text-[13px] text-lovira-muted leading-relaxed">
-              Hãy tạo một phiên mới để Lovira đồng hành cùng chú nhé!
+              Hãy nói việc bạn sắp làm, Lovira sẽ đề xuất cách hỗ trợ!
             </p>
           </div>
           <button
@@ -69,7 +69,7 @@ export const RecentSessions: React.FC<RecentSessionsProps> = ({
             className="mt-2 inline-flex items-center gap-2 px-5 py-2.5 rounded-[12px] bg-lovira-purple text-white font-[700] text-[14px] transition-all shadow-sm cursor-pointer hover:opacity-90"
           >
             <Plus className="w-[18px] h-[18px]" />
-            <span>+ Tạo phiên mới</span>
+            <span>Bạn đang cần làm gì?</span>
           </button>
         </div>
       )}

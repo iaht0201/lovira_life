@@ -22,8 +22,8 @@ export const QuickActions: React.FC<QuickActionsProps> = ({
   const actions = [
     {
       id: 'create_session' as const,
-      title: 'Tạo phiên mới',
-      description: 'Bắt đầu với một chủ đề công việc mới',
+      title: 'Lovira giúp việc gì?',
+      description: 'Hãy nói việc bạn sắp làm, Lovira sẽ đề xuất cách hỗ trợ.',
       icon: Plus,
       accent: 'purple' as const,
       onClick: onCreateSession,

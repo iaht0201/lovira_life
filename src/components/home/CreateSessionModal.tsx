@@ -120,10 +120,10 @@ export const CreateSessionModal: React.FC<CreateSessionModalProps> = ({
             </div>
             <div>
               <h2 className="text-lg sm:text-xl font-black tracking-tight text-gray-900 dark:text-white">
-                Tạo phiên làm việc mới
+                Bạn đang cần làm gì?
               </h2>
               <p className="text-xs text-gray-500 dark:text-gray-400 font-medium">
-                Tự do gõ chủ đề hoặc chọn gợi ý nhanh bên dưới
+                Hãy nói việc bạn sắp làm, Lovira sẽ đề xuất cách hỗ trợ phù hợp.
               </p>
             </div>
           </div>
@@ -144,14 +144,14 @@ export const CreateSessionModal: React.FC<CreateSessionModalProps> = ({
           <div className="space-y-1.5">
             <label className="block text-xs font-black uppercase tracking-wider text-[#287C78] dark:text-[#42A39E] flex items-center gap-1.5">
               <Sparkles className="w-4 h-4 text-[#287C78]" />
-              <span>Chủ đề / Mục tiêu công việc của chú:</span>
+              <span>Việc bạn chuẩn bị thực hiện:</span>
             </label>
 
             <div className="relative">
               <input
                 type="text"
                 autoFocus
-                placeholder="Ví dụ: Đăng ký BHYT, Hỏi đường đi Chợ Rẫy, Học dùng Zalo..."
+                placeholder="Ví dụ: Mai tôi đi khám bệnh, Chiều tôi phải ra ngân hàng..."
                 value={topicInput}
                 onChange={(e) => setTopicInput(e.target.value)}
                 className="w-full h-12 px-4 text-sm font-bold bg-gray-50 dark:bg-[#202C2C] border-2 border-[#287C78]/50 dark:border-[#42A39E]/60 rounded-2xl focus:border-[#287C78] focus:ring-2 focus:ring-[#287C78]/20 outline-none text-gray-900 dark:text-white transition-all shadow-inner"
@@ -167,7 +167,7 @@ export const CreateSessionModal: React.FC<CreateSessionModalProps> = ({
               )}
             </div>
             <p className="text-[11px] text-gray-500 dark:text-gray-400 pl-1 font-medium">
-              💡 Chú có thể nhập bất kỳ nội dung hoặc mục tiêu cá nhân nào mà không bị bó buộc.
+              💡 Bạn có thể nói những việc đời thường như &quot;Mai đi khám&quot;, &quot;Cần làm lại BHYT&quot;... Lovira sẽ hỏi bạn cách hỗ trợ thích hợp.
             </p>
           </div>
 
@@ -229,7 +229,7 @@ export const CreateSessionModal: React.FC<CreateSessionModalProps> = ({
               className="flex-1 py-3 text-xs font-black bg-gradient-to-r from-[#287C78] to-[#1F625F] hover:opacity-90 text-white rounded-xl shadow-lg transition-all cursor-pointer flex items-center justify-center gap-1.5 disabled:opacity-50"
             >
               <CheckCircle2 className="w-4 h-4" />
-              <span>{isSubmitting ? 'Đang khởi tạo...' : 'Bắt đầu phiên ngay'}</span>
+              <span>{isSubmitting ? 'Đang xử lý...' : 'Tiếp tục'}</span>
             </button>
           </div>
 

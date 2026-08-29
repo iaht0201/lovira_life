@@ -1392,27 +1392,13 @@ export function useSessionManager({
   const handleCaptureCameraImage = useCallback(async (dataUrl: string) => {
     let currentTarget = activeSession;
     if (!currentTarget) {
-      const activeId = storageService.getActiveSessionId();
-      if (activeId) {
-        currentTarget = storageService.getSession(activeId);
+      // RULE 7: Camera without active session -> Open Vision Assistant without auto-creating LifeSession!
+      showToast('Đã chụp hình! Đang chuyển sang Nhìn giúp tôi...');
+      if (onNavigate) {
+        onNavigate('/vision');
       }
-      if (!currentTarget) {
-        const list = storageService.getSessionsList();
-        if (list.length > 0) {
-          currentTarget = storageService.getSession(list[0].id);
-        }
-      }
-      if (!currentTarget) {
-        currentTarget = createLifeSessionFromScenario(
-          'healthcare',
-          'Phiên chụp tài liệu & khám bệnh',
-          accessibilitySettings,
-          userProfile
-        );
-        storageService.saveSession(currentTarget);
-        storageService.setActiveSessionId(currentTarget.id);
-        refreshSessionsList();
-      }
+      setCameraModalOpen(false);
+      return;
     }
 
     const now = new Date().toISOString();

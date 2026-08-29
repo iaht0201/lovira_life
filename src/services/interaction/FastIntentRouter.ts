@@ -586,26 +586,27 @@ export async function routeFastIntent(
     };
   }
 
-  // B7. Template-First Instant Session Creation
-  // Check if phrase matches one of the known life scenario templates (healthcare, administrative, shopping, interview, repair)
+  // B7. Scenario Match -> Life Event Detection & Support Option Proposal (NO AUTO CREATE)
   const templateMatch = matchScenarioTemplate(normalized, unaccented);
   if (templateMatch) {
     const cleanTitle = templateMatch.label.replace(/^[\p{Extended_Pictographic}\u{1F300}-\u{1F9FF}\u{2600}-\u{26FF}\u{2700}-\u{27BF}\s]+/gu, '');
+    const promptReply = `${da}, ${addressing} sắp làm ${cleanTitle.toLowerCase()} phải không ạ. ${addressing.charAt(0).toUpperCase() + addressing.slice(1)} muốn ${me} hỗ trợ từng bước khi chuẩn bị và thực hiện, hay tạo nhắc nhở trước giờ đi ạ?`;
+
     return {
       handled: true,
       confidence: 0.92,
       source: 'pattern',
-      appAction: {
-        type: 'CREATE_SESSION',
-        payload: {
-          goal: rawText,
-          sessionTitle: cleanTitle,
-          scenarioKey: templateMatch.family,
-          creationMode: 'template',
-        },
+      needsClarification: true,
+      clarificationActionType: 'CHOOSE_SUPPORT_MODE',
+      clarificationQuestion: promptReply,
+      clarificationPayload: {
+        originalText: rawText,
+        scenarioFamily: templateMatch.family,
+        proposedGoal: cleanTitle,
       },
-      reply: `${da}, ${me} tạo ngay phiên hướng dẫn "${cleanTitle}" cho ${addressing} đây ạ! ${me} đã chuẩn bị sẵn danh sách các bước thực hiện để đồng hành cùng ${addressing}.`,
-      speech: `${da}, ${me} đã tạo ngay phiên hướng dẫn "${cleanTitle}" cho ${addressing} rồi ạ!`,
+      reply: promptReply,
+      speech: `${da}, ${addressing} muốn ${me} hỗ trợ từng bước hay tạo nhắc nhở trước giờ đi ạ?`,
+      suggestedReplies: ['Hỗ trợ từng bước', 'Tạo nhắc nhở', 'Không cần'],
     };
   }
 

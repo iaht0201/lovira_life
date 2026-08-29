@@ -848,6 +848,7 @@ async function _executeLocalBrainInternal(
     // -------------------------------------------------------------
     // CREATE SCENARIO TEMPLATE SESSION
     // -------------------------------------------------------------
+    case 'suggest_support':
     case 'create_session_template': {
       const scenarioKey = intent.appAction?.payload?.scenarioKey || 'general';
       const scenarioTitleMap: Record<string, string> = {
@@ -870,23 +871,25 @@ async function _executeLocalBrainInternal(
       };
 
       const title = scenarioTitleMap[scenarioKey] || 'Đồng hành cuộc sống';
+      const promptReply = `${da}, ${addressing} sắp làm ${title.toLowerCase()} phải không ạ. ${addressing.charAt(0).toUpperCase() + addressing.slice(1)} muốn ${me} hỗ trợ từng bước khi chuẩn bị và thực hiện, hay tạo nhắc nhở trước giờ đi ạ?`;
 
       return {
         handled: true,
         intentId: intent.id,
         category: intent.category,
         confidence,
-        appAction: {
-          type: 'CREATE_SESSION',
-          payload: {
-            goal: trimmedText,
-            sessionTitle: title,
-            scenarioKey,
-            creationMode: 'template',
-          },
+        appAction: undefined, // NEVER auto-create or mutate
+        needsClarification: true,
+        clarificationActionType: 'CHOOSE_SUPPORT_MODE',
+        clarificationQuestion: promptReply,
+        clarificationPayload: {
+          originalText: trimmedText,
+          scenarioFamily: scenarioKey,
+          proposedGoal: title,
         },
-        reply: `${da}, ${me} tạo ngay phiên hướng dẫn "${title}" cho ${addressing} đây ạ! ${me} đã chuẩn bị sẵn các bước thực hiện để đồng hành cùng ${addressing}.`,
-        speech: `${da}, ${me} đã tạo ngay phiên hướng dẫn "${title}" cho ${addressing} rồi ạ!`,
+        reply: promptReply,
+        speech: `${da}, ${addressing} muốn ${me} hỗ trợ từng bước hay tạo nhắc nhở trước giờ đi ạ?`,
+        suggestedReplies: ['Hỗ trợ từng bước', 'Tạo nhắc nhở', 'Không cần'],
       };
     }
 

@@ -192,6 +192,103 @@ export async function resolvePendingInteraction(
 
     // 2. Action-specific resolvers FIRST
 
+    // Support choice clarification (Life Event support mode selection)
+    if (pending.data.actionType === 'CHOOSE_SUPPORT_MODE' || pending.data.actionType === 'support_choice') {
+      const normInput = stripVietnameseAccents(normalizeVietnameseText(trimmed)).toLowerCase();
+      const proposedGoal = pending.data.payload?.proposedGoal || pending.data.payload?.originalText || 'Công việc này';
+      const scenarioFamily = pending.data.payload?.scenarioFamily || 'general';
+
+      // Negative response
+      if (isNegativeResponse(trimmed)) {
+        return {
+          resolved: true,
+          reply: `${da} vâng, khi nào cần hỗ trợ ${addressing} cứ nói với ${me} nhé!`,
+          clearPending: true,
+        };
+      }
+
+      // Check if user answered with a time directly
+      const resolvedDate = parseClarifiedTime(trimmed);
+      if (resolvedDate && !isNaN(resolvedDate.getTime())) {
+        const scheduledAt = resolvedDate.toISOString();
+        const timeFormatted = resolvedDate.toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' });
+        const dateFormatted = resolvedDate.toLocaleDateString('vi-VN');
+        return {
+          resolved: true,
+          appAction: {
+            type: 'CREATE_REMINDER',
+            payload: {
+              title: proposedGoal,
+              scheduledAt,
+            },
+          },
+          reply: `${da}, ${me} đã lên lịch nhắc nhở "${proposedGoal}" vào lúc ${timeFormatted} (${dateFormatted}) rồi${a}.`,
+          clearPending: true,
+        };
+      }
+
+      // Check if user chose Reminder
+      if (normInput.includes('nhac nho') || normInput.includes('nhac') || normInput.includes('lich hen')) {
+        const askTimePrompt = `${da}, ${addressing} muốn ${me} nhắc nhở "${proposedGoal}" vào lúc mấy giờ ạ?`;
+        return {
+          resolved: true,
+          reply: askTimePrompt,
+          clearPending: false,
+          newPending: {
+            type: 'clarification',
+            data: {
+              actionType: 'CREATE_REMINDER',
+              payload: {
+                title: proposedGoal,
+                originalText: pending.data.payload?.originalText,
+              },
+              question: askTimePrompt,
+              suggestedReplies: ['7 giờ sáng', '8 giờ sáng', '2 giờ chiều', '7 giờ tối'],
+            },
+            createdAt: new Date().toISOString(),
+            expiresAt: Date.now() + 180000,
+          },
+        };
+      }
+
+      // Otherwise, assume user chose Step-by-Step Support -> Ask for explicit confirmation to create session
+      const confirmPrompt = `${da}, ${me} sẽ tạo một mục hỗ trợ "${proposedGoal}" để cùng ${addressing} chuẩn bị và thực hiện từng bước. ${addressing.charAt(0).toUpperCase() + addressing.slice(1)} đồng ý tạo chứ ạ?`;
+      return {
+        resolved: true,
+        reply: confirmPrompt,
+        clearPending: false,
+        newPending: {
+          type: 'confirm_action',
+          data: {
+            action: {
+              type: 'CREATE_SESSION',
+              payload: {
+                goal: proposedGoal,
+                sessionTitle: proposedGoal,
+                scenarioKey: scenarioFamily,
+                creationMode: 'template',
+                appConfirmed: true,
+                skipConfirmation: true,
+              },
+            },
+            actionType: 'CREATE_SESSION',
+            payload: {
+              goal: proposedGoal,
+              scenarioKey: scenarioFamily,
+              appConfirmed: true,
+              skipConfirmation: true,
+            },
+            question: confirmPrompt,
+            successReply: `${da}, ${me} tạo ngay mục hỗ trợ "${proposedGoal}" cho ${addressing} đây ạ!`,
+            cancelReply: `${da} vâng, khi nào cần hỗ trợ ${addressing} cứ nói với ${me} nhé!`,
+            suggestedReplies: ['Đồng ý', 'Không cần'],
+          },
+          createdAt: new Date().toISOString(),
+          expiresAt: Date.now() + 180000,
+        },
+      };
+    }
+
     // Weather clarification
     if (pending.data.actionType === 'GET_WEATHER') {
       const origQuery = pending.data.payload?.originalQuery || '';

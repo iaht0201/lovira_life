@@ -40,6 +40,7 @@ export interface AppActionPayload {
   repeat?: 'once' | 'daily' | 'weekly' | 'monthly';
   priority?: 'normal' | 'high';
   skipConfirmation?: boolean;
+  appConfirmed?: boolean;
 }
 
 export interface AppAction {

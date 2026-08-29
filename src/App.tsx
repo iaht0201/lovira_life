@@ -315,10 +315,8 @@ function AppContent() {
                 onOpenChat={() => {
                   if (activeSession) {
                     navigate(`/session/${activeSession.id}`);
-                  } else if (sessionsList.length > 0) {
-                    handleOpenSession(sessionsList[0].id);
                   } else {
-                    handleCreateSessionFromTemplate('custom', 'Trò chuyện cùng Lovira');
+                    navigate('/chat');
                   }
                 }}
               />
