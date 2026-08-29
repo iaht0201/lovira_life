@@ -198,6 +198,9 @@ function AppContent() {
     handleDeleteResource,
     sendInteraction,
     handleCaptureCameraImage,
+    globalMessages,
+    clearGlobalChat,
+    pendingInteraction,
   } = useSessionManager({
     userProfile,
     aiSettings,
@@ -312,13 +315,7 @@ function AppContent() {
                 onOpenTasks={() => navigate('/tasks')}
                 onOpenReminders={() => navigate('/reminders')}
                 onOpenCamera={() => setCameraModalOpen(true)}
-                onOpenChat={() => {
-                  if (activeSession) {
-                    navigate(`/session/${activeSession.id}`);
-                  } else {
-                    navigate('/chat');
-                  }
-                }}
+                onOpenChat={() => navigate('/chat')}
               />
             }
           />
@@ -330,8 +327,19 @@ function AppContent() {
               <GlobalChatPage
                 activeSession={activeSession}
                 sessionsList={sessionsList}
+                globalMessages={globalMessages}
                 onOpenSession={handleOpenSession}
                 onCreateSessionFromTemplate={handleCreateSessionFromTemplate}
+                onSendInteraction={(txt) =>
+                  sendInteraction(txt, {
+                    inputMode: 'chat',
+                    activeTab: 'chat',
+                    pageContext: currentGlobalPageContext,
+                  })
+                }
+                onClearGlobalChat={clearGlobalChat}
+                isLoading={isLoading}
+                pendingInteraction={pendingInteraction}
                 userName={userProfile?.preferredName || ''}
               />
             }

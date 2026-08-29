@@ -127,6 +127,15 @@ export interface SessionMessage {
   suggestedReplies?: string[];
 }
 
+export interface GlobalChatMessage {
+  id: string;
+  sender: 'user' | 'lovira';
+  text: string;
+  timestamp: string;
+  inputMode?: 'text' | 'voice';
+  suggestedReplies?: string[];
+}
+
 export interface SessionActionLogEntry {
   id: string;
   timestamp: string;

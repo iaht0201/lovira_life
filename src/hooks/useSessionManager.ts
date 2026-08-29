@@ -13,6 +13,7 @@ import {
   InteractionInputMode,
   PendingInteraction,
   AccessibilityContext,
+  GlobalChatMessage,
 } from '../types';
 import { storageService, BriefSessionHeader } from '../services/storageService';
 import { indexedDbService } from '../services/indexedDbService';
@@ -81,7 +82,43 @@ export function useSessionManager({
   const [activeSession, setActiveSession] = useState<LifeSession | null>(null);
   const [sessionsList, setSessionsList] = useState<BriefSessionHeader[]>([]);
   const [isLoading, setIsLoading] = useState(false);
-  const [pendingInteraction, setPendingInteraction] = useState<PendingInteraction | null>(null);
+  const [pendingInteraction, setPendingInteractionState] = useState<PendingInteraction | null>(() => storageService.getPendingInteraction());
+  const [globalMessages, setGlobalMessages] = useState<GlobalChatMessage[]>(() =>
+    storageService.getGlobalChatMessages()
+  );
+
+  const setPendingInteraction = useCallback((pending: PendingInteraction | null) => {
+    setPendingInteractionState(pending);
+    storageService.savePendingInteraction(pending);
+  }, []);
+
+  const addGlobalMessage = useCallback((userText: string, loviraText: string, options?: { inputMode?: InteractionInputMode; suggestedReplies?: string[] }) => {
+    const now = new Date().toISOString();
+    const uMsg: GlobalChatMessage = {
+      id: `gmsg-${Date.now()}`,
+      sender: 'user',
+      text: userText,
+      timestamp: now,
+      inputMode: options?.inputMode,
+    };
+    const lMsg: GlobalChatMessage = {
+      id: `gmsg-${Date.now() + 1}`,
+      sender: 'lovira',
+      text: loviraText,
+      timestamp: new Date().toISOString(),
+      suggestedReplies: options?.suggestedReplies,
+    };
+    setGlobalMessages((prev) => {
+      const updated = [...prev, uMsg, lMsg];
+      storageService.saveGlobalChatMessages(updated);
+      return updated;
+    });
+  }, []);
+
+  const clearGlobalChat = useCallback(() => {
+    setGlobalMessages([]);
+    storageService.clearGlobalChatMessages();
+  }, []);
 
   // AbortController for cancelling stale fetch requests
   const abortControllerRef = useRef<AbortController | null>(null);
@@ -565,7 +602,8 @@ export function useSessionManager({
   const executeValidatedAppAction = useCallback(async (
     rawAction: AppAction,
     appCtx: AppInteractionContext,
-    rtCtx: any
+    rtCtx: any,
+    options?: { trustedSource?: boolean }
   ): Promise<{
     status: 'executed' | 'pending_confirmation' | 'rejected';
     executed: boolean;
@@ -573,7 +611,7 @@ export function useSessionManager({
     reason?: string;
     confirmationPrompt?: string;
   }> => {
-    const val = validateAppAction(rawAction, appCtx);
+    const val = validateAppAction(rawAction, appCtx, options);
     if (!val.valid || !val.action) {
       if (val.reason) {
         showToast(`⚠️ ${val.reason}`);
@@ -698,7 +736,7 @@ export function useSessionManager({
       if (pendingRes.resolved) {
         let finalReply = pendingRes.reply || '';
         if (pendingRes.appAction) {
-          const execRes = await executeValidatedAppAction(pendingRes.appAction, appContext, runtimeContext);
+          const execRes = await executeValidatedAppAction(pendingRes.appAction, appContext, runtimeContext, { trustedSource: true });
           if (execRes.executed) {
             finalReply = pendingRes.reply || 'Dạ vâng, con đã thực hiện xong rồi ạ.';
           } else {
@@ -734,11 +772,10 @@ export function useSessionManager({
               messages: [...sessionAfterPending.messages, userMsg, loviraMsg],
               updatedAt: now,
             };
-          }
-
-          if (sessionAfterPending) {
             setActiveSession(sessionAfterPending);
             saveUpdatedSession(sessionAfterPending);
+          } else if (!isSessionContext) {
+            addGlobalMessage(trimmedText, finalReply, { inputMode });
           }
 
           showToast(finalReply);
@@ -818,6 +855,8 @@ export function useSessionManager({
         };
         setActiveSession(updatedSession);
         saveUpdatedSession(updatedSession);
+      } else if (!isSessionContext) {
+        addGlobalMessage(trimmedText, askMsg, { inputMode, suggestedReplies: ['7 giờ sáng', '8 giờ tối', '15 phút nữa'] });
       }
 
       showToast(askMsg);
@@ -873,6 +912,8 @@ export function useSessionManager({
           };
           setActiveSession(updatedSession);
           saveUpdatedSession(updatedSession);
+        } else if (!isSessionContext) {
+          addGlobalMessage(trimmedText, confirmMsg, { inputMode, suggestedReplies: ['Xem tất cả lịch nhắc', 'Tạo thêm nhắc nhở'] });
         }
 
         showToast(confirmMsg);
@@ -922,11 +963,11 @@ export function useSessionManager({
 
     // A3. Fast Intent Router (Hybrid Local-First Deterministic Pipeline)
     const fastRoute = await routeFastIntent(trimmedText, {
-      session: activeSession,
+      session: isSessionContext ? activeSession : null,
       userProfile,
       activeTab,
       page: isSessionContext ? 'session' : (pageContext?.page || activeTab || 'dashboard'),
-      hasActiveSession: !!activeSession,
+      hasActiveSession: isSessionContext && !!activeSession,
     });
 
     if (fastRoute.handled) {
@@ -968,6 +1009,8 @@ export function useSessionManager({
           };
           setActiveSession(updatedSession);
           saveUpdatedSession(updatedSession);
+        } else if (!isSessionContext) {
+          addGlobalMessage(trimmedText, q, { inputMode, suggestedReplies: fastRoute.suggestedReplies });
         }
 
         showToast(q);
@@ -1031,6 +1074,8 @@ export function useSessionManager({
           };
           setActiveSession(updatedSession);
           saveUpdatedSession(updatedSession);
+        } else if (!isSessionContext) {
+          addGlobalMessage(trimmedText, prompt, { inputMode, suggestedReplies: fastRoute.suggestedReplies || ['Đồng ý', 'Thôi không cần'] });
         }
 
         showToast(prompt);
@@ -1056,7 +1101,7 @@ export function useSessionManager({
       }
 
       // Handle AgentActions if provided by Fast Router
-      let sessionToSave = activeSession;
+      let sessionToSave = isSessionContext ? activeSession : null;
       if (fastRoute.agentActions && fastRoute.agentActions.length > 0 && sessionToSave) {
         const batchTrigger = inputMode === 'voice' ? 'voice' : 'chat';
         const batchRes = applyAgentActionBatch(sessionToSave, fastRoute.agentActions, batchTrigger);
@@ -1087,6 +1132,8 @@ export function useSessionManager({
         };
         setActiveSession(updatedSession);
         saveUpdatedSession(updatedSession);
+      } else if (!isSessionContext) {
+        addGlobalMessage(trimmedText, replyText, { inputMode, suggestedReplies: fastRoute.suggestedReplies });
       }
 
       showToast(replyText);
@@ -1100,9 +1147,7 @@ export function useSessionManager({
     }
 
     // B. Main Interaction Flow (Fallback to AI Chat when Fast Router returns handled = false)
-    const sessionToUse =
-      activeSession ||
-      (sessionsList.length > 0 ? storageService.getSession(sessionsList[0].id) : null);
+    const sessionToUse = isSessionContext ? activeSession : null;
 
     if (sessionToUse) {
       const now = new Date().toISOString();
@@ -1351,6 +1396,11 @@ export function useSessionManager({
         userInput: trimmedText,
       });
 
+      addGlobalMessage(trimmedText, groundingResult.finalReply, {
+        inputMode,
+        suggestedReplies: groundingResult.finalSuggestedReplies,
+      });
+
       showToast(groundingResult.finalReply);
 
       if (inputMode === 'voice' || accessibilitySettings.speakResponse) {
@@ -1495,5 +1545,8 @@ export function useSessionManager({
     handleDeleteResource,
     sendInteraction,
     handleCaptureCameraImage,
+    globalMessages,
+    clearGlobalChat,
+    pendingInteraction,
   };
 }

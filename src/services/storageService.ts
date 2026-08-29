@@ -1,4 +1,4 @@
-import { LifeSession, AccessibilitySettings, AISettings, UserProfile, ScenarioFamily } from '../types.js';
+import { LifeSession, AccessibilitySettings, AISettings, UserProfile, ScenarioFamily, GlobalChatMessage, PendingInteraction } from '../types.js';
 import { DEMO_MEDICAL_SESSION } from '../data/initialData.js';
 import { calculateNextRecommendedAction, resolveCurrentStep } from './actionEngine.js';
 
@@ -10,6 +10,8 @@ const KEY_ACTIVE_SESSION = 'lovira_active_session';
 const KEY_USER_PROFILE = 'lovira_user_profile';
 const KEY_APP_OPEN_COUNT = 'lovira_app_open_count';
 const KEY_BANNER_DISMISSED = 'lovira_profile_banner_dismissed';
+const KEY_GLOBAL_CHAT = 'lovira_global_chat_v1';
+const KEY_PENDING_INTERACTION = 'lovira_pending_interaction';
 
 export interface BriefSessionHeader {
   id: string;
@@ -310,6 +312,73 @@ class StorageService {
       localStorage.setItem(KEY_BANNER_DISMISSED, dismissed ? 'true' : 'false');
     } catch (e) {
       console.error('Failed to save banner dismissed state', e);
+    }
+  }
+
+  // --- GLOBAL CHAT HISTORY PERSISTENCE ---
+  getGlobalChatMessages(): GlobalChatMessage[] {
+    try {
+      const raw = localStorage.getItem(KEY_GLOBAL_CHAT);
+      if (!raw) return [];
+      const list = JSON.parse(raw);
+      return Array.isArray(list) ? list : [];
+    } catch {
+      return [];
+    }
+  }
+
+  saveGlobalChatMessages(messages: GlobalChatMessage[]): void {
+    try {
+      localStorage.setItem(KEY_GLOBAL_CHAT, JSON.stringify(messages));
+    } catch (e) {
+      console.error('Failed to save global chat messages', e);
+    }
+  }
+
+  clearGlobalChatMessages(): void {
+    try {
+      localStorage.removeItem(KEY_GLOBAL_CHAT);
+    } catch (e) {
+      console.error('Failed to clear global chat messages', e);
+    }
+  }
+
+  // --- PENDING INTERACTION PERSISTENCE (TTL Controlled) ---
+  getPendingInteraction(): PendingInteraction | null {
+    try {
+      const raw = localStorage.getItem(KEY_PENDING_INTERACTION);
+      if (!raw) return null;
+      const parsed = JSON.parse(raw);
+      if (parsed && typeof parsed === 'object' && parsed.expiresAt) {
+        if (Date.now() > parsed.expiresAt) {
+          localStorage.removeItem(KEY_PENDING_INTERACTION);
+          return null;
+        }
+        return parsed as PendingInteraction;
+      }
+      return null;
+    } catch {
+      return null;
+    }
+  }
+
+  savePendingInteraction(pending: PendingInteraction | null): void {
+    try {
+      if (!pending) {
+        localStorage.removeItem(KEY_PENDING_INTERACTION);
+      } else {
+        localStorage.setItem(KEY_PENDING_INTERACTION, JSON.stringify(pending));
+      }
+    } catch (e) {
+      console.error('Failed to save pending interaction', e);
+    }
+  }
+
+  clearPendingInteraction(): void {
+    try {
+      localStorage.removeItem(KEY_PENDING_INTERACTION);
+    } catch (e) {
+      console.error('Failed to clear pending interaction', e);
     }
   }
 }
