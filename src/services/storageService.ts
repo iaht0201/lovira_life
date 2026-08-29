@@ -37,9 +37,9 @@ export const DEFAULT_ACCESSIBILITY: AccessibilitySettings = {
 };
 
 export const DEFAULT_AI_SETTINGS: AISettings = {
-  provider: 'groq',
+  provider: 'gemini',
   apiKey: '',
-  selectedModel: 'openai/gpt-oss-20b',
+  selectedModel: 'gemini-3.7-flash',
   demoMode: false,
 };
 
@@ -220,13 +220,21 @@ class StorageService {
       if (!raw) return DEFAULT_AI_SETTINGS;
       const parsed = JSON.parse(raw);
       
-      // Auto-migrate legacy demo mode or unconfigured settings to Groq openai/gpt-oss-20b
-      if (parsed.provider === 'demo' || parsed.demoMode === true || !parsed.selectedModel) {
+      // Auto-migrate legacy settings, groq provider, or demo mode to Gemini 3.7 Flash
+      if (
+        parsed.provider === 'demo' ||
+        parsed.provider === 'groq' ||
+        parsed.demoMode === true ||
+        !parsed.selectedModel ||
+        parsed.selectedModel.includes('openai') ||
+        parsed.selectedModel.includes('groq') ||
+        parsed.selectedModel.includes('qwen')
+      ) {
         const migrated: AISettings = {
           ...DEFAULT_AI_SETTINGS,
           ...parsed,
-          provider: 'groq',
-          selectedModel: parsed.selectedModel || 'openai/gpt-oss-20b',
+          provider: 'gemini',
+          selectedModel: 'gemini-3.7-flash',
           demoMode: false,
         };
         localStorage.setItem(KEY_SETTINGS, JSON.stringify(migrated));

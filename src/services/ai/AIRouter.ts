@@ -1,10 +1,15 @@
 import { LifeSession } from '../../types.js';
-import { GroqModel } from './GroqProvider.js';
 
-export function selectGroqModel(message: string, session?: LifeSession | null): GroqModel {
+export enum GeminiModelName {
+  FLASH_3_7 = 'gemini-3.7-flash',
+  FLASH_2_5 = 'gemini-2.5-flash',
+  PRO_2_5 = 'gemini-2.5-pro',
+}
+
+export function selectGeminiModel(message: string, session?: LifeSession | null): string {
   const text = message.toLowerCase();
 
-  // 1. Deep reasoning required (Conflict resolution, planning, multi-step tradeoff)
+  // 1. Deep reasoning required (Conflict resolution, multi-step tradeoff, clinical note parsing)
   if (
     text.includes('trễ') ||
     text.includes('nên làm gì trước') ||
@@ -13,27 +18,11 @@ export function selectGroqModel(message: string, session?: LifeSession | null): 
     text.includes('ưu tiên') ||
     (text.length > 150 && (text.includes('và') || text.includes('hoặc')))
   ) {
-    return GroqModel.GPT_OSS_120B;
+    return GeminiModelName.FLASH_3_7;
   }
 
-  // 2. Complex natural language interpretation / dialect / ambiguous phrasing
-  if (
-    text.includes('cái lúc nãy') ||
-    text.includes('bác sĩ vừa nói') ||
-    text.includes('phòng đó') ||
-    text.includes('bước vừa rồi') ||
-    text.includes('chuyển tôi sang')
-  ) {
-    return GroqModel.QWEN_3_6_27B;
-  }
-
-  // 3. Fast lightweight responses for short commands or simple prompts
-  if (text.length < 15) {
-    return GroqModel.GPT_OSS_20B;
-  }
-
-  // 4. Default fast text model
-  return GroqModel.GPT_OSS_20B;
+  // 2. Fast default model for all interactions
+  return GeminiModelName.FLASH_3_7;
 }
 
 

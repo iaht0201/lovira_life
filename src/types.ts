@@ -244,7 +244,7 @@ export interface LoviraAgentResponse {
   nextRecommendedAction?: RecommendedAction;
   warnings?: string[];
   meta?: {
-    engine: 'local' | 'groq' | 'gemini';
+    engine: 'local' | 'gemini' | 'groq';
     model?: string;
     processingTime?: number;
   };
@@ -287,14 +287,14 @@ export interface AccessibilitySettings {
 
 export interface ModelProfile {
   id: string;
-  provider: 'groq' | 'gemini';
+  provider: 'gemini';
   capability: 'fast' | 'reasoning' | 'conversation' | 'vision' | 'lite';
   supportsVision: boolean;
   supportsToolCalling: boolean;
 }
 
 export interface AISettings {
-  provider: 'gemini' | 'groq' | 'demo';
+  provider: 'gemini' | 'demo';
   apiKey?: string;
   selectedModel: string;
   demoMode: boolean;

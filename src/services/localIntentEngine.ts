@@ -611,6 +611,6 @@ export function parseLocalIntent(
     }
   }
 
-  // NOT a deterministic operational command -> Pass to Groq / LLM for natural dialogue & advice
+  // NOT a deterministic operational command -> Pass to Gemini / LLM for natural dialogue & advice
   return null;
 }
