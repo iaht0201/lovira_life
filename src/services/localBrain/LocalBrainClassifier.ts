@@ -227,6 +227,23 @@ export function classifyLocalBrain(
       }
     }
 
+    // 2b. If this is reminder creation, DO NOT hijack schedule inquiry questions (e.g. "tôi hỏi mai tôi có lịch gì không")
+    if (intent.id === 'reminder.create') {
+      const isScheduleInquiry =
+        /lịch.*gì.*không/i.test(normalized) ||
+        /nhắc.*gì.*không/i.test(normalized) ||
+        /hẹn.*gì.*không/i.test(normalized) ||
+        /có.*lịch.*không/i.test(normalized) ||
+        /có.*nhắc.*không/i.test(normalized) ||
+        normalized.includes('tôi hỏi') ||
+        normalized.includes('hỏi xem') ||
+        normalized.includes('xem lịch') ||
+        normalized.includes('coi lịch') ||
+        normalized.includes('kiểm tra lịch');
+
+      if (isScheduleInquiry) continue;
+    }
+
     // 3. Negative Examples Blocker Check (First-Class False-Positive Prevention)
     if (
       matchesNegativeExample(

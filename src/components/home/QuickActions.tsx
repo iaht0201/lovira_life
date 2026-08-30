@@ -1,10 +1,11 @@
 import React from 'react';
-import { Plus, Camera, Bell, MessageSquare } from 'lucide-react';
+import { Plus, Camera, Bell, MessageSquare, Ear } from 'lucide-react';
 import { QuickActionCard } from './QuickActionCard';
 
 interface QuickActionsProps {
   onCreateSession: () => void;
   onOpenCamera?: () => void;
+  onOpenListen?: () => void;
   onOpenTasks?: () => void;
   onOpenReminders: () => void;
   onOpenChat: () => void;
@@ -13,6 +14,7 @@ interface QuickActionsProps {
 export const QuickActions: React.FC<QuickActionsProps> = ({
   onCreateSession,
   onOpenCamera,
+  onOpenListen,
   onOpenTasks,
   onOpenReminders,
   onOpenChat,
@@ -37,6 +39,14 @@ export const QuickActions: React.FC<QuickActionsProps> = ({
       onClick: handleCameraClick,
     },
     {
+      id: 'listen' as const,
+      title: 'Nghe giúp tôi',
+      description: 'Ghi âm, tóm tắt cuộc trò chuyện & VSL',
+      icon: Ear,
+      accent: 'purple' as const,
+      onClick: onOpenListen || (() => {}),
+    },
+    {
       id: 'reminders' as const,
       title: 'Nhắc nhở',
       description: 'Tạo & Quản lý các nhắc nhở chi tiết',
@@ -56,7 +66,7 @@ export const QuickActions: React.FC<QuickActionsProps> = ({
 
   return (
     <section aria-label="Lối tắt thao tác nhanh">
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3 sm:gap-4">
         {actions.map((act) => (
           <QuickActionCard key={act.id} {...act} />
         ))}

@@ -11,6 +11,7 @@ import {
   RefreshCw,
 } from 'lucide-react';
 import { useWeather } from '../../hooks/useWeather';
+import { formatVietnameseLocationName } from '../../services/locationService';
 
 interface WeatherMiniCardProps {
   location?: string;
@@ -26,7 +27,8 @@ export const WeatherMiniCard: React.FC<WeatherMiniCardProps> = ({
   const { weather, requestGpsLocation } = useWeather();
 
   // Prefer live weather if props are not explicitly overridden
-  const displayLocation = propLocation || weather.location;
+  const rawLocation = propLocation || weather.location;
+  const displayLocation = formatVietnameseLocationName(rawLocation);
   const displayTemp = propTemp || weather.temp;
   const displayCondition = propCondition || weather.condition;
 
@@ -46,7 +48,7 @@ export const WeatherMiniCard: React.FC<WeatherMiniCardProps> = ({
     <div className="bg-lovira-card border border-lovira rounded-[22px] p-3.5 sm:p-4 shadow-lovira flex items-center justify-between transition-all relative overflow-hidden group">
       <div className="space-y-1">
         <div className="flex items-center space-x-1.5">
-          <p className="text-[12px] font-[700] text-lovira-muted uppercase tracking-wider">
+          <p className="text-[13px] font-[700] text-lovira-title tracking-normal">
             {displayLocation}
           </p>
           {weather.isGps && (

@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import { getCurrentLocation } from '../services/locationService';
+import { getCurrentLocation, reverseGeocodeVietnamese, formatVietnameseLocationName } from '../services/locationService';
 
 export interface WeatherData {
   location: string;
@@ -68,24 +68,12 @@ export function useWeather() {
     let locationName = 'Hà Nội';
 
     try {
-      // 1. If GPS coordinates provided, reverse geocode to get city name
+      // 1. If GPS coordinates provided, reverse geocode with Vietnamese diacritics
       if (isGpsUsed && lat !== undefined && lon !== undefined) {
         try {
-          const geoRes = await fetch(
-            `https://api.bigdatacloud.net/data/reverse-geocode-client?latitude=${lat}&longitude=${lon}&localityLanguage=vi`
-          );
-          if (geoRes.ok) {
-            const geoData = await geoRes.json();
-            const city =
-              geoData.city ||
-              geoData.locality ||
-              geoData.principalSubdivision ||
-              geoData.countryName;
-
-            if (city) {
-              // Clean up prefixes like "Thành phố " for compact display if needed or keep full
-              locationName = city.replace(/^Thành phố\s+/i, 'TP. ');
-            }
+          const geo = await reverseGeocodeVietnamese(lat, lon);
+          if (geo.cityName) {
+            locationName = geo.cityName;
           }
         } catch (geoErr) {
           console.warn('Reverse geocoding warning:', geoErr);

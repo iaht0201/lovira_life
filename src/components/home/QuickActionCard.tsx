@@ -2,7 +2,7 @@ import React from 'react';
 import { LucideIcon } from 'lucide-react';
 
 export interface QuickActionCardProps {
-  id: 'create_session' | 'tasks' | 'reminders' | 'chat';
+  id: string;
   title: string;
   description: string;
   icon: LucideIcon;

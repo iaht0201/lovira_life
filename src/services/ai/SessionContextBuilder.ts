@@ -49,15 +49,24 @@ export function buildSessionContextPrompt(
   });
   const nowISO = now.toISOString();
 
-  // Active reminders
-  const activeReminders = reminderService.getUpcomingReminders();
-  const remindersFormatted =
-    activeReminders
+  // Active reminders grouped by period
+  const groups = reminderService.getUpcomingGroups();
+  const formatList = (items: typeof groups.today) =>
+    items
       .map(
         (r, idx) =>
-          `${idx + 1}. "${r.title}" (ID: ${r.id}, Lúc: ${reminderService.formatReminderDateTime(r.scheduledAt)}, Lặp: ${r.repeat}, Danh mục: ${r.category})`
+          `  ${idx + 1}. "${r.title}" (Lúc: ${reminderService.formatReminderDateTime(r.scheduledAt)}, ID: ${r.id}, Lặp: ${r.repeat}, Danh mục: ${r.category})`
       )
-      .join('\n') || 'Hiện chưa có nhắc nhở nào sắp tới.';
+      .join('\n') || '  (Không có)';
+
+  const remindersFormatted = `
+- HÔM NAY:
+${formatList(groups.today)}
+- NGÀY MAI:
+${formatList(groups.tomorrow)}
+- SẮP TỚI:
+${formatList(groups.upcoming)}
+`.trim();
 
   // Deduce real-time honorific pair based on user's active message & profile
   const honorificContext = deduceHonorifics(userProfile, currentMessage);

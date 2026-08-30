@@ -17,12 +17,14 @@ import {
   LogIn,
   Cloud,
   AlertOctagon,
+  Ear,
 } from 'lucide-react';
 
 export type NavTab =
   | 'dashboard'
   | 'chat'
   | 'vision'
+  | 'listen'
   | 'tasks'
   | 'calendar'
   | 'history'
@@ -65,6 +67,7 @@ export const DesktopSidebar: React.FC<DesktopSidebarProps> = ({
     { id: 'dashboard' as NavTab, label: 'Trang chủ', icon: LayoutDashboard },
     { id: 'chat' as NavTab, label: 'Trò chuyện', icon: MessageSquare },
     { id: 'vision' as NavTab, label: 'Nhìn giúp tôi', icon: Eye },
+    { id: 'listen' as NavTab, label: 'Nghe giúp tôi', icon: Ear },
     { id: 'reminders' as NavTab, label: 'Lịch & Nhắc nhở', icon: CalendarDays },
     { id: 'history' as NavTab, label: 'Lịch sử', icon: History },
   ];

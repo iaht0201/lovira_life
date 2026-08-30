@@ -20,6 +20,14 @@ export interface VisionResult {
   possibleHazards?: string[];
 }
 
+export interface ConversationSummary {
+  mainContent: string;
+  keyPoints: string[];
+  actionItems: string[];
+  importantNotes?: string[];
+  vslKeywords?: string[];
+}
+
 export type ScenarioFamily =
   | 'healthcare'
   | 'administrative'

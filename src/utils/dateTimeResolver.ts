@@ -44,11 +44,26 @@ export function parseVietnameseReminderText(
   const raw = text.trim();
   const lower = raw.toLowerCase();
 
-  // 0. Exclude non-reminder conversational or inquiry phrases
-  const conversationalKeywords = [
+  // 0. Exclude non-reminder conversational, inquiry, or question/complaint phrases
+  const questionOrQueryMarkers = [
+    '?',
+    'ủa',
+    'sao',
+    'tại sao',
+    'sao lại',
+    'không phải',
+    'có phải',
+    'có lịch',
+    'có nhắc',
+    'có hẹn',
+    'lưu context',
+    'context',
+    'db',
+    'database',
+    'bao quát',
+    'trả lời',
     'nhắc lại',
     'vừa nhắc',
-    'có nhắc',
     'không nhắc',
     'chưa nhắc',
     'chuyện gì',
@@ -59,8 +74,27 @@ export function parseVietnameseReminderText(
     'nhắc đến',
     'nhắc xem',
     'nhắc coi',
+    'có lịch gì không',
+    'có lịch không',
+    'có nhắc nhở gì không',
+    'có hẹn gì không',
+    'có việc gì không',
+    'tôi hỏi',
+    'hỏi xem',
+    'xem lịch',
+    'coi lịch',
+    'kiểm tra',
   ];
-  if (conversationalKeywords.some((kw) => lower.includes(kw))) {
+
+  if (
+    questionOrQueryMarkers.some((kw) => lower.includes(kw)) ||
+    /lịch.*gì.*không/.test(lower) ||
+    /nhắc.*gì.*không/.test(lower) ||
+    /hẹn.*gì.*không/.test(lower) ||
+    /có.*lịch.*không/.test(lower) ||
+    /có.*tạo.*chưa/.test(lower) ||
+    /có.*tạo.*à/.test(lower)
+  ) {
     return { status: 'not_reminder' };
   }
 

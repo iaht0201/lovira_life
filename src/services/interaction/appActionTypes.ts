@@ -11,6 +11,7 @@ export type AppActionType =
   | 'OPEN_VISION'
   | 'TRIGGER_SOS'
   | 'OPEN_SOS'
+  | 'OPEN_LISTEN'
   | 'UPDATE_ACCESSIBILITY_SETTING'
   | 'OPEN_REMINDERS'
   | 'CREATE_REMINDER'

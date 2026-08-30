@@ -41,25 +41,120 @@ export function parseLocalIntent(
   const honorifics = deduceHonorifics(userProfile, text);
   const { addressing, me, praise, da, a } = honorifics;
 
-  // 0. Query Reminders / Schedule ("Lịch nhắc của chú thế nào?", "Hôm nay chú có hẹn gì không?", "Xem lịch nhắc")
-  const isReminderQuery =
-    (tLower.includes('lịch nhắc') ||
-      tLower.includes('nhắc nhở') ||
-      tLower.includes('lịch hẹn') ||
-      tLower.includes('có hẹn') ||
-      tLower.includes('danh sách nhắc') ||
-      tLower.includes('việc cần làm')) &&
-    (tLower.includes('gì') ||
-      tLower.includes('nào') ||
-      tLower.includes('xem') ||
-      tLower.includes('thế nào') ||
-      tLower.includes('kiểm tra') ||
-      tLower.includes('danh sách') ||
-      tLower.includes('hôm nay') ||
-      tLower.includes('sắp tới') ||
-      tLower.includes('chưa'));
+  // 0a. Query DB Context & Capability ("db có lưu context ko thế", "có bao quát được db không")
+  const isDBQuery =
+    (tLower.includes('db') || tLower.includes('database') || tLower.includes('context') || tLower.includes('dữ liệu')) &&
+    (tLower.includes('lưu') || tLower.includes('bao quát') || tLower.includes('có') || tLower.includes('xem') || tLower.includes('hiểu') || tLower.includes('kiểm tra'));
+
+  if (isDBQuery) {
+    const allReminders = reminderService.getReminders();
+    const activeCount = allReminders.filter((r) => r.status === 'active').length;
+    const itemsSummary = allReminders
+      .map((r) => {
+        const timeFormatted = reminderService.formatReminderDateTime(r.scheduledAt);
+        return `• [${r.status === 'completed' ? 'Đã xong' : 'Chưa xong'}] ${r.title} (${timeFormatted})`;
+      })
+      .join('\n');
+
+    return {
+      reply: `${da}, Lovira quản lý và đồng bộ toàn bộ cơ sở dữ liệu (Context DB) theo thời gian thực ạ! Hiện tại cơ sở dữ liệu đang lưu giữ ${allReminders.length} lịch nhắc (${activeCount} việc đang chờ thực hiện):\n${itemsSummary || '• Chưa có dữ liệu.'}`,
+      speech: `${da}, Lovira có bao quát và lưu đầy đủ ngữ cảnh cơ sở dữ liệu ạ. Hiện có ${allReminders.length} lịch nhắc nhở đang được theo dõi ạ.`,
+      actions: [],
+      confidence: 0.99,
+      suggestedReplies: ['Xem tất cả lịch nhắc', 'Tạo lịch mới'],
+    };
+  }
+
+  // 0b. Query Reminders / Schedule ("Mai tôi có lịch gì không?", "Lịch nhắc của chú thế nào?", "Hôm nay chú có hẹn gì không?")
+  const isTomorrowQuery = tLower.includes('mai') || tLower.includes('ngày mai') || tLower.includes('bữa mai');
+  const isTodayQuery = tLower.includes('hôm nay') || tLower.includes('bữa nay') || tLower.includes('bữa ni');
+
+  const hasScheduleKeyword =
+    tLower.includes('lịch') ||
+    tLower.includes('lịch nhắc') ||
+    tLower.includes('nhắc nhở') ||
+    tLower.includes('lịch hẹn') ||
+    tLower.includes('có hẹn') ||
+    tLower.includes('danh sách nhắc') ||
+    tLower.includes('việc cần làm');
+
+  const hasQueryMarker =
+    tLower.includes('gì') ||
+    tLower.includes('nào') ||
+    tLower.includes('xem') ||
+    tLower.includes('thế nào') ||
+    tLower.includes('kiểm tra') ||
+    tLower.includes('danh sách') ||
+    tLower.includes('không') ||
+    tLower.includes('chưa') ||
+    tLower.includes('tôi hỏi') ||
+    tLower.includes('hỏi') ||
+    tLower.includes('có');
+
+  const isReminderQuery = hasScheduleKeyword && hasQueryMarker;
 
   if (isReminderQuery) {
+    const groups = reminderService.getUpcomingGroups();
+
+    if (isTomorrowQuery) {
+      const tomorrowReminders = groups.tomorrow;
+
+      if (tomorrowReminders.length === 0) {
+        return {
+          reply: `${da}, ngày mai ${addressing} chưa có lịch nhắc nhở hay lịch hẹn nào ạ. ${addressing.charAt(0).toUpperCase() + addressing.slice(1)} có muốn ${me} tạo nhắc nhở cho ngày mai không ạ?`,
+          speech: `${da}, ngày mai ${addressing} chưa có lịch nhắc nhở nào ạ.`,
+          actions: [],
+          confidence: 0.98,
+          suggestedReplies: ['Tạo nhắc nhở ngày mai', 'Xem lịch hôm nay'],
+        };
+      }
+
+      const itemsText = tomorrowReminders
+        .map((r) => {
+          const timeStr = reminderService.formatReminderDateTime(r.scheduledAt);
+          const icon = r.category === 'medication' ? '💊' : r.category === 'appointment' ? '🩺' : '🔔';
+          return `• ${icon} ${r.title}: (${timeStr})`;
+        })
+        .join('\n');
+
+      return {
+        reply: `${da}, đây là lịch nhắc nhở ngày mai của ${addressing} ạ:\n${itemsText}`,
+        speech: `${da}, ngày mai ${addressing} có ${tomorrowReminders.length} lịch nhắc ạ.`,
+        actions: [],
+        confidence: 0.98,
+        suggestedReplies: ['Tạo nhắc nhở mới', 'Xem tất cả lịch nhắc'],
+      };
+    }
+
+    if (isTodayQuery) {
+      const todayReminders = groups.today;
+      if (todayReminders.length === 0) {
+        return {
+          reply: `${da}, hôm nay ${addressing} chưa có lịch nhắc nhở hay lịch hẹn nào ạ. ${addressing.charAt(0).toUpperCase() + addressing.slice(1)} có muốn ${me} tạo nhắc nhở mới không ạ?`,
+          speech: `${da}, hôm nay ${addressing} chưa có lịch nhắc nhở nào ạ.`,
+          actions: [],
+          confidence: 0.98,
+          suggestedReplies: ['Tạo nhắc nhở uống thuốc', 'Tạo lịch hẹn mới'],
+        };
+      }
+
+      const itemsText = todayReminders
+        .map((r) => {
+          const timeStr = reminderService.formatReminderDateTime(r.scheduledAt);
+          const icon = r.category === 'medication' ? '💊' : r.category === 'appointment' ? '🩺' : '🔔';
+          return `• ${icon} ${r.title}: (${timeStr})`;
+        })
+        .join('\n');
+
+      return {
+        reply: `${da}, đây là lịch nhắc nhở hôm nay của ${addressing} ạ:\n${itemsText}`,
+        speech: `${da}, hôm nay ${addressing} có ${todayReminders.length} lịch nhắc ạ.`,
+        actions: [],
+        confidence: 0.98,
+        suggestedReplies: ['Tạo nhắc nhở mới', 'Xem tất cả lịch nhắc'],
+      };
+    }
+
     const upcoming = reminderService.getUpcomingReminders();
     if (upcoming.length === 0) {
       return {

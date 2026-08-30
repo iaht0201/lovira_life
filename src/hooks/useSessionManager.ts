@@ -719,6 +719,7 @@ export function useSessionManager({
       },
       openCamera: () => setCameraModalOpen(true),
       openVision: () => (onNavigate ? onNavigate('/vision') : setActiveTab?.('vision')),
+      openListen: () => (onNavigate ? onNavigate('/listen') : setActiveTab?.('listen')),
       updateAccessibilitySetting: (key: string, value: any) => {
         setAccessibility((prev: any) => ({ ...prev, [key]: value }));
       },

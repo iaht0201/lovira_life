@@ -18,6 +18,7 @@ import {
   Volume2,
   Sparkles,
   AlertOctagon,
+  Ear,
 } from 'lucide-react';
 import { NavTab } from './DesktopSidebar';
 import { AccessibilitySettings } from '../../types';
@@ -63,6 +64,7 @@ export const MobileSidebarDrawer: React.FC<MobileSidebarDrawerProps> = ({
     { id: 'dashboard' as NavTab, label: 'Trang chủ', icon: LayoutDashboard },
     { id: 'chat' as NavTab, label: 'Trò chuyện', icon: MessageSquare },
     { id: 'vision' as NavTab, label: 'Nhìn giúp tôi', icon: Eye },
+    { id: 'listen' as NavTab, label: 'Nghe giúp tôi', icon: Ear },
     { id: 'reminders' as NavTab, label: 'Lịch & Nhắc nhở', icon: Bell },
     { id: 'history' as NavTab, label: 'Lịch sử', icon: History },
     { id: 'profile' as NavTab, label: 'Hồ sơ', icon: User },

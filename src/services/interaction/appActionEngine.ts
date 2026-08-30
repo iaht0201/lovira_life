@@ -15,6 +15,7 @@ export interface AppActionRuntimeContext {
   openReminders?: () => void;
   triggerSOS?: () => void;
   openSOS?: () => void;
+  openListen?: () => void;
   updateAccessibilitySetting?: (key: string, value: any) => void;
   saveUpdatedSession?: (session: any) => void;
   refreshSessionsList?: () => void;
@@ -71,6 +72,13 @@ export async function applyAppAction(
       case 'OPEN_REMINDERS':
         if (context.openReminders) {
           context.openReminders();
+          return true;
+        }
+        return false;
+
+      case 'OPEN_LISTEN':
+        if (context.openListen) {
+          context.openListen();
           return true;
         }
         return false;

@@ -1,5 +1,6 @@
 import { UserProfile, EmergencyContact, getEmergencyContacts, getUserDisplayName } from '../types/userProfile.js';
 import { SOSLocation, SOSAlertLog, NATIONAL_EMERGENCY_SERVICES } from '../types/sos.js';
+import { reverseGeocodeVietnamese } from './locationService.js';
 
 const KEY_SOS_LOGS = 'lovira_sos_logs';
 
@@ -44,24 +45,11 @@ class SOSService {
           let address: string | undefined = undefined;
           let cityName: string | undefined = undefined;
 
-          // Attempt reverse geocode
+          // Attempt reverse geocode with Vietnamese diacritics
           try {
-            const res = await fetch(
-              `https://api.bigdatacloud.net/data/reverse-geocode-client?latitude=${latitude}&longitude=${longitude}&localityLanguage=vi`
-            );
-            if (res.ok) {
-              const data = await res.json();
-              const city = data.city || data.principalSubdivision || data.countryName;
-              const locality = data.locality || '';
-              const road = data.street || data.localityInfo?.administrative?.[3]?.name || '';
-              
-              if (city) cityName = city.replace(/^Thành phố\s+/i, 'TP. ');
-              
-              const parts = [road, locality, city].filter(Boolean);
-              if (parts.length > 0) {
-                address = parts.join(', ');
-              }
-            }
+            const geo = await reverseGeocodeVietnamese(latitude, longitude);
+            cityName = geo.cityName;
+            address = geo.address || geo.cityName;
           } catch (e) {
             console.warn('[SOSService] Reverse geocode error:', e);
           }

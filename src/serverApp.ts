@@ -849,6 +849,103 @@ Trả về kết quả bằng định dạng JSON thuần túy (JSON object) g�
     }
   });
 
+  // 5.6. Summarize Conversation Endpoint (Groq Primary, Gemini Fallback)
+  app.post('/api/summarize-conversation', async (req, res) => {
+    try {
+      const { transcript, customApiKey } = req.body;
+      if (!transcript || !transcript.trim()) {
+        return res.status(400).json({ error: 'Thiếu văn bản cuộc trò chuyện' });
+      }
+
+      const promptText = `Bạn là trợ lý AI Lovira dành cho người cao tuổi. Hãy tóm tắt cuộc trò chuyện sau thành ngôn ngữ tiếng Việt dễ hiểu, mạch lạc:
+"${transcript}"
+
+Trả về JSON object gồm:
+- mainContent: (string) Tóm tắt 2-3 câu nội dung chính.
+- keyPoints: (array of string) 2-4 ý chính cần nhớ.
+- actionItems: (array of string) các công việc/hướng dẫn cần làm.
+- importantNotes: (array of string) các lưu ý quan trọng.
+- vslKeywords: (array of string) 2-3 từ khóa chính tiêu biểu (ví dụ: "chào", "nghe", "cảm ơn", "bác sĩ", "thuốc").`;
+
+      const groqKey = customApiKey || process.env.GROQ_API_KEY;
+      if (groqKey) {
+        try {
+          const groqRes = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+            method: 'POST',
+            headers: {
+              Authorization: `Bearer ${groqKey}`,
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+              model: GroqModel.GPT_OSS_20B,
+              messages: [{ role: 'user', content: promptText }],
+              response_format: { type: 'json_object' },
+              temperature: 0.2,
+            }),
+          });
+
+          if (groqRes.ok) {
+            const data = (await groqRes.json()) as any;
+            const content = data.choices?.[0]?.message?.content;
+            if (content) {
+              const parsed = JSON.parse(content);
+              return res.json(parsed);
+            }
+          }
+        } catch (groqErr) {
+          console.warn('[Summarize Conversation] Groq failed, trying Gemini:', groqErr);
+        }
+      }
+
+      const apiKey = customApiKey || process.env.GEMINI_API_KEY;
+      if (apiKey && apiKey !== 'MY_GEMINI_API_KEY') {
+        const ai = new GoogleGenAI({ apiKey });
+        const response = await ai.models.generateContent({
+          model: 'gemini-3.7-flash',
+          contents: [{ role: 'user', parts: [{ text: promptText }] }],
+          config: {
+            responseMimeType: 'application/json',
+            responseSchema: {
+              type: Type.OBJECT,
+              properties: {
+                mainContent: { type: Type.STRING },
+                keyPoints: { type: Type.ARRAY, items: { type: Type.STRING } },
+                actionItems: { type: Type.ARRAY, items: { type: Type.STRING } },
+                importantNotes: { type: Type.ARRAY, items: { type: Type.STRING } },
+                vslKeywords: { type: Type.ARRAY, items: { type: Type.STRING } },
+              },
+              required: ['mainContent'],
+            },
+            temperature: 0.2,
+          },
+        });
+
+        if (response.text) {
+          const parsed = JSON.parse(response.text.trim());
+          return res.json(parsed);
+        }
+      }
+
+      const lines = transcript.split('\n').filter((l: string) => l.trim().length > 0);
+      return res.json({
+        mainContent: `Cuộc trò chuyện gồm ${lines.length} câu thoại. Ý chính tập trung vào hướng dẫn thực tế.`,
+        keyPoints: lines.slice(0, 3),
+        actionItems: ['Ghi nhớ thông tin quan trọng', 'Thực hiện theo dặn dò'],
+        importantNotes: ['Theo dõi khi cần thiết'],
+        vslKeywords: ['nghe', 'cảm ơn'],
+      });
+    } catch (e: any) {
+      console.error('Summarize conversation error:', e);
+      return res.json({
+        mainContent: 'Nội dung trao đổi đã được ghi nhận.',
+        keyPoints: ['Đã lưu văn bản cuộc hội thoại'],
+        actionItems: [],
+        importantNotes: [],
+        vslKeywords: ['nghe'],
+      });
+    }
+  });
+
   // 5.5. Document / Image Q&A Endpoint (Groq Qwen Primary, Gemini Fallback)
   app.post('/api/gemini/document-qa', async (req, res) => {
     try {

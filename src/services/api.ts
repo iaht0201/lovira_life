@@ -1,4 +1,4 @@
-import { VisionResult } from '../types';
+import { VisionResult, ConversationSummary } from '../types';
 
 export async function fetchApi<T = any>(endpoint: string, body: any): Promise<T> {
   const res = await fetch(endpoint, {
@@ -75,5 +75,51 @@ export async function analyzeVision(
         possibleHazards: [],
       };
     }
+  }
+}
+
+export async function summarizeConversation(
+  transcriptText: string,
+  customApiKey?: string
+): Promise<ConversationSummary> {
+  try {
+    const res = await fetchApi<{
+      mainContent?: string;
+      keyPoints?: string[];
+      actionItems?: string[];
+      importantNotes?: string[];
+      vslKeywords?: string[];
+      error?: string;
+    }>('/api/summarize-conversation', {
+      transcript: transcriptText,
+      customApiKey,
+    });
+
+    if (res.error) {
+      throw new Error(res.error);
+    }
+
+    return {
+      mainContent: res.mainContent || 'Tóm tắt nội dung cuộc trò chuyện.',
+      keyPoints: res.keyPoints || [],
+      actionItems: res.actionItems || [],
+      importantNotes: res.importantNotes || [],
+      vslKeywords: res.vslKeywords || ['chào', 'nghe', 'cảm ơn'],
+    };
+  } catch (err) {
+    console.warn('[summarizeConversation] Falling back to client-side summary:', err);
+
+    const lines = transcriptText.split('\n').filter((l) => l.trim().length > 0);
+    const keyPoints = lines.slice(0, 3).map((l) => l.replace(/^(bác sĩ|người thân|bạn|tôi):/i, '').trim());
+
+    return {
+      mainContent: transcriptText.length > 0
+        ? `Nội dung trao đổi gồm ${lines.length} câu thoại. Ý chính tập trung vào thông tin được hướng dẫn.`
+        : 'Chưa có dữ liệu hội thoại để tóm tắt.',
+      keyPoints: keyPoints.length > 0 ? keyPoints : ['Lắng nghe thông tin từ người đối thoại'],
+      actionItems: ['Lưu lại các mốc thời gian quan trọng', 'Theo dõi hướng dẫn cần thực hiện'],
+      importantNotes: ['Lưu ý các dặn dò quan trọng'],
+      vslKeywords: ['chào', 'nghe', 'cảm ơn', 'giúp'],
+    };
   }
 }

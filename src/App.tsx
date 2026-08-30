@@ -23,6 +23,7 @@ import { LifeDashboard } from './components/dashboard/LifeDashboard';
 import { LifeSessionRoute } from './components/session/LifeSessionRoute';
 import { GlobalChatPage } from './components/chat/GlobalChatPage';
 import { VisionView } from './components/vision/VisionView';
+import { ListenView } from './components/conversation/ListenView';
 import { HistoryPage } from './components/history/HistoryPage';
 import { RemindersPage } from './components/reminders/RemindersPage';
 import { CameraModal } from './components/camera/CameraModal';
@@ -328,6 +329,7 @@ function AppContent() {
                 onOpenTasks={() => navigate('/tasks')}
                 onOpenReminders={() => navigate('/reminders')}
                 onOpenCamera={() => setCameraModalOpen(true)}
+                onOpenListen={() => navigate('/listen')}
                 onOpenChat={() => navigate('/chat')}
                 onTriggerSOS={handleTriggerSOS}
               />
@@ -375,6 +377,17 @@ function AppContent() {
                 settings={accessibility}
                 onCreateSessionFromTemplate={handleCreateSessionFromTemplate}
                 onOpenSession={handleOpenSession}
+                onShowToast={showToast}
+              />
+            }
+          />
+
+          {/* Route 2.6: Nghe giúp tôi (Listen & Record) */}
+          <Route
+            path="/listen"
+            element={
+              <ListenView
+                onNavigate={(path) => navigate(path)}
                 onShowToast={showToast}
               />
             }

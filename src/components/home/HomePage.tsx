@@ -25,6 +25,7 @@ interface HomePageProps {
   onOpenReminders: () => void;
   onOpenChat: () => void;
   onOpenCamera?: () => void;
+  onOpenListen?: () => void;
   onTriggerSOS?: () => void;
   isOffline?: boolean;
 }
@@ -40,6 +41,7 @@ export const HomePage: React.FC<HomePageProps> = ({
   onOpenReminders,
   onOpenChat,
   onOpenCamera,
+  onOpenListen,
   onTriggerSOS,
   isOffline = false,
 }) => {
@@ -67,6 +69,7 @@ export const HomePage: React.FC<HomePageProps> = ({
       <QuickActions
         onCreateSession={() => setIsCreateModalOpen(true)}
         onOpenCamera={onOpenCamera}
+        onOpenListen={onOpenListen}
         onOpenTasks={onOpenTasks}
         onOpenReminders={onOpenReminders}
         onOpenChat={onOpenChat}

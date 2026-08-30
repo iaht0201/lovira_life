@@ -204,6 +204,37 @@ export async function routeFastIntent(
     };
   }
 
+  // A0_LISTEN. Listen Assistant ("Nghe giúp tôi")
+  const isListenPhrase =
+    normalized === 'nghe giúp tôi' ||
+    normalized === 'nghe giúp chú' ||
+    normalized === 'nghe giúp con' ||
+    normalized === 'nghe giúp' ||
+    normalized === 'mở nghe giúp tôi' ||
+    normalized === 'bật nghe giúp tôi' ||
+    normalized === 'mở nghe giúp' ||
+    normalized.includes('nghe giúp') ||
+    normalized.includes('trợ lý nghe giúp') ||
+    normalized.includes('mở nghe giúp') ||
+    normalized.includes('bật nghe giúp') ||
+    normalized.includes('ghi âm cuộc trò chuyện') ||
+    normalized.includes('tóm tắt cuộc trò chuyện') ||
+    normalized.includes('nghe và tóm tắt') ||
+    unaccented.includes('nghe giup') ||
+    unaccented.includes('ghi am cuoc tro chuyen') ||
+    unaccented.includes('tom tat cuoc tro chuyen');
+
+  if (isListenPhrase && !normalized.includes('không')) {
+    return {
+      handled: true,
+      confidence: 1.0,
+      source: 'exact',
+      appAction: { type: 'OPEN_LISTEN' },
+      reply: `${da}, ${me} mở tính năng Nghe giúp tôi cho ${addressing} ngay đây ạ! ${addressing.charAt(0).toUpperCase() + addressing.slice(1)} có thể ghi âm cuộc hội thoại để ${me} lắng nghe, tóm tắt và hiển thị ngôn ngữ ký hiệu VSL giúp nhé ạ.`,
+      speech: `${da}, ${me} mở tính năng Nghe giúp tôi ngay đây ạ!`,
+    };
+  }
+
   // A1. Camera & Scanner (Explicit camera open commands)
   const isCameraPhrase =
     normalized === 'chụp ảnh' ||
