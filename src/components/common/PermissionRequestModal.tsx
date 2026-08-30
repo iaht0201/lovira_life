@@ -133,11 +133,21 @@ export const PermissionRequestModal: React.FC<PermissionRequestModalProps> = ({
           </button>
         </div>
 
+        {/* Quick Allow All Banner */}
+        <button
+          onClick={requestAllPermissions}
+          className="w-full py-3.5 px-4 rounded-xl bg-gradient-to-r from-[#287C78] to-[#1F625F] hover:from-[#1F625F] hover:to-[#164947] text-white font-bold text-sm shadow-md flex items-center justify-center gap-2 transition-all cursor-pointer transform active:scale-98"
+        >
+          <ShieldCheck className="w-5 h-5 text-emerald-300" />
+          <span>Cho phép tất cả quyền (Khuyên dùng)</span>
+        </button>
+
         {/* Permission List */}
         <div className="space-y-3">
           {/* Micro */}
           <div className="p-3.5 rounded-xl bg-surface-raised border border-default flex items-center justify-between gap-3">
             <div className="flex items-center gap-3 min-w-0">
+
               <div className="w-9 h-9 rounded-xl bg-[#287C78]/10 text-[#287C78] dark:text-[#42A39E] flex items-center justify-center shrink-0">
                 <Mic className="w-5 h-5" />
               </div>

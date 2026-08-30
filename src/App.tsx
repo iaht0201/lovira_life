@@ -88,10 +88,13 @@ function AppContent() {
   };
 
   // Modals State
-  const [permissionModalOpen, setPermissionModalOpen] = useState(false);
+  const [permissionModalOpen, setPermissionModalOpen] = useState<boolean>(() => {
+    return localStorage.getItem('lovira_permissions_requested') !== 'true';
+  });
   const [onboardingOpen, setOnboardingOpen] = useState<boolean>(() => {
     return localStorage.getItem('lovira_onboarded') !== 'true';
   });
+
 
   const [confirmModal, setConfirmModal] = useState<{
     isOpen: boolean;
@@ -576,8 +579,12 @@ function AppContent() {
         {/* App Permissions Modal */}
         <PermissionRequestModal
           isOpen={permissionModalOpen}
-          onClose={() => setPermissionModalOpen(false)}
+          onClose={() => {
+            localStorage.setItem('lovira_permissions_requested', 'true');
+            setPermissionModalOpen(false);
+          }}
         />
+
 
         {/* Camera Capture Modal */}
         <CameraModal
