@@ -23,6 +23,7 @@ import { LifeDashboard } from './components/dashboard/LifeDashboard';
 import { LifeSessionRoute } from './components/session/LifeSessionRoute';
 import { GlobalChatPage } from './components/chat/GlobalChatPage';
 import { VisionView } from './components/vision/VisionView';
+import { HistoryPage } from './components/history/HistoryPage';
 import { RemindersPage } from './components/reminders/RemindersPage';
 import { CameraModal } from './components/camera/CameraModal';
 import { VSLFloatingPanel } from './components/vsl/VSLFloatingPanel';
@@ -41,6 +42,7 @@ import { NotificationDrawer } from './components/notifications/NotificationDrawe
 import { notificationService } from './services/notificationService';
 import { reminderService } from './services/reminderService';
 import { VoiceAssistantOverlay } from './components/voice/VoiceAssistantOverlay';
+import { SOSModal } from './components/sos/SOSModal';
 import { AppNotification, NotificationType } from './types';
 
 function AppContent() {
@@ -57,6 +59,11 @@ function AppContent() {
   const [userProfile, setUserProfile] = useState<UserProfile | null>(() => storageService.getUserProfile());
   const [profileSetupOpen, setProfileSetupOpen] = useState(false);
   const [bannerDismissed, setBannerDismissed] = useState(() => storageService.isProfileBannerDismissed());
+  const [sosModalOpen, setSosModalOpen] = useState(false);
+
+  const handleTriggerSOS = () => {
+    setSosModalOpen(true);
+  };
 
   // Auto sync userProfile changes to Cloud when syncProfile is active
   useEffect(() => {
@@ -201,6 +208,9 @@ function AppContent() {
     globalMessages,
     clearGlobalChat,
     pendingInteraction,
+    confirmDraftReminder,
+    updateDraftReminder,
+    cancelDraftReminder,
   } = useSessionManager({
     userProfile,
     aiSettings,
@@ -213,6 +223,8 @@ function AppContent() {
     setCameraModalOpen,
     setProfileSetupOpen,
     setAccessibility,
+    triggerSOS: handleTriggerSOS,
+    openSOS: handleTriggerSOS,
     authUser: user,
     syncSettings,
   });
@@ -272,6 +284,7 @@ function AppContent() {
         onTabChange={handleTabChange}
         onCreateSession={() => navigate('/chat')}
         onOpenAuthModal={handleOpenAuthModal}
+        onTriggerSOS={handleTriggerSOS}
         userName={userProfile?.preferredName || (user?.displayName ? user.displayName : '')}
         planName={getUserPlanName(userProfile)}
         voiceStatus={voiceStatus}
@@ -316,6 +329,7 @@ function AppContent() {
                 onOpenReminders={() => navigate('/reminders')}
                 onOpenCamera={() => setCameraModalOpen(true)}
                 onOpenChat={() => navigate('/chat')}
+                onTriggerSOS={handleTriggerSOS}
               />
             }
           />
@@ -345,6 +359,9 @@ function AppContent() {
                 onStartVoice={() => startListening(handleVoiceInput)}
                 voiceStatus={voiceStatus}
                 interimTranscript={interimTranscript}
+                onConfirmDraftReminder={confirmDraftReminder}
+                onUpdateDraftReminder={updateDraftReminder}
+                onCancelDraftReminder={cancelDraftReminder}
               />
             }
           />
@@ -441,14 +458,13 @@ function AppContent() {
           <Route
             path="/history"
             element={
-              <LifeDashboard
-                defaultTab="sessions"
+              <HistoryPage
                 activeSession={activeSession}
                 sessionsList={sessionsList}
                 onOpenSession={handleOpenSession}
-                onCreateSessionFromTemplate={handleCreateSessionFromTemplate}
+                onCreateSession={() => handleCreateSessionFromTemplate('custom')}
                 onDeleteSession={(id) => handleDeleteSession(id, setConfirmModal)}
-                onOpenCamera={() => setCameraModalOpen(true)}
+                onShowToast={showToast}
               />
             }
           />
@@ -491,6 +507,7 @@ function AppContent() {
                 onUpdateUserProfile={setUserProfile}
                 onOpenAuthModal={handleOpenAuthModal}
                 onShowToast={showToast}
+                onTriggerSOS={handleTriggerSOS}
                 totalSessionsCount={sessionsList.length}
               />
             }
@@ -499,6 +516,15 @@ function AppContent() {
           {/* Catch-all fallback */}
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
+
+        {/* SOS Emergency Modal */}
+        <SOSModal
+          isOpen={sosModalOpen}
+          onClose={() => setSosModalOpen(false)}
+          userProfile={userProfile}
+          onShowToast={showToast}
+          onOpenProfileSetup={() => setProfileSetupOpen(true)}
+        />
 
         {/* Auth Modal */}
         <AuthModal

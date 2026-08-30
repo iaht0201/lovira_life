@@ -17,6 +17,7 @@ import {
   Eye,
   Volume2,
   Sparkles,
+  AlertOctagon,
 } from 'lucide-react';
 import { NavTab } from './DesktopSidebar';
 import { AccessibilitySettings } from '../../types';
@@ -28,6 +29,7 @@ interface MobileSidebarDrawerProps {
   onTabChange: (tab: NavTab) => void;
   onCreateSession: () => void;
   onOpenAuthModal?: () => void;
+  onTriggerSOS?: () => void;
   userName?: string;
   planName?: string;
   accessibility?: AccessibilitySettings;
@@ -41,6 +43,7 @@ export const MobileSidebarDrawer: React.FC<MobileSidebarDrawerProps> = ({
   onTabChange,
   onCreateSession,
   onOpenAuthModal,
+  onTriggerSOS,
   userName = 'Bạn',
   planName = 'Gói miễn phí',
   accessibility,
@@ -60,10 +63,10 @@ export const MobileSidebarDrawer: React.FC<MobileSidebarDrawerProps> = ({
     { id: 'dashboard' as NavTab, label: 'Trang chủ', icon: LayoutDashboard },
     { id: 'chat' as NavTab, label: 'Trò chuyện', icon: MessageSquare },
     { id: 'vision' as NavTab, label: 'Nhìn giúp tôi', icon: Eye },
+    { id: 'reminders' as NavTab, label: 'Lịch & Nhắc nhở', icon: Bell },
     { id: 'history' as NavTab, label: 'Lịch sử', icon: History },
-    { id: 'reminders' as NavTab, label: 'Nhắc nhở', icon: Bell },
-    { id: 'settings' as NavTab, label: 'Cài đặt', icon: Settings },
     { id: 'profile' as NavTab, label: 'Hồ sơ', icon: User },
+    { id: 'settings' as NavTab, label: 'Cài đặt', icon: Settings },
   ];
 
   const handleSelectTab = (tab: NavTab) => {
@@ -188,6 +191,22 @@ export const MobileSidebarDrawer: React.FC<MobileSidebarDrawerProps> = ({
                 </button>
               );
             })}
+
+            {/* SOS Emergency Button */}
+            {onTriggerSOS && (
+              <div className="pt-2">
+                <button
+                  onClick={() => {
+                    onTriggerSOS();
+                    onClose();
+                  }}
+                  className="w-full flex items-center justify-center gap-2 h-[44px] px-4 rounded-[12px] bg-gradient-to-r from-rose-600 to-red-600 hover:from-rose-700 hover:to-red-700 text-white font-[800] text-[13px] shadow-md shadow-rose-600/30 transition-all cursor-pointer ring-1 ring-rose-400/40"
+                >
+                  <AlertOctagon className="w-[18px] h-[18px] text-amber-200 animate-pulse" />
+                  <span>Cứu hộ Khẩn cấp SOS 🚨</span>
+                </button>
+              </div>
+            )}
 
             {/* Create New Session Button */}
             <div className="pt-2">

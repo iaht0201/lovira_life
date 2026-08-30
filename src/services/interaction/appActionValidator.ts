@@ -84,6 +84,8 @@ export function validateAppAction(
     case 'OPEN_PROFILE':
     case 'OPEN_CAMERA':
     case 'OPEN_REMINDERS':
+    case 'TRIGGER_SOS':
+    case 'OPEN_SOS':
       return { valid: true, action };
 
     case 'OPEN_SESSION': {

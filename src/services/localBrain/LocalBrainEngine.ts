@@ -674,7 +674,7 @@ async function _executeLocalBrainInternal(
     }
 
     // -------------------------------------------------------------
-    // DELEGATE REMINDER PARSER (Create Reminders with Full Context Retention)
+    // DELEGATE REMINDER PARSER (Create Reminders with Full Context Retention & Strict Confirmation)
     // -------------------------------------------------------------
     case 'delegate_reminder_parser': {
       const parseRes = parseVietnameseReminderText(trimmedText);
@@ -682,15 +682,17 @@ async function _executeLocalBrainInternal(
         const rem = parseRes.reminder;
         const timeStr = reminderService.formatReminderDateTime(rem.scheduledAt);
         const icon = rem.category === 'medication' ? '💊' : rem.category === 'appointment' ? '🩺' : '🔔';
+        const confirmMsg = `${da}, ${me} xin xác nhận lại lời nhắc: ${icon} "${rem.title}" vào ${timeStr}. ${addressing} có đồng ý tạo không ạ?`;
 
         return {
           handled: true,
           intentId: intent.id,
           category: intent.category,
           confidence,
-          appAction: {
-            type: 'CREATE_REMINDER',
-            payload: {
+          needsClarification: true,
+          clarificationActionType: 'CONFIRM_REMINDER',
+          clarificationPayload: {
+            draftReminder: {
               title: rem.title,
               scheduledAt: rem.scheduledAt,
               category: rem.category,
@@ -698,12 +700,11 @@ async function _executeLocalBrainInternal(
               priority: rem.priority,
               notes: rem.notes,
               sessionId: session?.id,
-              skipConfirmation: true,
             },
           },
-          reply: `${da}, ${me} đã tạo lịch nhắc: ${icon} "${rem.title}" vào ${timeStr} cho ${addressing} rồi ạ!`,
-          speech: `${da}, ${me} đã tạo lịch nhắc "${rem.title}" vào ${timeStr} rồi ạ.`,
-          suggestedReplies: ['Xem danh sách nhắc nhở', 'Tạo thêm nhắc nhở khác'],
+          reply: `${confirmMsg} (${addressing.charAt(0).toUpperCase() + addressing.slice(1)} có thể bấm xác nhận, đổi giờ hoặc sửa tiêu đề).`,
+          speech: confirmMsg,
+          suggestedReplies: ['Đồng ý tạo', 'Đổi giờ', 'Đổi tiêu đề', 'Hủy bỏ'],
         };
       }
 

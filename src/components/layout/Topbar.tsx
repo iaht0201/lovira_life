@@ -16,7 +16,8 @@ import {
 } from 'lucide-react';
 import { AccessibilitySettings } from '../../types';
 import { useAuth } from '../../context/AuthContext';
-import { User, LogIn, Cloud } from 'lucide-react';
+import { User, LogIn, Cloud, AlertOctagon } from 'lucide-react';
+import { SOSButton } from '../sos/SOSButton';
 
 interface TopbarProps {
   accessibility?: AccessibilitySettings;
@@ -27,6 +28,7 @@ interface TopbarProps {
   onOpenProfile?: () => void;
   onOpenAuthModal?: () => void;
   onOpenMobileMenu?: () => void;
+  onTriggerSOS?: () => void;
   hasNotifications?: boolean;
 }
 
@@ -39,6 +41,7 @@ export const Topbar: React.FC<TopbarProps> = ({
   onOpenProfile,
   onOpenAuthModal,
   onOpenMobileMenu,
+  onTriggerSOS,
   hasNotifications = true,
 }) => {
   const { user, isAuthenticated, syncStatus } = useAuth();
@@ -173,7 +176,12 @@ export const Topbar: React.FC<TopbarProps> = ({
                   <div className="grid grid-cols-2 gap-1.5">
                     <button
                       onClick={toggleTheme}
-                      className="px-2.5 py-2 rounded-[10px] text-[12px] font-[700] flex items-center justify-center gap-1.5 bg-lovira-input hover:bg-lovira-card-hover text-lovira-title transition-all cursor-pointer shadow-2xs"
+                      className={`px-2.5 py-2 rounded-[10px] text-[12px] font-[700] flex items-center justify-center gap-1.5 transition-all cursor-pointer shadow-2xs ${
+                        accessibility.theme === 'dark'
+                          ? 'bg-[#1C2A2A] text-amber-300 ring-1 ring-amber-400/40'
+                          : 'bg-lovira-input text-lovira-title hover:bg-lovira-card-hover'
+                      }`}
+                      title="Chuyển chế độ Sáng / Tối"
                     >
                       {accessibility.theme === 'dark' ? (
                         <>
@@ -192,12 +200,13 @@ export const Topbar: React.FC<TopbarProps> = ({
                       onClick={toggleHighContrast}
                       className={`px-2.5 py-2 rounded-[10px] text-[12px] font-[700] flex items-center justify-center gap-1.5 transition-all cursor-pointer shadow-2xs ${
                         accessibility.highContrast
-                          ? 'bg-amber-400 text-black font-bold'
+                          ? 'bg-amber-400 text-black font-extrabold ring-2 ring-amber-300'
                           : 'bg-lovira-input text-lovira-muted hover:text-lovira-title hover:bg-lovira-card-hover'
                       }`}
+                      title="Bật / Tắt độ tương phản cao"
                     >
                       <Eye className="w-[14px] h-[14px]" />
-                      <span>Tương phản</span>
+                      <span>{accessibility.highContrast ? 'Đang bật Tương phản' : 'Tương phản'}</span>
                     </button>
                   </div>
                 </div>
@@ -220,7 +229,7 @@ export const Topbar: React.FC<TopbarProps> = ({
                           onClick={() => handleFontChange(scale)}
                           className={`py-1.5 rounded-[8px] text-[11px] font-[800] text-center transition-all cursor-pointer ${
                             isSelected
-                              ? 'bg-[#287C78] text-white shadow-2xs'
+                              ? 'bg-[#287C78] text-white shadow-2xs ring-2 ring-[#287C78]/30'
                               : 'bg-lovira-input text-lovira-muted hover:text-lovira-title hover:bg-lovira-card-hover'
                           }`}
                         >
@@ -271,9 +280,24 @@ export const Topbar: React.FC<TopbarProps> = ({
                     </span>
                   </button>
                 </div>
+
+                {/* 4. Voice Commands Help */}
+                <div className="pt-2 border-t border-lovira text-[11px] text-lovira-muted space-y-1">
+                  <div className="font-[700] text-lovira-title flex items-center gap-1">
+                    <span>🎙️ Lệnh giọng nói trợ năng:</span>
+                  </div>
+                  <div className="text-[10px] leading-relaxed text-lovira-muted">
+                    Có thể nói: <span className="text-[#287C78] dark:text-[#42A39E] font-[600]">"Chế độ tương phản"</span>, <span className="text-[#287C78] dark:text-[#42A39E] font-[600]">"Chữ to hơn"</span>, <span className="text-[#287C78] dark:text-[#42A39E] font-[600]">"Chế độ tối"</span>, <span className="text-[#287C78] dark:text-[#42A39E] font-[600]">"Bật đọc giọng nói"</span>...
+                  </div>
+                </div>
               </div>
             )}
           </div>
+        )}
+
+        {/* SOS Emergency Button */}
+        {onTriggerSOS && (
+          <SOSButton onClick={onTriggerSOS} variant="compact" />
         )}
 
         {/* Notification Button */}

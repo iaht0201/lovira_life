@@ -25,6 +25,7 @@ interface HomePageProps {
   onOpenReminders: () => void;
   onOpenChat: () => void;
   onOpenCamera?: () => void;
+  onTriggerSOS?: () => void;
   isOffline?: boolean;
 }
 
@@ -39,6 +40,7 @@ export const HomePage: React.FC<HomePageProps> = ({
   onOpenReminders,
   onOpenChat,
   onOpenCamera,
+  onTriggerSOS,
   isOffline = false,
 }) => {
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);

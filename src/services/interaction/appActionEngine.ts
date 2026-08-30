@@ -13,6 +13,8 @@ export interface AppActionRuntimeContext {
   openCamera: () => void;
   openVision?: () => void;
   openReminders?: () => void;
+  triggerSOS?: () => void;
+  openSOS?: () => void;
   updateAccessibilitySetting?: (key: string, value: any) => void;
   saveUpdatedSession?: (session: any) => void;
   refreshSessionsList?: () => void;
@@ -54,6 +56,17 @@ export async function applyAppAction(
           context.openCamera();
         }
         return true;
+
+      case 'TRIGGER_SOS':
+      case 'OPEN_SOS':
+        if (context.triggerSOS) {
+          context.triggerSOS();
+          return true;
+        } else if (context.openSOS) {
+          context.openSOS();
+          return true;
+        }
+        return false;
 
       case 'OPEN_REMINDERS':
         if (context.openReminders) {

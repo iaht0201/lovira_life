@@ -9,6 +9,8 @@ export type AppActionType =
   | 'OPEN_PROFILE'
   | 'OPEN_CAMERA'
   | 'OPEN_VISION'
+  | 'TRIGGER_SOS'
+  | 'OPEN_SOS'
   | 'UPDATE_ACCESSIBILITY_SETTING'
   | 'OPEN_REMINDERS'
   | 'CREATE_REMINDER'

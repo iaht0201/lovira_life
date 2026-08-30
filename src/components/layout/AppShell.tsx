@@ -11,6 +11,7 @@ interface AppShellProps {
   onTabChange: (tab: NavTab) => void;
   onCreateSession: () => void;
   onOpenAuthModal?: () => void;
+  onTriggerSOS?: () => void;
   userName?: string;
   planName?: string;
   voiceStatus: VoiceInteractionState;
@@ -27,6 +28,7 @@ export const AppShell: React.FC<AppShellProps> = ({
   onTabChange,
   onCreateSession,
   onOpenAuthModal,
+  onTriggerSOS,
   userName = 'Bạn',
   planName = 'Gói miễn phí',
   voiceStatus,
@@ -73,6 +75,7 @@ export const AppShell: React.FC<AppShellProps> = ({
         onTabChange={onTabChange}
         onCreateSession={onCreateSession}
         onOpenAuthModal={onOpenAuthModal}
+        onTriggerSOS={onTriggerSOS}
         userName={userName}
         planName={planName}
         isCollapsed={isSidebarCollapsed}
@@ -87,6 +90,7 @@ export const AppShell: React.FC<AppShellProps> = ({
         onTabChange={onTabChange}
         onCreateSession={onCreateSession}
         onOpenAuthModal={onOpenAuthModal}
+        onTriggerSOS={onTriggerSOS}
         userName={userName}
         planName={planName}
         accessibility={accessibility}
@@ -111,6 +115,7 @@ export const AppShell: React.FC<AppShellProps> = ({
             onOpenAuthModal={onOpenAuthModal}
             onOpenMobileMenu={() => setIsMobileMenuOpen(true)}
             onOpenNotifications={onOpenNotifications}
+            onTriggerSOS={onTriggerSOS}
             hasNotifications={hasNotifications}
           />
         )}

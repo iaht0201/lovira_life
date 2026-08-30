@@ -72,22 +72,22 @@ export const AuthUserCard: React.FC<AuthUserCardProps> = ({
 
   if (!isAuthenticated || !user) {
     return (
-      <div className="p-5 sm:p-6 rounded-[20px] bg-lovira-card border border-lovira-border transition-all">
+      <div className="p-5 sm:p-6 rounded-[16px] bg-lovira-card border border-[#E3E9E8] dark:border-[#243533] hover:border-[#B6DAD6] dark:hover:border-[#385654] transition-all">
         <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
           <div className="flex items-center gap-3.5">
-            <div className="w-12 h-12 rounded-full bg-gray-100 dark:bg-[#1F2C2C] text-lovira-muted flex items-center justify-center shrink-0">
+            <div className="w-12 h-12 rounded-[14px] bg-[#E5F3F1] dark:bg-[#1E3A38] text-[#238A83] dark:text-[#42A39E] flex items-center justify-center shrink-0">
               <User className="w-6 h-6" />
             </div>
             <div className="space-y-0.5">
               <div className="flex items-center gap-2 flex-wrap">
-                <h3 className="text-[15px] font-[800] text-lovira-title">
-                  Chế độ Khách (Trên thiết bị)
+                <h3 className="text-[16px] font-[800] text-lovira-title">
+                  Chế độ Khách (Trên thiết bị này)
                 </h3>
-                <span className="px-2.5 py-0.5 rounded-full text-[11px] font-[700] bg-gray-100 dark:bg-[#202C2C] text-lovira-muted">
-                  Cục bộ
+                <span className="px-2.5 py-0.5 rounded-full text-[12px] font-[700] bg-gray-100 dark:bg-[#202C2C] text-lovira-muted">
+                  Đang dùng
                 </span>
               </div>
-              <p className="text-[13px] font-[500] text-lovira-muted leading-relaxed">
+              <p className="text-[13px] sm:text-[14px] font-[500] text-lovira-muted leading-relaxed">
                 Tất cả phiên làm việc và ghi chú đang được lưu trực tiếp trên thiết bị của bạn.
               </p>
             </div>
@@ -96,7 +96,7 @@ export const AuthUserCard: React.FC<AuthUserCardProps> = ({
           <button
             type="button"
             onClick={onOpenAuthModal}
-            className="w-full sm:w-auto px-4 py-2.5 rounded-[12px] bg-[#287C78] hover:bg-[#1F625F] text-white font-[700] text-[13px] flex items-center justify-center gap-2 transition-all shadow-xs cursor-pointer shrink-0"
+            className="w-full sm:w-auto px-4 py-2.5 rounded-[12px] bg-[#238A83] hover:bg-[#1D7771] text-white font-[700] text-[14px] flex items-center justify-center gap-2 transition-all shadow-xs cursor-pointer shrink-0"
           >
             <LogIn className="w-4 h-4" />
             <span>Đăng nhập / Đăng ký</span>
@@ -109,7 +109,7 @@ export const AuthUserCard: React.FC<AuthUserCardProps> = ({
   const isGoogle = user.providerIds.includes('google.com');
 
   return (
-    <div className="p-5 sm:p-6 rounded-[20px] bg-lovira-card border border-lovira-border transition-all space-y-4">
+    <div className="p-5 sm:p-6 rounded-[16px] bg-lovira-card border border-[#E3E9E8] dark:border-[#243533] hover:border-[#B6DAD6] dark:hover:border-[#385654] transition-all space-y-4">
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
         {/* User Info Avatar & Details */}
         <div className="flex items-center gap-3.5">
@@ -118,24 +118,24 @@ export const AuthUserCard: React.FC<AuthUserCardProps> = ({
               src={user.photoURL}
               alt={user.displayName || 'Tài khoản'}
               referrerPolicy="no-referrer"
-              className="w-12 h-12 rounded-full object-cover border-2 border-[#287C78] shrink-0 shadow-2xs"
+              className="w-12 h-12 rounded-full object-cover border-2 border-[#238A83] shrink-0 shadow-2xs"
             />
           ) : (
-            <div className="w-12 h-12 rounded-full bg-[#287C78] text-white font-[800] text-lg flex items-center justify-center shrink-0 shadow-2xs">
+            <div className="w-12 h-12 rounded-full bg-[#238A83] text-white font-[800] text-lg flex items-center justify-center shrink-0 shadow-2xs">
               {user.displayName ? user.displayName.charAt(0).toUpperCase() : user.email?.charAt(0).toUpperCase() || 'U'}
             </div>
           )}
 
           <div className="space-y-0.5">
             <div className="flex items-center gap-2 flex-wrap">
-              <h3 className="text-[15px] font-[800] text-lovira-title">
+              <h3 className="text-[16px] font-[800] text-lovira-title">
                 {user.displayName || 'Người dùng Lovira'}
               </h3>
-              <span className="px-2.5 py-0.5 rounded-full text-[11px] font-[700] bg-teal-50 dark:bg-teal-950/60 text-[#287C78] dark:text-[#42A39E] border border-teal-200/50 dark:border-teal-800/50">
+              <span className="px-2.5 py-0.5 rounded-full text-[12px] font-[700] bg-[#E5F3F1] dark:bg-[#1E3A38] text-[#176F69] dark:text-[#42A39E] border border-[#B6DAD6]/50 dark:border-[#385654]/50">
                 {isGoogle ? 'Google Account' : 'Email/Password'}
               </span>
             </div>
-            <p className="text-[13px] font-[500] text-lovira-muted">
+            <p className="text-[13px] sm:text-[14px] font-[500] text-lovira-muted">
               {user.email || 'Tài khoản đã đăng nhập'}
             </p>
           </div>
@@ -168,7 +168,7 @@ export const AuthUserCard: React.FC<AuthUserCardProps> = ({
 
       {/* Verification Notice for Email Accounts if unverified */}
       {!isGoogle && !user.emailVerified && (
-        <div className="p-3.5 rounded-xl bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800/50 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-[13px]">
+        <div className="p-3.5 rounded-[12px] bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800/50 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-[13px]">
           <div className="flex items-start gap-2.5 text-amber-800 dark:text-amber-300">
             <AlertTriangle className="w-4 h-4 shrink-0 mt-0.5" />
             <span>Email của bạn chưa được xác minh.</span>

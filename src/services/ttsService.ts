@@ -110,6 +110,69 @@ export function stopSpeaking(): void {
   }
 }
 
+/**
+ * Chuyển đổi định dạng văn bản thô, danh sách liệt kê, bullet points, ký hiệu toán học/ký tự đặc biệt
+ * thành câu thoại tiếng Việt tự nhiên, rõ ràng cho công cụ đọc (TTS).
+ */
+export function prepareTTSReadableText(rawText: string): string {
+  if (!rawText) return '';
+  let text = rawText
+    .replace(/\*\*/g, '')
+    .replace(/#/g, '')
+    .replace(/⚠️/g, 'Cảnh báo: ')
+    .replace(/🏥|🏛️|🛒|📄|🌟|📍|🕒|👤|📋|💬|🎙️|🎙|✅|❌|❤️|🔔|💡/g, '')
+    .trim();
+
+  // Thay thế các ký tự viết tắt hoặc ký tự nối gây ngắt giọng khó chịu
+  text = text.replace(/\s*&\s*/g, ' và ');
+  text = text.replace(/\s*\/\s*/g, ' hoặc ');
+
+  // Xử lý từng dòng để phát hiện danh sách liệt kê (1, 2, 3... hoặc 1., 2)...)
+  const rawLines = text.split('\n');
+  const processedLines: string[] = [];
+
+  for (const line of rawLines) {
+    let l = line.trim();
+    if (!l) continue;
+
+    // Kiểm tra dòng đánh số: "1 Quét phiếu...", "1. Quét phiếu...", "1) Quét phiếu...", "Bước 1: Quét phiếu..."
+    const numMatch = l.match(/^(?:Bước\s+)?([0-9]{1,2})[.)\]\s:]+\s*(.*)$/i);
+    if (numMatch) {
+      const num = numMatch[1];
+      let content = numMatch[2].trim();
+      // Thay thế dấu nối ở giữa mục thành dấu phẩy để ngắt nhịp đọc
+      content = content.replace(/\s+[–—\-]\s+/g, ', ');
+      if (!/[.!?]$/.test(content)) content += '.';
+      processedLines.push(`Bước ${num}: ${content}`);
+      continue;
+    }
+
+    // Kiểm tra bullet point: "● ...", "• ...", "- ...", "* ...", "▪ ...", "– ...", "👉 ..."
+    const bulletMatch = l.match(/^[●•▪▫*+\-–—👉✓✔★◆◇►]\s*(.*)$/);
+    if (bulletMatch) {
+      let content = bulletMatch[1].trim();
+      // Thay thế dấu nối ở giữa mục (ví dụ "Sách tranh – giúp...") thành dấu phẩy ngắt nhịp tự nhiên
+      content = content.replace(/\s+[–—\-]\s+/g, ', ');
+      if (!/[.!?]$/.test(content)) content += '.';
+      processedLines.push(content);
+      continue;
+    }
+
+    // Dòng thông thường: thay thế dấu gạch ngang nối ý
+    l = l.replace(/\s+[–—\-]\s+/g, ', ');
+
+    if (l.endsWith(':')) {
+      processedLines.push(l);
+    } else if (!/[.!?]$/.test(l)) {
+      processedLines.push(l + '.');
+    } else {
+      processedLines.push(l);
+    }
+  }
+
+  return processedLines.join('\n').trim();
+}
+
 export function speakText(
   text: string,
   optionsOrOnEnd?: SpeakOptions | (() => void),
@@ -122,14 +185,7 @@ export function speakText(
       ? { onEnd: optionsOrOnEnd, onError: legacyOnError }
       : optionsOrOnEnd || {};
 
-  const cleanText = text
-    .replace(/\*\*/g, '')
-    .replace(/#/g, '')
-    .replace(/•/g, '')
-    .replace(/⚠️/g, 'Cảnh báo:')
-    .replace(/👉/g, '')
-    .replace(/🏥|🏛️|🛒|📄|🌟|📍|🕒|👤|📋|💬|🎙️|🎙|✅|❌|❤️|🔔|💡/g, '')
-    .trim();
+  const cleanText = prepareTTSReadableText(text);
 
   if (!cleanText) {
     options.onEnd?.();

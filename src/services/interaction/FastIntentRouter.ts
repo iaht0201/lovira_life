@@ -6,6 +6,7 @@ import { SCENARIO_REGISTRY, ScenarioRegistryEntry } from '../scenarioRegistry.js
 import { deduceHonorifics } from '../conversationStyle.js';
 import { fetchCurrentWeatherReport } from '../weatherService.js';
 import { executeLocalBrain } from '../localBrain/LocalBrainEngine.js';
+import { matchAccessibilityVoiceCommand } from './AccessibilityVoiceController.js';
 import {
   extractSpecificGoal,
   formatActionVerbDisplay,
@@ -98,6 +99,20 @@ export async function routeFastIntent(
   }
 
   const trimmedText = rawText.trim();
+
+  // 1.1 Direct Accessibility voice command check
+  const accessCmd = matchAccessibilityVoiceCommand(trimmedText);
+  if (accessCmd && accessCmd.handled) {
+    return {
+      handled: true,
+      confidence: 1.0,
+      source: 'exact',
+      appAction: accessCmd.appAction,
+      reply: accessCmd.reply,
+      speech: accessCmd.speech,
+    };
+  }
+
   const normalized = normalizeVietnameseText(trimmedText);
   const unaccented = stripVietnameseAccents(normalized);
 
@@ -108,6 +123,52 @@ export async function routeFastIntent(
   // -------------------------------------------------------------
   // LAYER A: Certain Local Navigation & App Controls (Confidence 1.0)
   // -------------------------------------------------------------
+
+  // A_SOS. Emergency SOS Trigger ("Cứu tôi", "Khẩn cấp", "SOS", "Gọi cấp cứu")
+  const isSOSPhrase =
+    normalized === 'sos' ||
+    normalized === 'cứu tôi' ||
+    normalized === 'cứu với' ||
+    normalized === 'cứu' ||
+    normalized === 'khẩn cấp' ||
+    normalized === 'báo động' ||
+    normalized === 'kêu cứu' ||
+    normalized === 'help' ||
+    normalized === 'help me' ||
+    normalized === 'emergency' ||
+    normalized.includes('cứu tôi') ||
+    normalized.includes('cứu với') ||
+    normalized.includes('khẩn cấp') ||
+    normalized.includes('báo động') ||
+    normalized.includes('gọi cấp cứu') ||
+    normalized.includes('gọi 115') ||
+    normalized.includes('gọi cứu hộ') ||
+    normalized.includes('tôi bị ngã') ||
+    normalized.includes('bị té ngã') ||
+    normalized.includes('gửi định vị khẩn cấp') ||
+    normalized.includes('mở sos') ||
+    normalized.includes('bật sos') ||
+    normalized.includes('kêu cứu') ||
+    unaccented.includes('cuu toi') ||
+    unaccented.includes('cuu voi') ||
+    unaccented.includes('khan cap') ||
+    unaccented.includes('goi cap cuu') ||
+    unaccented.includes('toi bi nga') ||
+    unaccented.includes('mo sos') ||
+    unaccented.includes('bat sos');
+
+  if (isSOSPhrase) {
+    return {
+      handled: true,
+      confidence: 1.0,
+      source: 'exact',
+      intentId: 'INTENT_SOS_EMERGENCY',
+      appAction: { type: 'TRIGGER_SOS' },
+      reply: `🆘 ${da}, ${me} đang kích hoạt màn hình Khẩn cấp SOS và lấy tọa độ vị trí định vị của ${addressing} ngay lập tức để gửi cho người thân hoặc gọi cấp cứu ạ!`,
+      speech: `${da}, ${me} kích hoạt chế độ khẩn cấp SOS ngay đây ạ!`,
+      suggestedReplies: ['Gửi SMS khẩn cấp', 'Gọi người thân', 'Gọi 115', 'Tắt còi báo động'],
+    };
+  }
 
   // A0. Vision Assistant ("Nhìn giúp tôi")
   const isVisionPhrase =

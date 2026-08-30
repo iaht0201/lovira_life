@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { Volume2, Check, Copy, Sparkles, Bot, User, CheckCircle2 } from 'lucide-react';
 import { SessionMessage } from '../../types';
 import { BrandAvatar } from '../common/BrandAvatar';
+import { prepareTTSReadableText } from '../../services/ttsService';
 
 interface ChatMessageRendererProps {
   message: SessionMessage;
@@ -44,8 +45,14 @@ function normalizeMessageContent(raw: string): string {
     text = text.replace(/(:\s*)(1\.\s+)/g, ':\n$2');
   }
 
+  // Chuyển đổi các dấu đầu dòng dính liền sau dấu hai chấm
+  text = text.replace(/(:\s*)([●•▪▫*+\-–—👉✓✔★◆◇►]\s+)/g, ':\n$2');
+
   if (text.includes(' • ') && !text.includes('\n•')) {
     text = text.replace(/\s+•\s+/g, '\n• ');
+  }
+  if (text.includes(' ● ') && !text.includes('\n●')) {
+    text = text.replace(/\s+●\s+/g, '\n● ');
   }
 
   return text;
@@ -112,7 +119,7 @@ export const ChatMessageRenderer: React.FC<ChatMessageRendererProps> = ({
       continue;
     }
 
-    const bulletMatch = trimmed.match(/^([•\-*+👉✓✔])\s+(.*)$/);
+    const bulletMatch = trimmed.match(/^([●•▪▫*+\-–—👉✓✔★◆◇►])\s+(.*)$/);
     if (bulletMatch) {
       blocks.push({
         type: 'bullet',
@@ -172,42 +179,72 @@ export const ChatMessageRenderer: React.FC<ChatMessageRendererProps> = ({
           <div className="space-y-2.5">
             {blocks.map((block, idx) => {
               if (block.type === 'numbered') {
+                const itemSpeakText = `Bước ${block.number}: ${block.content.replace(/\*\*/g, '')}`;
                 return (
                   <div
                     key={idx}
-                    className={`flex items-start gap-2.5 p-2.5 rounded-xl transition-colors ${
+                    className={`flex items-center justify-between gap-2.5 p-2.5 sm:p-3 rounded-xl transition-all group/item ${
                       isUser
                         ? 'bg-[#1F625F] text-white'
-                        : 'bg-white dark:bg-[#152222] text-[#11181C] dark:text-[#F2F7F7] border border-[#D5ECE8] dark:border-transparent shadow-2xs'
+                        : 'bg-white dark:bg-[#152222] text-[#11181C] dark:text-[#F2F7F7] border border-[#D5ECE8] dark:border-transparent shadow-2xs hover:border-[#287C78]/40'
                     }`}
                   >
-                    <span
-                      className={`inline-flex items-center justify-center w-5 h-5 rounded-full text-[11px] font-bold shrink-0 mt-0.5 ${
-                        isUser
-                          ? 'bg-white text-[#287C78]'
-                          : 'bg-[#287C78] text-white dark:bg-[#42A39E] dark:text-[#101818]'
-                      }`}
-                    >
-                      {block.number}
-                    </span>
-                    <div className="flex-1 text-[13px] sm:text-[14px] leading-relaxed font-normal text-[#11181C] dark:text-[#F2F7F7]">
-                      {renderFormattedInlineText(block.content)}
+                    <div className="flex items-start gap-2.5 flex-1 min-w-0">
+                      <span
+                        className={`inline-flex items-center justify-center w-5 h-5 rounded-full text-[11px] font-bold shrink-0 mt-0.5 ${
+                          isUser
+                            ? 'bg-white text-[#287C78]'
+                            : 'bg-[#287C78] text-white dark:bg-[#42A39E] dark:text-[#101818]'
+                        }`}
+                      >
+                        {block.number}
+                      </span>
+                      <div className="flex-1 text-[13px] sm:text-[14px] leading-relaxed font-normal text-[#11181C] dark:text-[#F2F7F7]">
+                        {renderFormattedInlineText(block.content)}
+                      </div>
                     </div>
+
+                    {!isUser && onSpeak && (
+                      <button
+                        type="button"
+                        onClick={() => onSpeak(itemSpeakText)}
+                        className="opacity-60 group-hover/item:opacity-100 hover:opacity-100 p-1.5 rounded-lg hover:bg-[#E5F3F1] dark:hover:bg-[#1E3A38] text-[#287C78] dark:text-[#42A39E] transition-all cursor-pointer shrink-0"
+                        title={`Nghe bước ${block.number}`}
+                        aria-label={`Nghe bước ${block.number}`}
+                      >
+                        <Volume2 className="w-4 h-4" />
+                      </button>
+                    )}
                   </div>
                 );
               }
 
               if (block.type === 'bullet') {
+                const bulletSpeakText = prepareTTSReadableText(block.content);
                 return (
-                  <div key={idx} className="flex items-start gap-2.5 pl-1">
-                    <span
-                      className={`w-2 h-2 rounded-full shrink-0 mt-2 ${
-                        isUser ? 'bg-white' : 'bg-[#287C78] dark:bg-[#42A39E]'
-                      }`}
-                    />
-                    <div className="flex-1 leading-relaxed text-[13px] sm:text-[14px] text-[#11181C] dark:text-[#F2F7F7]">
-                      {renderFormattedInlineText(block.content)}
+                  <div key={idx} className="flex items-start justify-between gap-2.5 pl-1 group/item py-0.5 rounded-lg hover:bg-black/5 dark:hover:bg-white/5 transition-colors">
+                    <div className="flex items-start gap-2.5 flex-1 min-w-0">
+                      <span
+                        className={`w-2 h-2 rounded-full shrink-0 mt-2 ${
+                          isUser ? 'bg-white' : 'bg-[#287C78] dark:bg-[#42A39E]'
+                        }`}
+                      />
+                      <div className="flex-1 leading-relaxed text-[13px] sm:text-[14px] text-[#11181C] dark:text-[#F2F7F7]">
+                        {renderFormattedInlineText(block.content)}
+                      </div>
                     </div>
+
+                    {!isUser && onSpeak && (
+                      <button
+                        type="button"
+                        onClick={() => onSpeak(bulletSpeakText)}
+                        className="opacity-60 group-hover/item:opacity-100 hover:opacity-100 p-1.5 rounded-lg hover:bg-[#E5F3F1] dark:hover:bg-[#1E3A38] text-[#287C78] dark:text-[#42A39E] transition-all cursor-pointer shrink-0"
+                        title="Nghe mục này"
+                        aria-label="Nghe mục này"
+                      >
+                        <Volume2 className="w-3.5 h-3.5" />
+                      </button>
+                    )}
                   </div>
                 );
               }
@@ -233,11 +270,11 @@ export const ChatMessageRenderer: React.FC<ChatMessageRendererProps> = ({
                 {onSpeak && (
                   <button
                     type="button"
-                    onClick={() => onSpeak(cleanSpeechText)}
+                    onClick={() => onSpeak(prepareTTSReadableText(message.text))}
                     className="inline-flex items-center gap-1 font-bold text-[#287C78] dark:text-[#42A39E] hover:underline transition-opacity cursor-pointer"
                   >
                     <Volume2 className={`w-3.5 h-3.5 ${isSpeaking ? 'animate-pulse text-amber-500' : ''}`} />
-                    <span>Đọc to</span>
+                    <span>Đọc to toàn bộ</span>
                   </button>
                 )}
 

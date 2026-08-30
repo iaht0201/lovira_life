@@ -19,29 +19,57 @@
 
   html.high-contrast {
     --bg-base: #000000 !important;
-    --bg-surface: #121212 !important;
-    --bg-surface-raised: #000000 !important;
-    --bg-card: #181818 !important;
-    --bg-card-hover: #242424 !important;
+    --bg-surface: #0a0a0a !important;
+    --bg-surface-raised: #141414 !important;
+    --bg-card: #000000 !important;
+    --bg-card-hover: #1f1f1f !important;
     --bg-sidebar: #000000 !important;
-    --bg-sidebar-active: #333333 !important;
+    --bg-sidebar-active: #2a2a2a !important;
     --bg-topbar: #000000 !important;
     --bg-input: #121212 !important;
     --bg-hero: #000000 !important;
     --bg-badge-purple: #333300 !important;
 
     --text-primary: #FFFFFF !important;
-    --text-secondary: #F0F0F0 !important;
-    --text-muted: #D0D0D0 !important;
+    --text-secondary: #FFFFFF !important;
+    --text-muted: #E5E5E5 !important;
     --text-brand: #FFFF00 !important;
     --text-on-hero: #FFFFFF !important;
 
     --border-default: #FFFFFF !important;
-    --border-subtle: #CCCCCC !important;
+    --border-subtle: #FFFF00 !important;
     --border-brand: #FFFF00 !important;
 
     --color-primary: #FFFF00 !important;
-    --color-primary-hover: #FFFF88 !important;
+    --color-primary-hover: #FFFF66 !important;
+    --color-focus-ring: #FFFF00 !important;
+  }
+
+  html.high-contrast * {
+    border-color: var(--border-default);
+  }
+
+  html.high-contrast button,
+  html.high-contrast input,
+  html.high-contrast textarea,
+  html.high-contrast select {
+    border: 2px solid #FFFFFF !important;
+    color: #FFFFFF !important;
+  }
+
+  html.high-contrast .bg-gradient-to-r,
+  html.high-contrast .bg-gradient-to-br,
+  html.high-contrast .bg-gradient-to-tr {
+    background-image: none !important;
+    background-color: #000000 !important;
+    border: 2px solid #FFFFFF !important;
+  }
+
+  html.high-contrast a:focus,
+  html.high-contrast button:focus,
+  html.high-contrast input:focus {
+    outline: 3px solid #FFFF00 !important;
+    outline-offset: 3px !important;
   }
 
   html {

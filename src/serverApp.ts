@@ -127,7 +127,7 @@ export function createApp() {
     }
   });
 
-  // 1.6 Edge TTS Endpoint (Microsoft Edge Vietnamese Neural Speech Synthesis)
+  // 1.6 Edge TTS Endpoint (Microsoft Edge Vietnamese Neural Speech Synthesis with full multi-step support)
   app.post('/api/tts', async (req, res) => {
     try {
       const { text, voice = 'vi-VN-HoaiMyNeural', rate = '+0%', pitch = '+0Hz', format = 'base64' } = req.body as {
@@ -142,22 +142,62 @@ export function createApp() {
         return res.status(400).json({ error: 'Thiếu văn bản cần đọc' });
       }
 
-      // Clean text from markdown bold/bullets/emojis
-      const cleanText = text
+      // Robust Vietnamese speech normalization: transform numbered steps, bullets, abbreviations
+      let cleanText = text
         .replace(/\*\*/g, '')
         .replace(/#/g, '')
-        .replace(/•/g, '')
-        .replace(/⚠️/g, 'Cảnh báo:')
-        .replace(/👉/g, '')
+        .replace(/⚠️/g, 'Cảnh báo: ')
         .replace(/🏥|🏛️|🛒|📄|🌟|📍|🕒|👤|📋|💬|🎙️|🎙|✅|❌|❤️|🔔|💡/g, '')
         .trim();
+
+      cleanText = cleanText.replace(/\s*&\s*/g, ' và ');
+      cleanText = cleanText.replace(/\s*\/\s*/g, ' hoặc ');
+
+      const rawLines = cleanText.split('\n');
+      const normalizedLines: string[] = [];
+
+      for (const line of rawLines) {
+        let l = line.trim();
+        if (!l) continue;
+
+        const numMatch = l.match(/^(?:Bước\s+)?([0-9]{1,2})[.)\]\s:]+\s*(.*)$/i);
+        if (numMatch) {
+          const num = numMatch[1];
+          let content = numMatch[2].trim();
+          content = content.replace(/\s+[–—\-]\s+/g, ', ');
+          if (!/[.!?]$/.test(content)) content += '.';
+          normalizedLines.push(`Bước ${num}: ${content}`);
+          continue;
+        }
+
+        const bulletMatch = l.match(/^[●•▪▫*+\-–—👉✓✔★◆◇►]\s*(.*)$/);
+        if (bulletMatch) {
+          let content = bulletMatch[1].trim();
+          content = content.replace(/\s+[–—\-]\s+/g, ', ');
+          if (!/[.!?]$/.test(content)) content += '.';
+          normalizedLines.push(content);
+          continue;
+        }
+
+        l = l.replace(/\s+[–—\-]\s+/g, ', ');
+
+        if (l.endsWith(':')) {
+          normalizedLines.push(l);
+        } else if (!/[.!?]$/.test(l)) {
+          normalizedLines.push(l + '.');
+        } else {
+          normalizedLines.push(l);
+        }
+      }
+
+      cleanText = normalizedLines.join('\n').trim();
 
       if (!cleanText) {
         return res.status(400).json({ error: 'Văn bản rỗng sau khi làm sạch' });
       }
 
       const ttsVoice = voice === 'vi-VN-NamMinhNeural' ? 'vi-VN-NamMinhNeural' : 'vi-VN-HoaiMyNeural';
-      console.log(`[EdgeTTS] Synthesizing Vietnamese speech (${ttsVoice}): "${cleanText.substring(0, 40)}..."`);
+      console.log(`[EdgeTTS] Synthesizing Vietnamese speech (${ttsVoice}): "${cleanText.substring(0, 50)}..."`);
 
       let audioBuffer: Buffer | null = null;
       let usedEngine = 'EdgeTTS';
@@ -173,27 +213,63 @@ export function createApp() {
         })();
 
         const timeoutPromise = new Promise<never>((_, reject) =>
-          setTimeout(() => reject(new Error('EdgeTTS timeout (4000ms)')), 4000)
+          setTimeout(() => reject(new Error('EdgeTTS timeout (5000ms)')), 5000)
         );
 
         audioBuffer = await Promise.race([edgeTTSPromise, timeoutPromise]);
       } catch (edgeErr: any) {
-        console.warn(`[EdgeTTS API Notice] EdgeTTS unavailable or timed out (${edgeErr?.message || edgeErr}), switching to Google TTS fallback...`);
+        console.warn(`[EdgeTTS API Notice] EdgeTTS unavailable (${edgeErr?.message || edgeErr}), switching to Multi-chunk Google TTS...`);
         usedEngine = 'GoogleTTS';
 
-        // Google Translate TTS Fallback
-        const encodedText = encodeURIComponent(cleanText.slice(0, 200));
-        const googleUrl = `https://translate.google.com/translate_tts?ie=UTF-8&q=${encodedText}&tl=vi&client=tw-ob`;
-        const googleRes = await fetch(googleUrl, {
-          headers: {
-            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-          },
-        });
+        // Multi-chunk Google Translate TTS for complete audio without truncation
+        const sentences = cleanText.split(/(?<=[.!?\n])\s+/);
+        const chunks: string[] = [];
+        let currentChunk = '';
 
-        if (googleRes.ok) {
-          audioBuffer = Buffer.from(await googleRes.arrayBuffer());
+        for (const s of sentences) {
+          if (!s.trim()) continue;
+          if ((currentChunk + ' ' + s).length <= 160) {
+            currentChunk = currentChunk ? currentChunk + ' ' + s : s;
+          } else {
+            if (currentChunk) chunks.push(currentChunk);
+            if (s.length <= 160) {
+              currentChunk = s;
+            } else {
+              const words = s.split(' ');
+              let sub = '';
+              for (const w of words) {
+                if ((sub + ' ' + w).length <= 160) {
+                  sub = sub ? sub + ' ' + w : w;
+                } else {
+                  if (sub) chunks.push(sub);
+                  sub = w;
+                }
+              }
+              if (sub) currentChunk = sub;
+            }
+          }
+        }
+        if (currentChunk) chunks.push(currentChunk);
+
+        const chunkBuffers: Buffer[] = [];
+        for (const chunk of chunks) {
+          const encodedText = encodeURIComponent(chunk.trim());
+          const googleUrl = `https://translate.google.com/translate_tts?ie=UTF-8&q=${encodedText}&tl=vi&client=tw-ob`;
+          const googleRes = await fetch(googleUrl, {
+            headers: {
+              'User-Agent':
+                'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+            },
+          });
+          if (googleRes.ok) {
+            chunkBuffers.push(Buffer.from(await googleRes.arrayBuffer()));
+          }
+        }
+
+        if (chunkBuffers.length > 0) {
+          audioBuffer = Buffer.concat(chunkBuffers);
         } else {
-          throw new Error(`Fallback Google TTS failed with status ${googleRes.status}`);
+          throw new Error('All Google TTS chunks failed');
         }
       }
 
@@ -651,10 +727,10 @@ Trả về kết quả bằng định dạng JSON thuần túy (JSON object) g�
 - detectedText: (string array) Các đoạn văn bản hoặc chữ ghi trên hình ảnh (nếu có).
 - possibleHazards: (string array) Các lưu ý hoặc nguy cơ chướng ngại vật/an toàn (nếu có).`;
 
-      // Priority 1: Groq Vision Models (Groq Qwen / Vision models)
+      // Priority 1: Groq Vision Models (Active Qwen Vision models)
       const groqKey = customApiKey || process.env.GROQ_API_KEY;
       if (groqKey) {
-        const groqVisionModels = ['llama-3.2-11b-vision-preview', 'llama-3.2-90b-vision-preview', 'qwen-2.5-32b'];
+        const groqVisionModels = ['qwen-2.5-32b'];
         const formattedImage = imageBase64.startsWith('data:')
           ? imageBase64
           : `data:image/jpeg;base64,${imageBase64}`;

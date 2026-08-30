@@ -1,3 +1,7 @@
+import { EmergencyContact } from './sos.js';
+
+export * from './sos.js';
+
 export type AccessibilityContextType =
   | "low_vision"
   | "hearing_impaired"
@@ -24,6 +28,9 @@ export interface UserProfile {
   caregiverName?: string;
   caregiverPhone?: string;
 
+  // Danh sách người thân / liên hệ khẩn cấp
+  emergencyContacts?: EmergencyContact[];
+
   // CHỈ chứa nội dung người dùng tự nhập, lưu nguyên văn, không suy diễn
   selfReportedConditions: string[];
 
@@ -46,6 +53,7 @@ export const DEFAULT_USER_PROFILE: Omit<UserProfile, "createdAt" | "updatedAt"> 
   syncHealthToCloud: false,
   subscriptionTier: "free",
   planName: "Gói Miễn phí",
+  emergencyContacts: [],
 };
 
 export function getUserPlanName(profile?: UserProfile | null): string {
@@ -62,3 +70,26 @@ export function getUserDisplayName(profile?: UserProfile | null, fallback = 'B�
   }
   return fallback;
 }
+
+/**
+ * Returns active emergency contacts for user, falling back to legacy caregiver info if present
+ */
+export function getEmergencyContacts(profile?: UserProfile | null): EmergencyContact[] {
+  if (!profile) return [];
+  if (profile.emergencyContacts && profile.emergencyContacts.length > 0) {
+    return profile.emergencyContacts;
+  }
+  if (profile.caregiverPhone?.trim()) {
+    return [
+      {
+        id: 'primary-caregiver',
+        name: profile.caregiverName?.trim() || 'Người chăm sóc',
+        phone: profile.caregiverPhone.trim(),
+        relationship: 'Người thân hỗ trợ',
+        isPrimary: true,
+      },
+    ];
+  }
+  return [];
+}
+

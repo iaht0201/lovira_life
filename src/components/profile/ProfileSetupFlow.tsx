@@ -48,6 +48,28 @@ export const ProfileSetupFlow: React.FC<ProfileSetupFlowProps> = ({
       .map((line) => line.trim())
       .filter((line) => line.length > 0);
 
+    const hasCaregiver = Boolean(caregiverName.trim() || caregiverPhone.trim());
+    let emergencyContacts = initialProfile?.emergencyContacts ? [...initialProfile.emergencyContacts] : [];
+
+    if (hasCaregiver && caregiverPhone.trim()) {
+      const existingPrimaryIdx = emergencyContacts.findIndex((c) => c.isPrimary);
+      if (existingPrimaryIdx >= 0) {
+        emergencyContacts[existingPrimaryIdx] = {
+          ...emergencyContacts[existingPrimaryIdx],
+          name: caregiverName.trim() || 'Người thân',
+          phone: caregiverPhone.trim(),
+        };
+      } else {
+        emergencyContacts.unshift({
+          id: `contact-${Date.now()}`,
+          name: caregiverName.trim() || 'Người thân',
+          phone: caregiverPhone.trim(),
+          relationship: 'Người thân hỗ trợ',
+          isPrimary: true,
+        });
+      }
+    }
+
     const updatedProfile: UserProfile = {
       ...DEFAULT_USER_PROFILE,
       ...initialProfile,
@@ -55,9 +77,10 @@ export const ProfileSetupFlow: React.FC<ProfileSetupFlowProps> = ({
       pronounStyle,
       customPronoun: pronounStyle === 'custom' ? customPronoun.trim() : undefined,
       communicationPace,
-      hasCaregiverContact: Boolean(caregiverName.trim() || caregiverPhone.trim()),
+      hasCaregiverContact: hasCaregiver,
       caregiverName: caregiverName.trim() || undefined,
       caregiverPhone: caregiverPhone.trim() || undefined,
+      emergencyContacts,
       selfReportedConditions: conditions,
       createdAt: initialProfile?.createdAt || new Date().toISOString(),
       updatedAt: new Date().toISOString(),

@@ -77,14 +77,11 @@ const BANNED_SUGGESTED_REPLY_PATTERNS = [
 /**
  * Strips markdown and special symbols for natural TTS speech output
  */
+import { prepareTTSReadableText } from '../ttsService.js';
+
 export function stripForSpeech(text: string): string {
   if (!text) return '';
-  return text
-    .replace(/[#*_~`]/g, '') // remove markdown
-    .replace(/👉|🌸|🎉|💡|⚠️|✅|❌|🔍|📍|🏥|💊|🛵|🚗/g, '') // remove emojis
-    .replace(/\[([^\]]+)\]\([^)]+\)/g, '$1') // [link](url) -> link
-    .replace(/\s+/g, ' ')
-    .trim();
+  return prepareTTSReadableText(text);
 }
 
 /**
@@ -183,11 +180,13 @@ export function validateAndGroundAIResponse(input: GroundingInput): GroundingRes
     finalSuggestedReplies = ['Xong rồi', 'Giờ tôi cần làm gì tiếp?', 'Cần trợ giúp bước này'];
   }
 
-  // 5. Ground Speech: NEVER speak raw model output if reply was modified or grounded
+  // 5. Ground Speech: If reply contains lists or numbered steps, speak the full formatted content
   let finalSpeech: string;
-  if (wasModified) {
+  const hasListContent = /[\n●•▪▫*+\-–—👉✓✔]/.test(finalReply) && finalReply.split('\n').length > 1;
+
+  if (wasModified || hasListContent || !rawSpeech || !rawSpeech.trim()) {
     finalSpeech = stripForSpeech(finalReply);
-  } else if (rawSpeech && rawSpeech.trim()) {
+  } else {
     // Also verify rawSpeech does not contain hallucinated patterns
     let speechCandidate = rawSpeech;
     let speechHadHallucination = false;
@@ -203,8 +202,6 @@ export function validateAndGroundAIResponse(input: GroundingInput): GroundingRes
     } else {
       finalSpeech = stripForSpeech(speechCandidate);
     }
-  } else {
-    finalSpeech = stripForSpeech(finalReply);
   }
 
   return {

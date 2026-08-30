@@ -21,7 +21,8 @@ const geminiAgentResponseSchema = {
     },
     speech: {
       type: Type.STRING,
-      description: 'Lời đọc ngắn gọn, tự nhiên, diễn cảm cho giọng nói TTS (không chứa ký tự markdown).',
+      description:
+        'Lời đọc tự nhiên, diễn cảm, đọc đầy đủ cả các mục/bước trong danh sách nếu có cho giọng nói TTS (không chứa ký tự markdown).',
     },
     suggestedReplies: {
       type: Type.ARRAY,

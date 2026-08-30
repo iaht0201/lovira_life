@@ -24,7 +24,21 @@ export interface AppInteractionContext {
 export type PendingInteractionType =
   | 'create_session'
   | 'confirm_action'
-  | 'clarification';
+  | 'clarification'
+  | 'confirm_reminder';
+
+export interface PendingDraftReminder {
+  title: string;
+  scheduledAt: string;
+  category?: 'medication' | 'appointment' | 'family' | 'general';
+  repeat?: 'once' | 'daily' | 'weekly' | 'monthly';
+  priority?: 'low' | 'normal' | 'high';
+  leadTimeMinutes?: number;
+  eventTime?: string;
+  eventDate?: string;
+  notes?: string;
+  sessionId?: string;
+}
 
 export interface PendingInteraction {
   type: PendingInteractionType;
@@ -42,6 +56,7 @@ export interface PendingInteraction {
     suggestedReplies?: string[];
     successReply?: string;
     cancelReply?: string;
+    draftReminder?: PendingDraftReminder;
   };
   createdAt: string;
   expiresAt?: number;

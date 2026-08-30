@@ -9,16 +9,14 @@ import {
 } from '../../types.js';
 import { buildSessionContextPrompt } from './SessionContextBuilder.js';
 
-// Enum cho toàn bộ các mô hình Groq chính thức được hỗ trợ
+// Enum cho toàn bộ các mô hình Groq chính thức hiện hành
 export enum GroqModel {
   GPT_OSS_20B = 'openai/gpt-oss-20b',
   GPT_OSS_120B = 'openai/gpt-oss-120b',
   QWEN_3_6_27B = 'qwen/qwen3.6-27b',
   COMPOUND_MINI = 'groq/compound-mini',
   COMPOUND = 'groq/compound',
-  // Legacy aliases mapped to active models
-  LLAMA_3_1_8B = 'openai/gpt-oss-20b',
-  LLAMA_3_3_70B = 'openai/gpt-oss-120b',
+  // Active aliases mapped to supported models
   MIXTRAL_8X7B = 'qwen/qwen3.6-27b',
   GEMMA2_9B = 'groq/compound-mini',
   DEEPSEEK_70B = 'openai/gpt-oss-120b',
@@ -38,16 +36,16 @@ export const ALLOWED_GROQ_MODELS = Object.values(GroqModel);
 export function normalizeGroqModel(modelInput?: string): GroqModel {
   if (!modelInput) return GroqModel.GPT_OSS_20B;
 
-  if (modelInput === 'llama-3.1-8b-instant' || modelInput === 'openai/gpt-oss-20b' || modelInput === 'groq/compound-mini') {
+  if (modelInput.includes('gpt-oss-20b') || modelInput.includes('compound-mini')) {
     return GroqModel.GPT_OSS_20B;
   }
-  if (modelInput === 'llama-3.3-70b-versatile' || modelInput === 'openai/gpt-oss-120b' || modelInput === 'groq/compound') {
+  if (modelInput.includes('gpt-oss-120b') || modelInput.includes('compound')) {
     return GroqModel.GPT_OSS_120B;
   }
-  if (modelInput === 'mixtral-8x7b-32768' || modelInput === 'qwen/qwen3.6-27b') {
+  if (modelInput.includes('qwen') || modelInput.includes('mixtral')) {
     return GroqModel.QWEN_3_6_27B;
   }
-  if (modelInput === 'gemma2-9b-it') {
+  if (modelInput.includes('gemma')) {
     return GroqModel.COMPOUND_MINI;
   }
 
@@ -56,7 +54,7 @@ export function normalizeGroqModel(modelInput?: string): GroqModel {
   }
 
   const lower = modelInput.toLowerCase();
-  if (lower.includes('70b') || lower.includes('compound') || lower.includes('120b')) {
+  if (lower.includes('120b') || lower.includes('compound') || lower.includes('70b')) {
     return GroqModel.GPT_OSS_120B;
   }
   if (lower.includes('qwen') || lower.includes('mixtral')) return GroqModel.QWEN_3_6_27B;
@@ -102,7 +100,7 @@ export async function callGroqAgent(
 - Bạn PHẢI trả về duy nhất một đối tượng JSON hợp lệ:
 {
   "reply": "Câu trả lời thân thiện bằng tiếng Việt (dùng • và **in đậm** cho danh sách)",
-  "speech": "Lời đọc to ngắn gọn bằng tiếng Việt",
+  "speech": "Lời đọc to bằng tiếng Việt tự nhiên, đọc đầy đủ cả các mục/bước trong danh sách nếu có",
   "suggestedReplies": ["Gợi ý 1", "Gợi ý 2"],
   "actions": [{ "type": "ADD_TASK|UPDATE_TASK|COMPLETE_TASK|COMPLETE_SUBTASK|ADD_FACT|COMPLETE_SESSION", "payload": { ... } }],
   "appActions": [{ "type": "GO_HOME|OPEN_SESSION|CREATE_SESSION|OPEN_SETTINGS|OPEN_CAMERA|OPEN_REMINDERS|CREATE_REMINDER", "payload": { ... } }],

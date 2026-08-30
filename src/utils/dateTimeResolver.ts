@@ -369,8 +369,59 @@ export function parseClarifiedTime(
 }
 
 /**
+ * Normalizes colloquial or rough spoken activity goals into polished Vietnamese titles
+ * e.g. "đi phải đi khám" -> "Đi khám bệnh", "làm cccd" -> "Làm thẻ Căn cước công dân"
+ */
+export function normalizeActivityGoal(goal: string): string {
+  if (!goal || !goal.trim()) return 'Công việc cần làm';
+  let g = goal.trim();
+
+  // Clean trailing punctuation
+  g = g.replace(/[?.!;,]+$/, '').trim();
+
+  // Strip awkward spoken stutter like "đi phải đi", "phải đi", "tính đi"
+  g = g.replace(/^(?:đi\s+)?(?:phải|cần|tính|chuẩn\s+bị|sắp|định)\s+(?:đi\s+)?/i, 'đi ');
+  g = g.replace(/^đi\s+phải\s+đi\s+/i, 'đi ');
+  g = g.replace(/^đi\s+đi\s+/i, 'đi ');
+
+  const lower = g.toLowerCase();
+
+  // Specific common scenarios polishing
+  if (/^(?:đi\s+)?khám(?:\s+bệnh)?$/i.test(lower)) {
+    return 'Đi khám bệnh';
+  }
+  if (/^(?:đi\s+)?khám\s+sức\s+khỏe(?:\s+tổng\s+quát)?$/i.test(lower)) {
+    return 'Khám sức khỏe tổng quát';
+  }
+  if (/^(?:đi\s+)?khám\s+(mắt|tai|mũi|họng|răng|tim|tim\s+mạch|xương\s+khớp|da\s+liễu|nhi|sản|phụ\s+khoa|tiêu\s+hóa)$/i.test(lower)) {
+    const specMatch = lower.match(/khám\s+(.*)$/i);
+    const spec = specMatch ? specMatch[1] : '';
+    return `Đi khám ${spec}`;
+  }
+  if (/^(?:đi\s+)?(?:làm\s+)?(?:thẻ\s+)?(?:cccd|căn\s+cước|căn\s+cước\s+công\s+dân)$/i.test(lower)) {
+    return 'Làm Căn cước công dân';
+  }
+  if (/^(?:đi\s+)?(?:làm\s+|đổi\s+)?(?:thẻ\s+)?(?:bhyt|bảo\s+hiểm\s+y\s+tế)$/i.test(lower)) {
+    return 'Làm thủ tục Bảo hiểm y tế';
+  }
+  if (/^(?:đi\s+)?(?:làm\s+)?hộ\s+chiếu$/i.test(lower)) {
+    return 'Làm Hộ chiếu xuất nhập cảnh';
+  }
+  if (/^(?:đi\s+)?(?:chợ|đi\s+chợ|mua\s+đồ|mua\s+sắm|siêu\s+thị)$/i.test(lower)) {
+    return 'Đi chợ & mua sắm';
+  }
+  if (/^(?:đi\s+)?rút\s+tiền(?:\s+ngân\s+hàng|\s+atm)?$/i.test(lower)) {
+    return 'Đi rút tiền ngân hàng';
+  }
+
+  // Ensure capitalized first letter
+  return g.charAt(0).toUpperCase() + g.slice(1);
+}
+
+/**
  * Extracts a specific goal / activity title from a user's prompt,
  * preserving specific details like "khám tai", "phỏng vấn kế toán", "làm BHYT"
+ * and removing conversational voice artifacts and pronouns.
  */
 export function extractSpecificGoal(text: string): string {
   if (!text || !text.trim()) return '';
@@ -378,6 +429,9 @@ export function extractSpecificGoal(text: string): string {
 
   // Remove trailing punctuation
   cleaned = cleaned.replace(/[?.!;,]+$/, '');
+
+  // Clean conversational callouts (e.g. "Lovira ơi", "ơi em", "nhờ con", "cho bác hỏi")
+  cleaned = cleaned.replace(/^(?:lovira\s+ơi|ơi\s+lovira|em\s+ơi|ơi\s+em|cháu\s+ơi|con\s+ơi|nhờ\s+lovira|nhờ\s+em|nhờ\s+cháu|nhờ\s+con|cho\s+(?:tôi|chú|bác|cô|bà|ông|anh|chị)\s+hỏi)\s*[,:]?\s*/i, '');
 
   // Iteratively remove leading temporal words, time expressions, pronouns, and modals
   let prev = '';
@@ -393,19 +447,22 @@ export function extractSpecificGoal(text: string): string {
     // Remove leading personal pronouns
     cleaned = cleaned.replace(/^(chú|tôi|bác|cô|bà|ông|anh|chị|em|mình)\s+/i, '');
 
-    // Remove leading modal/intent verbs
-    cleaned = cleaned.replace(/^(phải|cần|sắp|muốn|dự định|sắp sửa|tính|đang|nhớ|tạo|cho|hỗ trợ)\s+/i, '');
+    // Remove leading modal/intent verbs and colloquial voice stutters (e.g. "đi phải đi", "phải đi", "tính đi")
+    cleaned = cleaned.replace(/^(?:đi\s+)?(phải|cần|sắp|muốn|dự định|sắp sửa|tính|đang|nhớ|tạo|cho|hỗ trợ|chuẩn bị|định)\s+(?:đi\s+)?/i, '');
+    cleaned = cleaned.replace(/^(phải|cần|sắp|muốn|dự định|sắp sửa|tính|đang|nhớ|tạo|cho|hỗ trợ|chuẩn bị|định)\s+/i, '');
+    cleaned = cleaned.replace(/^đi\s+phải\s+đi\s+/i, 'đi ');
+    cleaned = cleaned.replace(/^đi\s+đi\s+/i, 'đi ');
   }
 
   // Clean trailing polite words or reminder requests
-  cleaned = cleaned.replace(/(nhé|nha|nhen|ạ|nhé con|nha con|giúp chú|giúp bác|giúp tôi)$/i, '').trim();
+  cleaned = cleaned.replace(/(nhé|nha|nhen|ạ|nhé con|nha con|giúp chú|giúp bác|giúp tôi|giúp em|giúp mình)$/i, '').trim();
 
   if (!cleaned || cleaned.length < 2) {
     return text.trim();
   }
 
-  // Capitalize first letter
-  return cleaned.charAt(0).toUpperCase() + cleaned.slice(1);
+  // Normalize via standard goal refiner
+  return normalizeActivityGoal(cleaned);
 }
 
 /**

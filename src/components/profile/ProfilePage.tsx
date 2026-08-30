@@ -16,12 +16,14 @@ import {
   Activity,
   Plus,
   Phone,
+  AlertOctagon,
 } from 'lucide-react';
 import { UserProfile } from '../../types';
 import { buildAddressing } from '../../utils/filterRelevantConditions';
 import { storageService } from '../../services/storageService';
 import { AuthUserCard } from '../auth/AuthUserCard';
 import { CloudSyncCard } from '../auth/CloudSyncCard';
+import { EmergencyContactsEditor } from '../sos/EmergencyContactsEditor';
 
 interface ProfilePageProps {
   userProfile: UserProfile | null;
@@ -29,6 +31,7 @@ interface ProfilePageProps {
   onUpdateUserProfile: (profile: UserProfile | null) => void;
   onOpenAuthModal?: () => void;
   onShowToast?: (msg: string) => void;
+  onTriggerSOS?: () => void;
   completedTasksCount?: number;
   totalSessionsCount?: number;
 }
@@ -39,6 +42,7 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({
   onUpdateUserProfile,
   onOpenAuthModal = () => {},
   onShowToast,
+  onTriggerSOS,
   completedTasksCount = 12,
   totalSessionsCount = 5,
 }) => {
@@ -180,56 +184,34 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({
 
       {/* SECTION 2: Caregiver & Emergency Contacts */}
       <div className="p-6 rounded-[22px] bg-lovira-card border border-lovira shadow-2xs space-y-5">
-        <div className="flex items-center justify-between border-b border-lovira-subtle pb-3.5">
+        <div className="flex items-center justify-between border-b border-lovira-subtle pb-3.5 flex-wrap gap-2">
           <div className="flex items-center gap-2.5">
             <div className="w-[36px] h-[36px] rounded-[12px] bg-rose-500/10 text-rose-600 dark:text-rose-400 flex items-center justify-center font-[700]">
               <PhoneCall className="w-[18px] h-[18px]" />
             </div>
             <div>
-              <h3 className="text-[16px] font-[800] text-lovira-title">Người thân hỗ trợ khẩn cấp</h3>
-              <p className="text-[12px] font-[500] text-lovira-muted">Thông tin liên lạc với con cháu hoặc người chăm sóc</p>
+              <h3 className="text-[16px] font-[800] text-lovira-title">Liên hệ khẩn cấp & Cứu hộ SOS</h3>
+              <p className="text-[12px] font-[500] text-lovira-muted">Gửi tọa độ GPS và tin nhắn kêu cứu khi người dùng bấm SOS</p>
             </div>
           </div>
+
+          {onTriggerSOS && (
+            <button
+              type="button"
+              onClick={onTriggerSOS}
+              className="px-3.5 py-1.5 rounded-xl bg-gradient-to-r from-rose-600 to-red-600 hover:from-rose-700 hover:to-red-700 text-white font-bold text-xs flex items-center gap-1.5 shadow-md shadow-rose-600/30 cursor-pointer transition-all active:scale-95"
+            >
+              <AlertOctagon className="w-4 h-4 text-amber-200 animate-pulse" />
+              <span>Mở bảng SOS ngay</span>
+            </button>
+          )}
         </div>
 
-        {userProfile?.hasCaregiverContact || userProfile?.caregiverPhone ? (
-          <div className="p-4 rounded-[18px] bg-lovira-badge-purple/40 border border-lovira-purple/30 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-            <div className="space-y-1">
-              <span className="text-[11px] font-[700] uppercase tracking-wider text-lovira-purple">
-                Người hỗ trợ trực tiếp
-              </span>
-              <p className="text-[16px] font-[800] text-lovira-title">
-                {userProfile.caregiverName || 'Người thân'}
-              </p>
-              <p className="text-[13px] font-[600] text-lovira-muted flex items-center gap-1.5">
-                <Phone className="w-[14px] h-[14px] text-lovira-purple" />
-                <span>{userProfile.caregiverPhone || 'Chưa nhập số điện thoại'}</span>
-              </p>
-            </div>
-
-            {userProfile.caregiverPhone && (
-              <a
-                href={`tel:${userProfile.caregiverPhone}`}
-                className="px-4 py-2 rounded-[12px] bg-lovira-purple text-white font-[700] text-[13px] hover:opacity-90 transition-all flex items-center gap-1.5 cursor-pointer shadow-xs shrink-0"
-              >
-                <Phone className="w-[14px] h-[14px]" />
-                <span>Gọi ngay</span>
-              </a>
-            )}
-          </div>
-        ) : (
-          <div className="p-4 rounded-[16px] bg-lovira-input border border-dashed border-lovira text-center space-y-2">
-            <p className="text-[13px] font-[500] text-lovira-muted">
-              Chưa có thông tin người thân hỗ trợ khẩn cấp.
-            </p>
-            <button
-              onClick={onOpenProfileSetup}
-              className="px-4 py-1.5 rounded-[12px] bg-lovira-badge-purple text-lovira-purple font-[700] text-[12px] hover:bg-lovira-purple hover:text-white transition-colors cursor-pointer"
-            >
-              + Thêm người thân
-            </button>
-          </div>
-        )}
+        {/* Embedded Emergency Contacts Editor */}
+        <EmergencyContactsEditor
+          userProfile={userProfile}
+          onUpdateProfile={(updated) => onUpdateUserProfile(updated)}
+        />
       </div>
 
       {/* SECTION 3: Health Conditions & Preferences */}

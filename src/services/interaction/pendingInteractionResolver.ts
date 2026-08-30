@@ -1,9 +1,12 @@
-import { PendingInteraction } from './interactionTypes.js';
+import { PendingInteraction, PendingDraftReminder } from './interactionTypes.js';
 import { AppAction } from './appActionTypes.js';
 import { AgentAction } from '../../types.js';
+import { matchAccessibilityVoiceCommand } from './AccessibilityVoiceController.js';
 import {
   parseClarifiedTime,
+  parseVietnameseReminderText,
   extractSpecificGoal,
+  normalizeActivityGoal,
   formatActionVerbDisplay,
   extractDateFromText,
   extractTimeFromText,
@@ -13,6 +16,50 @@ import { fetchCurrentWeatherReport } from '../weatherService.js';
 import { reminderService } from '../reminderService.js';
 import { normalizeVietnameseText, stripVietnameseAccents } from './VietnameseNormalizer.js';
 import { extractSnoozePreset, extractReminderTargetKeyword } from '../localBrain/ReminderTargetResolver.js';
+
+export function extractNewTitleFromText(text: string): string | null {
+  const raw = text.trim();
+  const norm = stripVietnameseAccents(normalizeVietnameseText(raw)).toLowerCase();
+
+  const prefixes = [
+    'doi tieu de thanh',
+    'doi tieu de la',
+    'doi tieu de sang',
+    'sua tieu de thanh',
+    'sua tieu de la',
+    'sua tieu de sang',
+    'doi ten thanh',
+    'doi ten la',
+    'doi ten sang',
+    'sua ten thanh',
+    'sua ten la',
+    'sua ten sang',
+    'doi thanh',
+    'sua thanh',
+    'tieu de la',
+    'tieu de thanh',
+    'ten la',
+    'dat ten la',
+    'dat ten thanh',
+  ];
+
+  for (const prefix of prefixes) {
+    const idx = norm.indexOf(prefix);
+    if (idx !== -1) {
+      let candidate = raw.slice(idx + prefix.length).trim();
+      candidate = candidate.replace(/^[":,\s-]+|[":,\s-]+$/g, '');
+      // Don't treat a pure time string as title (e.g. "đổi thành 8 giờ" -> time, not title)
+      const testTime = extractTimeFromText(candidate);
+      if (testTime.hasTime && candidate.length < 15 && (candidate.includes('h') || candidate.includes('gio') || candidate.includes('giờ'))) {
+        continue;
+      }
+      if (candidate.length >= 2) {
+        return candidate;
+      }
+    }
+  }
+  return null;
+}
 
 const STRICT_AFFIRMATIVE_REGEX =
   /^(có|co|ừ|u|um|ừm|ừ nè|u ne|ờ|o|uh|ok|oke|okie|dạ có|da co|dạ được|da duoc|dạ vâng|da vang|được|duoc|được chứ|duoc chu|được nha|duoc nha|tạo đi|tao di|tạo giúp|tao giup|tạo luôn|tao luon|đồng ý|dong y|đồng ý nha|dong y nha|nhất trí|nhat tri|tạo giúp chú|tạo giúp bác|tạo giúp tôi|tạo giúp cô|tạo giúp anh|tạo giúp chị|làm đi|lam di|làm luôn|lam luon|tiến hành đi|tien hanh di|triển luôn|trien luon|mở đi|mo di|mở giúp|mo giup|xóa đi|xoa di|xóa giúp|xoa giup|xóa luôn|xoa luon|xóa luôn đi|xoa luon di|chắc chắn|chac chan|chắc cú|chac cu|đồng ý xóa|dong y xoa|ừ xóa đi|u xoa di|ok xóa|ok xoa|hoàn thành đi|hoan thanh di|kết thúc đi|ket thuc di|đúng rồi|dung roi|đúng rùi|dung rui|chuẩn|chuan|chính xác|chinh xac)$/i;
@@ -121,6 +168,7 @@ export interface PendingResolution {
   appAction?: AppAction;
   agentActions?: AgentAction[];
   reply?: string;
+  speech?: string;
   clearPending: boolean;
   newPending?: PendingInteraction;
 }
@@ -146,6 +194,67 @@ export async function resolvePendingInteraction(
   }
 
   const trimmed = userText.trim();
+
+  // 0. High Priority: If user is giving an accessibility command or system navigation command, execute it immediately!
+  const accessibilityCmd = matchAccessibilityVoiceCommand(trimmed);
+  if (accessibilityCmd && accessibilityCmd.handled) {
+    return {
+      resolved: true,
+      appAction: accessibilityCmd.appAction,
+      reply: accessibilityCmd.reply,
+      speech: accessibilityCmd.speech,
+      clearPending: true,
+    };
+  }
+
+  // 0.1 Check cancellation
+  if (isNegativeResponse(trimmed)) {
+    return {
+      resolved: true,
+      reply: `${da} vâng, ${me} đã hủy bỏ thao tác này rồi${a}.`,
+      speech: `${da} vâng, ${me} đã hủy bỏ thao tác này rồi${a}.`,
+      clearPending: true,
+    };
+  }
+
+  // 0.2 Check direct global navigation
+  const normNav = stripVietnameseAccents(normalizeVietnameseText(trimmed)).toLowerCase();
+  if (normNav.includes('trang chu') || normNav.includes('ve nha') || normNav.includes('man hinh chinh') || normNav === 'trang chu') {
+    return {
+      resolved: true,
+      appAction: { type: 'GO_HOME' },
+      reply: `${da}, ${me} đưa ${addressing} về màn hình trang chủ${a}!`,
+      speech: `${da}, ${me} đưa ${addressing} về màn hình trang chủ${a}!`,
+      clearPending: true,
+    };
+  }
+  if (normNav.includes('cai dat') || normNav.includes('mo cai dat') || normNav === 'cai dat') {
+    return {
+      resolved: true,
+      appAction: { type: 'OPEN_SETTINGS' },
+      reply: `${da}, ${me} mở trang cài đặt cho ${addressing} đây${a}!`,
+      speech: `${da}, ${me} mở trang cài đặt cho ${addressing} đây${a}!`,
+      clearPending: true,
+    };
+  }
+  if (normNav.includes('camera') || normNav.includes('may anh') || normNav.includes('chup anh') || normNav.includes('nhin giup')) {
+    return {
+      resolved: true,
+      appAction: { type: 'OPEN_CAMERA' },
+      reply: `${da}, ${me} mở máy ảnh camera cho ${addressing} ngay đây${a}!`,
+      speech: `${da}, ${me} mở máy ảnh camera cho ${addressing} ngay đây${a}!`,
+      clearPending: true,
+    };
+  }
+  if (normNav.includes('lich nhac nho') || normNav.includes('lich hen') || normNav.includes('xem lich') || normNav.includes('mo nhac nho')) {
+    return {
+      resolved: true,
+      appAction: { type: 'OPEN_REMINDERS' },
+      reply: `${da}, ${me} mở danh sách lịch nhắc nhở cho ${addressing} đây${a}!`,
+      speech: `${da}, ${me} mở danh sách lịch nhắc nhở cho ${addressing} đây${a}!`,
+      clearPending: true,
+    };
+  }
 
   if (pending.type === 'create_session') {
     // 1. Negative first
@@ -194,6 +303,175 @@ export async function resolvePendingInteraction(
         clearPending: true,
       };
     }
+  }
+
+  // --------------------------------------------------------------------------
+  // CONFIRM REMINDER: Strict User Confirmation Before Creation + In-flight Editing
+  // --------------------------------------------------------------------------
+  if (pending.type === 'confirm_reminder' || pending.data.actionType === 'CONFIRM_REMINDER') {
+    const draft: PendingDraftReminder | undefined =
+      pending.data.draftReminder ||
+      (pending.data.payload?.draftReminder as PendingDraftReminder) ||
+      (pending.data.payload as PendingDraftReminder);
+
+    if (!draft || !draft.title) {
+      return { resolved: false, clearPending: true };
+    }
+
+    // 1. NEGATIVE: User cancels ("không", "thôi", "hủy", "bỏ qua", "đừng tạo", "không cần"...)
+    if (isNegativeResponse(trimmed)) {
+      return {
+        resolved: true,
+        reply: `${da} vâng, ${me} đã hủy bỏ việc tạo lời nhắc này rồi${a}.`,
+        speech: `${da} vâng, ${me} đã hủy bỏ lời nhắc này rồi${a}.`,
+        clearPending: true,
+      };
+    }
+
+    // 2. STRICT AFFIRMATIVE: User confirms creation ("đồng ý", "tạo đi", "lưu đi", "xác nhận", "đúng rồi", "ok", "được rồi"...)
+    if (isAffirmativeResponse(trimmed)) {
+      const dObj = new Date(draft.scheduledAt);
+      const timeFormatted = !isNaN(dObj.getTime())
+        ? dObj.toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })
+        : draft.eventTime || 'đã hẹn';
+      const dateFormatted = !isNaN(dObj.getTime())
+        ? dObj.toLocaleDateString('vi-VN')
+        : draft.eventDate || 'hôm nay';
+
+      return {
+        resolved: true,
+        appAction: {
+          type: 'CREATE_REMINDER',
+          payload: {
+            title: draft.title,
+            scheduledAt: draft.scheduledAt,
+            category: draft.category || 'general',
+            repeat: draft.repeat || 'once',
+            priority: draft.priority === 'high' ? 'high' : 'normal',
+            leadTimeMinutes: draft.leadTimeMinutes,
+            eventTime: draft.eventTime,
+            eventDate: draft.eventDate,
+            notes: draft.notes,
+            sessionId: draft.sessionId,
+            skipConfirmation: true,
+          },
+        },
+        reply: `${da}, ${me} đã ghi nhận và lên lịch nhắc: "${draft.title}" vào lúc ${timeFormatted} (${dateFormatted}) cho ${addressing} rồi${a}.`,
+        speech: `${da}, ${me} đã lên lịch nhắc "${draft.title}" vào lúc ${timeFormatted} rồi${a}.`,
+        clearPending: true,
+      };
+    }
+
+    // 3. EDIT TITLE: User wants to modify title ("đổi tiêu đề thành...", "sửa tên thành...", "đổi tên là...", "tiêu đề là...")
+    const newTitle = extractNewTitleFromText(trimmed);
+    if (newTitle) {
+      const updatedDraft: PendingDraftReminder = { ...draft, title: newTitle };
+      const dObj = new Date(updatedDraft.scheduledAt);
+      const timeFormatted = !isNaN(dObj.getTime())
+        ? dObj.toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })
+        : updatedDraft.eventTime || 'đã hẹn';
+      const dateFormatted = !isNaN(dObj.getTime())
+        ? dObj.toLocaleDateString('vi-VN')
+        : updatedDraft.eventDate || 'hôm nay';
+
+      const updateReply = `${da}, ${me} đã đổi tiêu đề thành "${newTitle}" lúc ${timeFormatted} (${dateFormatted}) rồi. ${addressing.charAt(0).toUpperCase() + addressing.slice(1)} có đồng ý tạo lời nhắc này không ạ?`;
+      return {
+        resolved: true,
+        reply: `${updateReply} (${addressing.charAt(0).toUpperCase() + addressing.slice(1)} có thể bấm xác nhận, đổi giờ hoặc sửa tiêu đề tiếp nhé).`,
+        speech: updateReply,
+        clearPending: false,
+        newPending: {
+          type: 'confirm_reminder',
+          data: {
+            actionType: 'CONFIRM_REMINDER',
+            draftReminder: updatedDraft,
+            question: updateReply,
+            suggestedReplies: ['Đồng ý tạo', 'Đổi giờ', 'Đổi tiêu đề', 'Hủy bỏ'],
+          },
+          createdAt: new Date().toISOString(),
+          expiresAt: Date.now() + 180000,
+        },
+      };
+    }
+
+    // 4. EDIT TIME: User wants to change time ("đổi thành 8 giờ", "8h tối", "sửa giờ thành 7h30 sáng", "lùi lại 15 phút", "ngày mai 9h"...)
+    const newResolvedDate = parseClarifiedTime(trimmed, draft.scheduledAt);
+    if (newResolvedDate && !isNaN(newResolvedDate.getTime())) {
+      const updatedDraft: PendingDraftReminder = { ...draft, scheduledAt: newResolvedDate.toISOString() };
+      const timeFormatted = newResolvedDate.toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' });
+      const dateFormatted = newResolvedDate.toLocaleDateString('vi-VN');
+
+      const updateReply = `${da}, ${me} đã cập nhật giờ nhắc "${updatedDraft.title}" sang lúc ${timeFormatted} (${dateFormatted}) rồi. ${addressing.charAt(0).toUpperCase() + addressing.slice(1)} có đồng ý tạo không ạ?`;
+      return {
+        resolved: true,
+        reply: `${updateReply} (${addressing.charAt(0).toUpperCase() + addressing.slice(1)} có thể bấm xác nhận, đổi giờ hoặc sửa tiêu đề).`,
+        speech: updateReply,
+        clearPending: false,
+        newPending: {
+          type: 'confirm_reminder',
+          data: {
+            actionType: 'CONFIRM_REMINDER',
+            draftReminder: updatedDraft,
+            question: updateReply,
+            suggestedReplies: ['Đồng ý tạo', 'Đổi giờ', 'Đổi tiêu đề', 'Hủy bỏ'],
+          },
+          createdAt: new Date().toISOString(),
+          expiresAt: Date.now() + 180000,
+        },
+      };
+    }
+
+    // 5. Entire new reminder sentence
+    const fullParse = parseVietnameseReminderText(trimmed);
+    if (fullParse.status === 'resolved') {
+      const newRem = fullParse.reminder;
+      const dObj = new Date(newRem.scheduledAt);
+      const timeFormatted = dObj.toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' });
+      const dateFormatted = dObj.toLocaleDateString('vi-VN');
+      const updatedDraft: PendingDraftReminder = {
+        ...draft,
+        title: newRem.title,
+        scheduledAt: newRem.scheduledAt,
+        category: newRem.category,
+        repeat: newRem.repeat,
+        priority: newRem.priority,
+        notes: newRem.notes,
+      };
+      const updateReply = `${da}, ${me} xin xác nhận lại lời nhắc mới: "${newRem.title}" vào lúc ${timeFormatted} (${dateFormatted}). ${addressing.charAt(0).toUpperCase() + addressing.slice(1)} có đồng ý tạo không ạ?`;
+      return {
+        resolved: true,
+        reply: `${updateReply} (${addressing.charAt(0).toUpperCase() + addressing.slice(1)} có thể bấm xác nhận hoặc sửa lại).`,
+        speech: updateReply,
+        clearPending: false,
+        newPending: {
+          type: 'confirm_reminder',
+          data: {
+            actionType: 'CONFIRM_REMINDER',
+            draftReminder: updatedDraft,
+            question: updateReply,
+            suggestedReplies: ['Đồng ý tạo', 'Đổi giờ', 'Đổi tiêu đề', 'Hủy bỏ'],
+          },
+          createdAt: new Date().toISOString(),
+          expiresAt: Date.now() + 180000,
+        },
+      };
+    }
+
+    // Fallback confirmation prompt
+    const dObj = new Date(draft.scheduledAt);
+    const timeFormatted = !isNaN(dObj.getTime())
+      ? dObj.toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })
+      : draft.eventTime || 'đã hẹn';
+    const dateFormatted = !isNaN(dObj.getTime())
+      ? dObj.toLocaleDateString('vi-VN')
+      : draft.eventDate || 'hôm nay';
+    const rep = `${da}, ${addressing} có muốn tạo lời nhắc "${draft.title}" lúc ${timeFormatted} (${dateFormatted}) không ạ? Hoặc ${addressing} có muốn đổi giờ / đổi tiêu đề không ạ?`;
+    return {
+      resolved: true,
+      reply: rep,
+      speech: rep,
+      clearPending: false,
+    };
   }
 
   if (pending.type === 'clarification') {
@@ -259,7 +537,8 @@ export async function resolvePendingInteraction(
     if (pending.data.actionType === 'CHOOSE_SUPPORT_MODE' || pending.data.actionType === 'support_choice') {
       const normInput = stripVietnameseAccents(normalizeVietnameseText(trimmed)).toLowerCase();
       const payload = pending.data.payload || {};
-      const proposedGoal = payload.proposedGoal || payload.originalText || 'Công việc này';
+      const rawProposed = payload.proposedGoal || payload.originalText || 'Công việc này';
+      const proposedGoal = normalizeActivityGoal(rawProposed);
       const scenarioFamily = payload.scenarioFamily || 'general';
 
       // Negative response
@@ -564,22 +843,31 @@ export async function resolvePendingInteraction(
 
         const timeFormatted = resolvedDate.toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' });
         const dateFormatted = resolvedDate.toLocaleDateString('vi-VN');
+        const confirmMsg = `${da}, ${me} xin xác nhận lại: ${addressing} có muốn tạo lời nhắc "${title}" vào lúc ${timeFormatted} (${dateFormatted}) không ạ?`;
 
         return {
           resolved: true,
-          appAction: {
-            type: 'CREATE_REMINDER',
-            payload: {
-              title,
-              scheduledAt,
-              category,
-              repeat,
-              priority,
-              sessionId,
+          reply: `${confirmMsg} (${addressing.charAt(0).toUpperCase() + addressing.slice(1)} có thể bấm xác nhận, đổi giờ hoặc sửa lại tiêu đề).`,
+          speech: confirmMsg,
+          clearPending: false,
+          newPending: {
+            type: 'confirm_reminder',
+            data: {
+              actionType: 'CONFIRM_REMINDER',
+              draftReminder: {
+                title,
+                scheduledAt,
+                category,
+                repeat,
+                priority,
+                sessionId,
+              },
+              question: confirmMsg,
+              suggestedReplies: ['Đồng ý tạo', 'Đổi giờ', 'Đổi tiêu đề', 'Hủy bỏ'],
             },
+            createdAt: new Date().toISOString(),
+            expiresAt: Date.now() + 180000,
           },
-          reply: `${da}, ${me} đã lên lịch nhắc nhở "${title}" vào lúc ${timeFormatted} (${dateFormatted}) rồi${a}.`,
-          clearPending: true,
         };
       } else {
         // If user gave an unclear time response, retain pending clarification and ask again nicely
@@ -714,7 +1002,7 @@ function evaluateLifeEventReminderStep(
     };
   }
 
-  // Step 4: ALL 3 ARE KNOWN! -> Issue CREATE_REMINDER
+  // Step 4: ALL 3 ARE KNOWN! -> Transition to confirm_reminder for strict user approval
   const baseDate = state.dateIso ? new Date(state.dateIso) : new Date();
   const eventDateTime = new Date(baseDate.getTime());
   eventDateTime.setHours(state.eventHour, state.eventMinute, 0, 0);
@@ -732,26 +1020,34 @@ function evaluateLifeEventReminderStep(
   const dateFormatted = reminderDateTime.toLocaleDateString('vi-VN', { day: '2-digit', month: '2-digit' });
   const dateDisplay = state.dateLabel || dateFormatted;
 
-  const replyText = safeLeadMinutes > 0
-    ? `${da}, ${me} đã tạo nhắc nhở "${state.proposedGoal}" cho ${addressing} vào lúc ${timeFormatted} ${dateDisplay} (trước ${safeLeadMinutes} phút so với giờ đi lúc ${state.eventTimeStr}) rồi${a}.`
-    : `${da}, ${me} đã tạo nhắc nhở "${state.proposedGoal}" cho ${addressing} vào lúc ${state.eventTimeStr} ${dateDisplay} rồi${a}.`;
+  const confirmPrompt = safeLeadMinutes > 0
+    ? `${da}, ${me} xin xác nhận lại lời nhắc: "${state.proposedGoal}" vào lúc ${timeFormatted} ${dateDisplay} (trước ${safeLeadMinutes} phút so với giờ đi lúc ${state.eventTimeStr}). ${addressing} có đồng ý tạo không ạ?`
+    : `${da}, ${me} xin xác nhận lại lời nhắc: "${state.proposedGoal}" vào lúc ${state.eventTimeStr} ${dateDisplay}. ${addressing} có đồng ý tạo không ạ?`;
 
   return {
     resolved: true,
-    appAction: {
-      type: 'CREATE_REMINDER',
-      payload: {
-        title: state.proposedGoal,
-        scheduledAt: reminderDateTime.toISOString(),
-        eventTime: state.eventTimeStr,
-        eventDate: dateDisplay,
-        leadTimeMinutes: safeLeadMinutes,
-        category: 'appointment',
-        repeat: 'once',
-        notes: safeLeadMinutes > 0 ? `Giờ đi: ${state.eventTimeStr} (Nhắc trước ${safeLeadMinutes} phút)` : `Giờ đi: ${state.eventTimeStr}`,
+    reply: `${confirmPrompt} (${addressing.charAt(0).toUpperCase() + addressing.slice(1)} có thể bấm xác nhận, đổi giờ hoặc sửa tiêu đề).`,
+    speech: confirmPrompt,
+    clearPending: false,
+    newPending: {
+      type: 'confirm_reminder',
+      data: {
+        actionType: 'CONFIRM_REMINDER',
+        draftReminder: {
+          title: state.proposedGoal,
+          scheduledAt: reminderDateTime.toISOString(),
+          eventTime: state.eventTimeStr,
+          eventDate: dateDisplay,
+          leadTimeMinutes: safeLeadMinutes,
+          category: 'appointment',
+          repeat: 'once',
+          notes: safeLeadMinutes > 0 ? `Giờ đi: ${state.eventTimeStr} (Nhắc trước ${safeLeadMinutes} phút)` : `Giờ đi: ${state.eventTimeStr}`,
+        },
+        question: confirmPrompt,
+        suggestedReplies: ['Đồng ý tạo', 'Đổi giờ', 'Đổi tiêu đề', 'Hủy bỏ'],
       },
+      createdAt: new Date().toISOString(),
+      expiresAt: Date.now() + 180000,
     },
-    reply: replyText,
-    clearPending: true,
   };
 }

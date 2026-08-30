@@ -1,7 +1,8 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { LifeSession, ScenarioType, GlobalChatMessage, PendingInteraction, VoiceInteractionState } from '../../types';
+import { LifeSession, ScenarioType, GlobalChatMessage, PendingInteraction, PendingDraftReminder, VoiceInteractionState } from '../../types';
 import { BriefSessionHeader } from '../../services/storageService';
 import { SessionListSidebar } from '../session/SessionListSidebar';
+import { ReminderConfirmationCard } from '../reminders/ReminderConfirmationCard';
 import {
   MessageSquare,
   Sparkles,
@@ -26,7 +27,10 @@ import {
   X,
   Loader2,
   CheckCircle2,
+  Volume2,
+  Bell,
 } from 'lucide-react';
+import { speakText } from '../../services/ttsService';
 
 interface SuggestedTopic {
   id: string;
@@ -167,6 +171,9 @@ interface GlobalChatPageProps {
   onStartVoice?: () => void;
   voiceStatus?: VoiceInteractionState;
   interimTranscript?: string;
+  onConfirmDraftReminder?: (draft?: PendingDraftReminder) => void;
+  onUpdateDraftReminder?: (draft: PendingDraftReminder) => void;
+  onCancelDraftReminder?: () => void;
 }
 
 export const GlobalChatPage: React.FC<GlobalChatPageProps> = ({
@@ -184,6 +191,9 @@ export const GlobalChatPage: React.FC<GlobalChatPageProps> = ({
   onStartVoice,
   voiceStatus = 'idle',
   interimTranscript = '',
+  onConfirmDraftReminder,
+  onUpdateDraftReminder,
+  onCancelDraftReminder,
 }) => {
   const [goalInput, setGoalInput] = useState('');
   const [selectedCategory, setSelectedCategory] = useState<'all' | 'health' | 'admin' | 'life' | 'travel'>('all');
@@ -193,6 +203,13 @@ export const GlobalChatPage: React.FC<GlobalChatPageProps> = ({
   const [freeChatInput, setFreeChatInput] = useState('');
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+
+  // If a pending interaction arrives, switch to free chat mode so user sees the confirmation immediately
+  useEffect(() => {
+    if (pendingInteraction) {
+      setActiveTabMode('freeChat');
+    }
+  }, [pendingInteraction]);
 
   const filteredTopics = selectedCategory === 'all'
     ? SUGGESTED_TOPICS
@@ -568,10 +585,22 @@ export const GlobalChatPage: React.FC<GlobalChatPageProps> = ({
                             className={`max-w-[80%] sm:max-w-[70%] p-3.5 rounded-[18px] text-xs sm:text-sm leading-relaxed ${
                               isUser
                                 ? 'bg-[#287C78] text-white rounded-br-xs font-medium shadow-2xs'
-                                : 'bg-lovira-subtle text-lovira-title border border-lovira rounded-bl-xs font-medium'
+                                : 'bg-lovira-subtle text-lovira-title border border-lovira rounded-bl-xs font-medium space-y-1.5'
                             }`}
                           >
-                            {msg.text}
+                            <div>{msg.text}</div>
+                            {!isUser && (
+                              <div className="pt-1 flex items-center gap-2 text-[11px] text-[#287C78] dark:text-[#42A39E]">
+                                <button
+                                  type="button"
+                                  onClick={() => speakText(msg.text)}
+                                  className="inline-flex items-center gap-1 font-bold hover:underline cursor-pointer"
+                                >
+                                  <Volume2 className="w-3.5 h-3.5" />
+                                  <span>Đọc to</span>
+                                </button>
+                              </div>
+                            )}
                           </div>
                           {isUser && (
                             <div className="w-7 h-7 rounded-full bg-lovira-subtle border border-lovira text-lovira-title flex items-center justify-center shrink-0 text-xs font-bold">
@@ -591,13 +620,76 @@ export const GlobalChatPage: React.FC<GlobalChatPageProps> = ({
                         </div>
                       </div>
                     )}
+
+                    {/* Pending Reminder Draft Confirmation Card */}
+                    {pendingInteraction?.type === 'confirm_reminder' && pendingInteraction.data?.draftReminder && (
+                      <div className="pt-2">
+                        <ReminderConfirmationCard
+                          draft={pendingInteraction.data.draftReminder}
+                          question={pendingInteraction.data.question}
+                          onConfirm={(draft) => {
+                            if (onConfirmDraftReminder) {
+                              onConfirmDraftReminder(draft);
+                            } else if (onSendInteraction) {
+                              onSendInteraction('Đồng ý');
+                            }
+                          }}
+                          onUpdateDraft={(draft) => {
+                            if (onUpdateDraftReminder) {
+                              onUpdateDraftReminder(draft);
+                            }
+                          }}
+                          onCancel={() => {
+                            if (onCancelDraftReminder) {
+                              onCancelDraftReminder();
+                            } else if (onSendInteraction) {
+                              onSendInteraction('Hủy bỏ');
+                            }
+                          }}
+                        />
+                      </div>
+                    )}
+
                     <div ref={messagesEndRef} />
                   </div>
                 )}
               </div>
 
+              {/* Suggested Quick Reply Chips */}
+              {pendingInteraction?.data?.suggestedReplies && pendingInteraction.data.suggestedReplies.length > 0 && (
+                <div className="flex flex-wrap items-center gap-1.5 pt-2.5 px-1">
+                  <span className="text-[11px] font-bold text-lovira-muted">Gợi ý nhanh:</span>
+                  {pendingInteraction.data.suggestedReplies.map((replyText, idx) => (
+                    <button
+                      key={idx}
+                      type="button"
+                      onClick={() => {
+                        if (replyText === 'Đồng ý tạo' || replyText === 'Đồng ý') {
+                          if (onConfirmDraftReminder) {
+                            onConfirmDraftReminder();
+                          } else if (onSendInteraction) {
+                            onSendInteraction('Đồng ý');
+                          }
+                        } else if (replyText === 'Hủy bỏ' || replyText === 'Hủy') {
+                          if (onCancelDraftReminder) {
+                            onCancelDraftReminder();
+                          } else if (onSendInteraction) {
+                            onSendInteraction('Hủy bỏ');
+                          }
+                        } else if (onSendInteraction) {
+                          onSendInteraction(replyText);
+                        }
+                      }}
+                      className="px-3 py-1 rounded-xl bg-amber-100/90 hover:bg-amber-200 dark:bg-amber-900/60 dark:hover:bg-amber-800 text-amber-900 dark:text-amber-100 text-xs font-bold border border-amber-300 dark:border-amber-700 transition-all shadow-2xs active:scale-95 cursor-pointer"
+                    >
+                      {replyText}
+                    </button>
+                  ))}
+                </div>
+              )}
+
               {/* Free Chat Input Form */}
-              <form onSubmit={handleSendFreeChat} className="flex gap-2 pt-3">
+              <form onSubmit={handleSendFreeChat} className="flex gap-2 pt-2">
                 <input
                   type="text"
                   value={freeChatInput}

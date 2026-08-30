@@ -12,6 +12,7 @@ import {
   AppInteractionContext,
   InteractionInputMode,
   PendingInteraction,
+  PendingDraftReminder,
   AccessibilityContext,
   GlobalChatMessage,
 } from '../types';
@@ -35,6 +36,7 @@ import { cloudSyncService } from '../services/firebase/cloudSyncService';
 import { LoviraAuthUser, CloudSyncSettings } from '../services/firebase/firebaseTypes';
 import { parseVietnameseReminderText } from '../utils/dateTimeResolver';
 import { routeFastIntent } from '../services/interaction/FastIntentRouter';
+import { matchAccessibilityVoiceCommand } from '../services/interaction/AccessibilityVoiceController';
 
 export interface InteractionOptions {
   inputMode?: InteractionInputMode;
@@ -59,6 +61,8 @@ interface UseSessionManagerProps {
   setCameraModalOpen: (open: boolean) => void;
   setProfileSetupOpen: (open: boolean) => void;
   setAccessibility: React.Dispatch<React.SetStateAction<any>>;
+  triggerSOS?: (options?: { reason?: string; autoSendLocation?: boolean; playSiren?: boolean }) => void;
+  openSOS?: () => void;
   authUser?: LoviraAuthUser | null;
   syncSettings?: CloudSyncSettings;
 }
@@ -76,6 +80,8 @@ export function useSessionManager({
   setCameraModalOpen,
   setProfileSetupOpen,
   setAccessibility,
+  triggerSOS,
+  openSOS,
   authUser,
   syncSettings,
 }: UseSessionManagerProps) {
@@ -687,6 +693,7 @@ export function useSessionManager({
       (pageContext?.pathname && pageContext.pathname.startsWith('/session/'));
 
     const trimmedText = userText.trim();
+    const { addressing, me } = deduceHonorifics(userProfile);
     setIsLoading(true);
     setVoiceStatus('processing');
 
@@ -715,6 +722,8 @@ export function useSessionManager({
       updateAccessibilitySetting: (key: string, value: any) => {
         setAccessibility((prev: any) => ({ ...prev, [key]: value }));
       },
+      triggerSOS: (opts?: any) => (triggerSOS ? triggerSOS(opts) : openSOS ? openSOS() : undefined),
+      openSOS: () => (openSOS ? openSOS() : triggerSOS ? triggerSOS() : undefined),
       saveUpdatedSession,
       refreshSessionsList,
       showToast,
@@ -727,6 +736,50 @@ export function useSessionManager({
       hasActiveSession: isSessionContext && !!activeSession,
       availableSessions: sessionsList,
     };
+
+    // A0. Check Instant Accessibility & System Voice Commands (Highest Priority)
+    const directAccessCmd = matchAccessibilityVoiceCommand(trimmedText, accessibilitySettings);
+    if (directAccessCmd && directAccessCmd.handled && directAccessCmd.appAction) {
+      setPendingInteraction(null);
+      await executeValidatedAppAction(directAccessCmd.appAction, appContext, runtimeContext, { trustedSource: true });
+      const finalReply = directAccessCmd.reply || 'Dạ vâng, Lovira đã thực hiện điều chỉnh rồi ạ.';
+      const speechToPlay = directAccessCmd.speech || finalReply;
+
+      if (!isSessionContext) {
+        addGlobalMessage(trimmedText, finalReply, { inputMode });
+      } else if (activeSession) {
+        const now = new Date().toISOString();
+        const userMsg = {
+          id: `msg-${Date.now()}`,
+          sender: 'user' as const,
+          text: trimmedText,
+          timestamp: now,
+          inputMode,
+        };
+        const loviraMsg = {
+          id: `msg-${Date.now() + 1}`,
+          sender: 'lovira' as const,
+          text: finalReply,
+          timestamp: new Date().toISOString(),
+        };
+        const updated = {
+          ...activeSession,
+          messages: [...activeSession.messages, userMsg, loviraMsg],
+          updatedAt: now,
+        };
+        setActiveSession(updated);
+        saveUpdatedSession(updated);
+      }
+
+      showToast(finalReply);
+      if (inputMode === 'voice' || accessibilitySettings.speakResponse) {
+        speakWithVoiceStatus(speechToPlay);
+      } else {
+        setVoiceStatus('idle');
+      }
+      setIsLoading(false);
+      return;
+    }
 
     // A. Check Pending Interaction FIRST
     if (pendingInteraction) {
@@ -894,94 +947,81 @@ export function useSessionManager({
 
     if (parseRes.status === 'resolved') {
       const parsedReminder = parseRes.reminder;
-      const reminderAction: AppAction = {
-        type: 'CREATE_REMINDER',
-        payload: {
-          title: parsedReminder.title,
-          scheduledAt: parsedReminder.scheduledAt,
-          category: parsedReminder.category,
-          repeat: parsedReminder.repeat,
-          priority: parsedReminder.priority,
-          sessionId: isSessionContext && activeSession ? activeSession.id : undefined,
-        },
+      const dObj = new Date(parsedReminder.scheduledAt);
+      const timeFormatted = !isNaN(dObj.getTime())
+        ? dObj.toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })
+        : 'đã chọn';
+      const dateFormatted = !isNaN(dObj.getTime())
+        ? dObj.toLocaleDateString('vi-VN')
+        : 'hôm nay';
+      const confirmQuestion = `Dạ, con xin xác nhận lại lời nhắc: "${parsedReminder.title}" vào lúc ${timeFormatted} (${dateFormatted}). ${addressing} có đồng ý tạo không ạ?`;
+
+      const draftReminder: PendingDraftReminder = {
+        title: parsedReminder.title,
+        scheduledAt: parsedReminder.scheduledAt,
+        category: parsedReminder.category,
+        repeat: parsedReminder.repeat,
+        priority: parsedReminder.priority,
+        notes: parsedReminder.notes,
+        sessionId: isSessionContext && activeSession ? activeSession.id : undefined,
       };
-      const execRes = await executeValidatedAppAction(reminderAction, appContext, runtimeContext);
-      if (execRes.executed) {
-        const dObj = new Date(parsedReminder.scheduledAt);
-        const timeFormatted = dObj.toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' });
-        const dateFormatted = dObj.toLocaleDateString('vi-VN');
-        const confirmMsg = `Dạ, con đã lên lịch nhắc nhở "${parsedReminder.title}" vào lúc ${timeFormatted} (${dateFormatted}) rồi ạ.`;
 
-        if (activeSession && isSessionContext) {
-          const now = new Date().toISOString();
-          const userMsg = {
-            id: `msg-${Date.now()}`,
-            sender: 'user' as const,
-            text: trimmedText,
-            timestamp: now,
-            inputMode,
-          };
-          const loviraMsg = {
-            id: `msg-${Date.now() + 1}`,
-            sender: 'lovira' as const,
-            text: confirmMsg,
-            timestamp: new Date().toISOString(),
-            suggestedReplies: ['Xem tất cả lịch nhắc', 'Tạo thêm nhắc nhở'],
-          };
-          const updatedSession = {
-            ...activeSession,
-            messages: [...activeSession.messages, userMsg, loviraMsg],
-            updatedAt: now,
-          };
-          setActiveSession(updatedSession);
-          saveUpdatedSession(updatedSession);
-        } else if (!isSessionContext) {
-          addGlobalMessage(trimmedText, confirmMsg, { inputMode, suggestedReplies: ['Xem tất cả lịch nhắc', 'Tạo thêm nhắc nhở'] });
-        }
+      const newPending: PendingInteraction = {
+        type: 'confirm_reminder',
+        scope: isSessionContext ? 'session' : 'global-chat',
+        sessionId: isSessionContext && activeSession ? activeSession.id : undefined,
+        data: {
+          actionType: 'CONFIRM_REMINDER',
+          draftReminder,
+          question: confirmQuestion,
+          suggestedReplies: ['Đồng ý tạo', 'Đổi giờ', 'Đổi tiêu đề', 'Hủy bỏ'],
+        },
+        createdAt: new Date().toISOString(),
+        expiresAt: Date.now() + 180000,
+      };
 
-        showToast(confirmMsg);
-        if (inputMode === 'voice' || accessibilitySettings.speakResponse) {
-          speakWithVoiceStatus(confirmMsg);
-        } else {
-          setVoiceStatus('idle');
-        }
-        setIsLoading(false);
-        return;
-      } else if (execRes.reason) {
-        const reasonMsg = `Dạ, ${execRes.reason}`;
-        if (activeSession && isSessionContext) {
-          const now = new Date().toISOString();
-          const userMsg = {
-            id: `msg-${Date.now()}`,
-            sender: 'user' as const,
-            text: trimmedText,
-            timestamp: now,
-            inputMode,
-          };
-          const loviraMsg = {
-            id: `msg-${Date.now() + 1}`,
-            sender: 'lovira' as const,
-            text: reasonMsg,
-            timestamp: new Date().toISOString(),
-          };
-          const updatedSession = {
-            ...activeSession,
-            messages: [...activeSession.messages, userMsg, loviraMsg],
-            updatedAt: now,
-          };
-          setActiveSession(updatedSession);
-          saveUpdatedSession(updatedSession);
-        }
+      setPendingInteraction(newPending);
 
-        showToast(reasonMsg);
-        if (inputMode === 'voice' || accessibilitySettings.speakResponse) {
-          speakWithVoiceStatus(reasonMsg);
-        } else {
-          setVoiceStatus('idle');
-        }
-        setIsLoading(false);
-        return;
+      const displayPrompt = `${confirmQuestion} (${addressing.charAt(0).toUpperCase() + addressing.slice(1)} có thể bấm xác nhận, đổi giờ hoặc sửa tiêu đề).`;
+
+      if (activeSession && isSessionContext) {
+        const now = new Date().toISOString();
+        const userMsg = {
+          id: `msg-${Date.now()}`,
+          sender: 'user' as const,
+          text: trimmedText,
+          timestamp: now,
+          inputMode,
+        };
+        const loviraMsg = {
+          id: `msg-${Date.now() + 1}`,
+          sender: 'lovira' as const,
+          text: displayPrompt,
+          timestamp: new Date().toISOString(),
+          suggestedReplies: ['Đồng ý tạo', 'Đổi giờ', 'Đổi tiêu đề', 'Hủy bỏ'],
+        };
+        const updatedSession = {
+          ...activeSession,
+          messages: [...activeSession.messages, userMsg, loviraMsg],
+          updatedAt: now,
+        };
+        setActiveSession(updatedSession);
+        saveUpdatedSession(updatedSession);
+      } else if (!isSessionContext) {
+        addGlobalMessage(trimmedText, displayPrompt, {
+          inputMode,
+          suggestedReplies: ['Đồng ý tạo', 'Đổi giờ', 'Đổi tiêu đề', 'Hủy bỏ'],
+        });
       }
+
+      showToast(confirmQuestion);
+      if (inputMode === 'voice' || accessibilitySettings.speakResponse) {
+        speakWithVoiceStatus(confirmQuestion);
+      } else {
+        setVoiceStatus('idle');
+      }
+      setIsLoading(false);
+      return;
     }
 
     // A3. Fast Intent Router (Hybrid Local-First Deterministic Pipeline)
@@ -1561,6 +1601,112 @@ export function useSessionManager({
     }
   }, [activeSession, showToast, saveUpdatedSession, accessibilitySettings, speakWithVoiceStatus]);
 
+  const confirmDraftReminder = useCallback(
+    async (overrideDraft?: PendingDraftReminder) => {
+      const draft = overrideDraft || pendingInteraction?.data?.draftReminder;
+      if (!draft) return;
+
+      const reminderAction: AppAction = {
+        type: 'CREATE_REMINDER',
+        payload: {
+          title: draft.title,
+          scheduledAt: draft.scheduledAt,
+          category: draft.category || 'general',
+          repeat: draft.repeat || 'once',
+          priority: draft.priority || 'normal',
+          leadTimeMinutes: draft.leadTimeMinutes,
+          eventTime: draft.eventTime,
+          eventDate: draft.eventDate,
+          notes: draft.notes,
+          sessionId: draft.sessionId || (activeSession ? activeSession.id : undefined),
+          skipConfirmation: true,
+        },
+      };
+
+      const appContext = {
+        activeTab: (activeSession ? 'session' : 'chat') as any,
+        activeSessionId: activeSession?.id,
+        currentStepNumber: activeSession?.currentStepIndex !== undefined ? activeSession.currentStepIndex + 1 : undefined,
+        currentStepTitle: activeSession?.steps?.[activeSession.currentStepIndex]?.title,
+        availableSessions: sessionsList,
+      };
+      const runtimeContext = {
+        userProfile,
+        showToast,
+        setCameraModalOpen,
+        setProfileSetupOpen,
+        onNavigate: onNavigate || (() => {}),
+        onGoBack: onGoBack || (() => {}),
+      };
+
+      const execRes = await executeValidatedAppAction(reminderAction, appContext, runtimeContext, { trustedSource: true });
+      setPendingInteraction(null);
+
+      if (execRes.executed) {
+        const dObj = new Date(draft.scheduledAt);
+        const timeFormatted = !isNaN(dObj.getTime())
+          ? dObj.toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })
+          : draft.eventTime || 'đã chọn';
+        const dateFormatted = !isNaN(dObj.getTime())
+          ? dObj.toLocaleDateString('vi-VN')
+          : draft.eventDate || 'hôm nay';
+        const successMsg = `Dạ, con đã lên lịch nhắc "${draft.title}" vào lúc ${timeFormatted} (${dateFormatted}) rồi ạ.`;
+
+        showToast(successMsg);
+        if (accessibilitySettings.speakResponse) {
+          speakWithVoiceStatus(successMsg);
+        }
+      }
+    },
+    [
+      pendingInteraction,
+      activeSession,
+      sessionsList,
+      userProfile,
+      showToast,
+      setCameraModalOpen,
+      setProfileSetupOpen,
+      onNavigate,
+      onGoBack,
+      accessibilitySettings,
+      speakWithVoiceStatus,
+      executeValidatedAppAction,
+      setPendingInteraction,
+    ]
+  );
+
+  const updateDraftReminder = useCallback(
+    (updatedDraft: PendingDraftReminder) => {
+      if (!pendingInteraction) return;
+      const dObj = new Date(updatedDraft.scheduledAt);
+      const timeFormatted = !isNaN(dObj.getTime())
+        ? dObj.toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })
+        : updatedDraft.eventTime || 'đã chọn';
+      const dateFormatted = !isNaN(dObj.getTime())
+        ? dObj.toLocaleDateString('vi-VN')
+        : updatedDraft.eventDate || 'hôm nay';
+      const confirmQuestion = `Dạ, con xin xác nhận lại lời nhắc: "${updatedDraft.title}" vào lúc ${timeFormatted} (${dateFormatted}). Chú/bác có đồng ý tạo không ạ?`;
+
+      setPendingInteraction({
+        ...pendingInteraction,
+        type: 'confirm_reminder',
+        data: {
+          ...pendingInteraction.data,
+          actionType: 'CONFIRM_REMINDER',
+          draftReminder: updatedDraft,
+          question: confirmQuestion,
+          suggestedReplies: ['Đồng ý tạo', 'Đổi giờ', 'Đổi tiêu đề', 'Hủy bỏ'],
+        },
+      });
+    },
+    [pendingInteraction, setPendingInteraction]
+  );
+
+  const cancelDraftReminder = useCallback(() => {
+    setPendingInteraction(null);
+    showToast('Đã hủy bỏ tạo lời nhắc.');
+  }, [showToast, setPendingInteraction]);
+
   return {
     activeSession,
     setActiveSession,
@@ -1586,5 +1732,8 @@ export function useSessionManager({
     globalMessages,
     clearGlobalChat,
     pendingInteraction,
+    confirmDraftReminder,
+    updateDraftReminder,
+    cancelDraftReminder,
   };
 }

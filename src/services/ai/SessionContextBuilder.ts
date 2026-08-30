@@ -113,6 +113,7 @@ ${timeContextBlock}
 
 XƯNG HÔ & ĐẶC ĐIỂM NGƯỜI DÙNG:
 ${honorificGuide}
+${userProfile?.selfReportedConditions && userProfile.selfReportedConditions.length > 0 ? `- Bệnh nền & Lưu ý sức khỏe của người dùng: ${userProfile.selfReportedConditions.join(', ')}\n  -> Luôn ưu tiên đưa ra lời khuyên dinh dưỡng, vận động, giờ giấc uống thuốc và sinh hoạt phù hợp với các tình trạng sức khỏe trên.` : ''}
 ${voiceGuide}
 
 NGUYÊN TẮC KHI Ở NGOÀI PHIÊN (DASHBOARD):
