@@ -593,19 +593,15 @@ function AppContent() {
           onCaptureImage={handleCaptureCameraImage}
         />
 
-        {/* Vietnamese Sign Language (VSL) Global Floating Panel */}
+        {/* Vietnamese Sign Language Panel Placeholder */}
         <VSLFloatingPanel
           isOpen={accessibility.vslEnabled}
           onClose={() => setAccessibility((prev) => ({ ...prev, vslEnabled: false }))}
           latestText={
-            lastVoiceResponseText ||
-            (globalMessages.length > 0 && globalMessages[globalMessages.length - 1]?.text) ||
-            (activeSession?.messages && activeSession.messages.length > 0 && activeSession.messages[activeSession.messages.length - 1]?.text) ||
+            activeSession?.messages[activeSession.messages.length - 1]?.text ||
             'Lovira Life sẵn sàng đồng hành cùng bạn!'
           }
-          isSpeaking={voiceStatus === 'speaking'}
         />
-
 
         {/* Notification Drawer */}
         <NotificationDrawer
