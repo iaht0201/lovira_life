@@ -170,28 +170,33 @@ export async function routeFastIntent(
     };
   }
 
-  // A0. Vision Assistant ("Nhìn giúp tôi")
+  // Check query complexity: If the query is a multi-word question, complex inquiry, or consultation,
+  // DO NOT blindly intercept with loose keyword matching -> delegate directly to AI NLU & Semantic Understanding!
+  const wordCount = trimmedText.trim().split(/\s+/).length;
+  const isComplexInquiry =
+    wordCount > 6 ||
+    /\b(sao|thế nào|ở đâu|khi nào|bao lâu|bao nhiêu|tại sao|nguyên nhân|uống gì|ăn gì|làm gì|hướng dẫn|tư vấn|khuyên|giải thích|chi tiết|tại|vì|nếu|khi|nhưng|rồi|chuẩn bị gì|thủ tục gì|đau|bệnh|sốt|huyết áp)\b/i.test(
+      normalized
+    );
+
+
+  // A0. Vision Assistant ("Nhìn giúp tôi" - Exact / Short Command Only)
   const isVisionPhrase =
-    normalized === 'nhìn giúp tôi' ||
-    normalized === 'nhìn giúp chú' ||
-    normalized === 'nhìn giúp con' ||
-    normalized === 'nhìn giúp' ||
-    normalized === 'mở nhìn giúp tôi' ||
-    normalized === 'bật nhìn giúp tôi' ||
-    normalized === 'mở nhìn giúp' ||
-    normalized.includes('nhìn giúp') ||
-    normalized.includes('trợ lý nhìn giúp') ||
-    normalized.includes('mở nhìn giúp') ||
-    normalized.includes('bật nhìn giúp') ||
-    normalized.includes('đọc đơn thuốc') ||
-    normalized.includes('đọc hóa đơn') ||
-    normalized.includes('đọc chữ giúp') ||
-    normalized.includes('nhận diện giúp') ||
-    normalized.includes('xem giúp tôi') ||
-    unaccented.includes('nhin giup') ||
-    unaccented.includes('doc don thuoc') ||
-    unaccented.includes('doc hoa don') ||
-    unaccented.includes('doc chu giup');
+    !isComplexInquiry &&
+    (normalized === 'nhìn giúp tôi' ||
+      normalized === 'nhìn giúp chú' ||
+      normalized === 'nhìn giúp con' ||
+      normalized === 'nhìn giúp' ||
+      normalized === 'mở nhìn giúp tôi' ||
+      normalized === 'bật nhìn giúp tôi' ||
+      normalized === 'mở nhìn giúp' ||
+      normalized === 'trợ lý nhìn giúp' ||
+      normalized === 'đọc đơn thuốc' ||
+      normalized === 'đọc hóa đơn' ||
+      normalized === 'đọc chữ giúp' ||
+      normalized === 'nhận diện giúp' ||
+      normalized === 'xem giúp tôi' ||
+      (wordCount <= 4 && (normalized.includes('nhìn giúp') || unaccented.includes('nhin giup'))));
 
   if (isVisionPhrase && !normalized.includes('không')) {
     return {
@@ -204,25 +209,23 @@ export async function routeFastIntent(
     };
   }
 
-  // A0_LISTEN. Listen Assistant ("Nghe giúp tôi")
+  // A0_LISTEN. Listen Assistant ("Nghe giúp tôi" - Exact / Short Command Only)
   const isListenPhrase =
-    normalized === 'nghe giúp tôi' ||
-    normalized === 'nghe giúp chú' ||
-    normalized === 'nghe giúp con' ||
-    normalized === 'nghe giúp' ||
-    normalized === 'mở nghe giúp tôi' ||
-    normalized === 'bật nghe giúp tôi' ||
-    normalized === 'mở nghe giúp' ||
-    normalized.includes('nghe giúp') ||
-    normalized.includes('trợ lý nghe giúp') ||
-    normalized.includes('mở nghe giúp') ||
-    normalized.includes('bật nghe giúp') ||
-    normalized.includes('ghi âm cuộc trò chuyện') ||
-    normalized.includes('tóm tắt cuộc trò chuyện') ||
-    normalized.includes('nghe và tóm tắt') ||
-    unaccented.includes('nghe giup') ||
-    unaccented.includes('ghi am cuoc tro chuyen') ||
-    unaccented.includes('tom tat cuoc tro chuyen');
+    !isComplexInquiry &&
+    (normalized === 'nghe giúp tôi' ||
+      normalized === 'nghe giúp chú' ||
+      normalized === 'nghe giúp con' ||
+      normalized === 'nghe giúp' ||
+      normalized === 'mở nghe giúp tôi' ||
+      normalized === 'bật nghe giúp tôi' ||
+      normalized === 'mở nghe giúp' ||
+      normalized === 'mở nghe thoại' ||
+      normalized === 'bắt đầu nghe' ||
+      normalized === 'nghe và ghi lại' ||
+      normalized === 'nghe & ghi lại' ||
+      normalized === 'ghi âm cuộc trò chuyện' ||
+      normalized === 'tóm tắt cuộc trò chuyện' ||
+      (wordCount <= 4 && (normalized.includes('nghe giúp') || unaccented.includes('nghe giup'))));
 
   if (isListenPhrase && !normalized.includes('không')) {
     return {
@@ -237,25 +240,18 @@ export async function routeFastIntent(
 
   // A1. Camera & Scanner (Explicit camera open commands)
   const isCameraPhrase =
-    normalized === 'chụp ảnh' ||
-    normalized === 'chụp hình' ||
-    normalized === 'mở camera' ||
-    normalized === 'mở máy ảnh' ||
-    normalized === 'mở cam' ||
-    normalized === 'bật camera' ||
-    normalized === 'bật máy ảnh' ||
-    normalized === 'máy ảnh' ||
-    normalized === 'camera' ||
-    normalized.includes('mở camera') ||
-    normalized.includes('mở máy ảnh') ||
-    normalized.includes('mở cam') ||
-    normalized.includes('bật camera') ||
-    normalized.includes('bật máy ảnh') ||
-    normalized.includes('chụp ảnh') ||
-    normalized.includes('chụp hình') ||
-    unaccented.includes('mo camera') ||
-    unaccented.includes('chup anh') ||
-    unaccented.includes('chup hinh');
+    !isComplexInquiry &&
+    (normalized === 'chụp ảnh' ||
+      normalized === 'chụp hình' ||
+      normalized === 'mở camera' ||
+      normalized === 'mở máy ảnh' ||
+      normalized === 'mở cam' ||
+      normalized === 'bật camera' ||
+      normalized === 'bật máy ảnh' ||
+      normalized === 'máy ảnh' ||
+      normalized === 'camera' ||
+      (wordCount <= 3 && (normalized.includes('mở camera') || normalized.includes('bật camera'))));
+
 
   const hasNegativeCameraIntent =
     normalized.includes('không muốn') ||
@@ -294,6 +290,7 @@ export async function routeFastIntent(
 
   // A2. Home / Dashboard (Explicit navigation command only)
   const isHomeCommand =
+    !isComplexInquiry &&
     (normalized === 'trang chủ' ||
       normalized === 'màn hình chính' ||
       normalized.includes('về trang chủ') ||
@@ -318,12 +315,13 @@ export async function routeFastIntent(
 
   // A3. Go Back
   if (
-    normalized === 'quay lại' ||
-    normalized === 'trở lại' ||
-    normalized === 'trở về' ||
-    normalized === 'lùi lại' ||
-    normalized.startsWith('quay lại') ||
-    normalized.startsWith('trở về')
+    !isComplexInquiry &&
+    (normalized === 'quay lại' ||
+      normalized === 'trở lại' ||
+      normalized === 'trở về' ||
+      normalized === 'lùi lại' ||
+      normalized.startsWith('quay lại') ||
+      normalized.startsWith('trở về'))
   ) {
     return {
       handled: true,
@@ -337,12 +335,13 @@ export async function routeFastIntent(
 
   // A4. Open Reminders
   if (
-    normalized.includes('mở nhắc nhở') ||
-    normalized.includes('trang nhắc nhở') ||
-    normalized.includes('mở lịch hẹn') ||
-    normalized.includes('xem danh sách nhắc nhở') ||
-    unaccented.includes('mo nhac nho') ||
-    unaccented.includes('mo lich hen')
+    !isComplexInquiry &&
+    (normalized.includes('mở nhắc nhở') ||
+      normalized.includes('trang nhắc nhở') ||
+      normalized.includes('mở lịch hẹn') ||
+      normalized.includes('xem danh sách nhắc nhở') ||
+      unaccented.includes('mo nhac nho') ||
+      unaccented.includes('mo lich hen'))
   ) {
     return {
       handled: true,
@@ -356,11 +355,12 @@ export async function routeFastIntent(
 
   // A5. Settings
   if (
-    normalized.includes('mở cài đặt') ||
-    normalized === 'cài đặt' ||
-    normalized.includes('mở thiết lập') ||
-    unaccented === 'cai dat' ||
-    unaccented.includes('mo cai dat')
+    !isComplexInquiry &&
+    (normalized.includes('mở cài đặt') ||
+      normalized === 'cài đặt' ||
+      normalized.includes('mở thiết lập') ||
+      unaccented === 'cai dat' ||
+      unaccented.includes('mo cai dat'))
   ) {
     return {
       handled: true,
@@ -374,11 +374,12 @@ export async function routeFastIntent(
 
   // A6. Profile
   if (
-    normalized.includes('mở hồ sơ') ||
-    normalized.includes('trang cá nhân') ||
-    normalized.includes('hồ sơ của tôi') ||
-    unaccented.includes('mo ho so') ||
-    unaccented.includes('trang ca nhan')
+    !isComplexInquiry &&
+    (normalized.includes('mở hồ sơ') ||
+      normalized.includes('trang cá nhân') ||
+      normalized.includes('hồ sơ của tôi') ||
+      unaccented.includes('mo ho so') ||
+      unaccented.includes('trang ca nhan'))
   ) {
     return {
       handled: true,
@@ -389,6 +390,7 @@ export async function routeFastIntent(
       speech: `${da}, ${me} mở hồ sơ cá nhân cho ${addressing} đây ạ.`,
     };
   }
+
 
   // A7. Session Controls (If active session exists)
   if (session) {
@@ -540,17 +542,17 @@ export async function routeFastIntent(
     };
   }
 
-  // B4. Schedule for Today Query ("hôm nay chú có lịch gì", "lịch hôm nay")
+  // B4. Schedule for Today Query (Explicit query only)
   const isScheduleQuery =
-    (normalized.includes('lịch') ||
-      normalized.includes('nhắc nhở') ||
-      normalized.includes('có hẹn') ||
-      normalized.includes('việc cần làm')) &&
-    (normalized.includes('hôm nay') ||
-      normalized.includes('xem') ||
-      normalized.includes('gì') ||
-      normalized.includes('thế nào') ||
-      normalized.includes('có không'));
+    !isComplexInquiry &&
+    (normalized === 'lịch hôm nay' ||
+      normalized === 'xem lịch hôm nay' ||
+      normalized === 'lịch nhắc hôm nay' ||
+      normalized.includes('hôm nay có lịch gì') ||
+      normalized.includes('hôm nay có nhắc nhở gì') ||
+      normalized.includes('hôm nay có hẹn gì') ||
+      unaccented === 'lich hom nay' ||
+      unaccented.includes('hom nay co lich gi'));
 
   if (isScheduleQuery) {
     const todayReminders = reminderService.getRemindersForDate(now);
@@ -590,8 +592,17 @@ export async function routeFastIntent(
     };
   }
 
-  // B5. Tomorrow Schedule Query ("lịch ngày mai")
-  if (normalized.includes('ngày mai') && (normalized.includes('lịch') || normalized.includes('hẹn'))) {
+  // B5. Tomorrow Schedule Query (Explicit query only)
+  const isTomorrowScheduleQuery =
+    !isComplexInquiry &&
+    (normalized === 'lịch ngày mai' ||
+      normalized === 'xem lịch ngày mai' ||
+      normalized.includes('ngày mai có lịch gì') ||
+      normalized.includes('ngày mai có hẹn gì') ||
+      unaccented === 'lich ngay mai' ||
+      unaccented.includes('ngay mai co lich gi'));
+
+  if (isTomorrowScheduleQuery) {
     const tomorrow = new Date(now);
     tomorrow.setDate(tomorrow.getDate() + 1);
     const tomorrowReminders = reminderService.getRemindersForDate(tomorrow);
@@ -629,27 +640,16 @@ export async function routeFastIntent(
 
   // B6. Weather & Temperature Query -> Direct API call via WeatherService (Zero LLM)
   const isWeatherOrTempQuery =
-    normalized.includes('thời tiết') ||
-    normalized.includes('trời có mưa') ||
-    normalized.includes('có mưa không') ||
-    normalized.includes('mưa không') ||
-    normalized.includes('hôm nay có mưa') ||
-    normalized.includes('hôm nay mưa không') ||
-    normalized.includes('nhiệt độ') ||
-    normalized.includes('bao nhiêu độ') ||
-    normalized.includes('mấy độ') ||
-    normalized.includes('trời hôm nay thế nào') ||
-    normalized.includes('ngoài trời') ||
-    normalized.includes('chỗ tôi có mưa') ||
-    normalized.includes('ở đây có mưa') ||
-    normalized.includes('chỗ này có mưa') ||
-    unaccented.includes('thoi tiet') ||
-    unaccented.includes('co mua khong') ||
-    unaccented.includes('mua khong') ||
-    unaccented.includes('bao nhieu do') ||
-    unaccented.includes('may do') ||
-    unaccented.includes('nhiet do') ||
-    unaccented.includes('ngoai troi');
+    !isComplexInquiry &&
+    (normalized === 'thời tiết' ||
+      normalized === 'xem thời tiết' ||
+      normalized.includes('thời tiết hôm nay') ||
+      normalized.includes('trời có mưa không') ||
+      normalized.includes('hôm nay có mưa không') ||
+      normalized.includes('hôm nay bao nhiêu độ') ||
+      normalized.includes('nhiệt độ hôm nay') ||
+      unaccented === 'thoi tiet' ||
+      unaccented.includes('thoi tiet hom nay'));
 
   if (isWeatherOrTempQuery) {
     const weatherResult = await fetchCurrentWeatherReport({
@@ -658,21 +658,6 @@ export async function routeFastIntent(
       da,
       rawText: trimmedText,
     });
-
-    if (weatherResult.needsClarification) {
-      return {
-        handled: true,
-        confidence: 0.98,
-        source: 'utility',
-        utilityQuery: 'GET_WEATHER',
-        needsClarification: true,
-        clarificationActionType: 'GET_WEATHER',
-        clarificationQuestion: weatherResult.reply,
-        reply: weatherResult.reply,
-        speech: weatherResult.speech,
-        suggestedReplies: weatherResult.suggestedReplies,
-      };
-    }
 
     return {
       handled: true,
@@ -685,45 +670,57 @@ export async function routeFastIntent(
     };
   }
 
-  // B7. Scenario Match -> Life Event Detection & Support Option Proposal (NO AUTO CREATE)
-  const templateMatch = matchScenarioTemplate(normalized, unaccented);
-  if (templateMatch) {
-    const fallbackTitle = templateMatch.label.replace(/^[\p{Extended_Pictographic}\u{1F300}-\u{1F9FF}\u{2600}-\u{26FF}\u{2700}-\u{27BF}\s]+/gu, '');
-    const specificGoal = extractSpecificGoal(rawText) || fallbackTitle;
-    const dateInfo = extractDateFromText(rawText);
-    const timeInfo = extractTimeFromText(rawText);
-    const leadTimeInfo = extractLeadTimeFromText(rawText);
 
-    const actionVerbDisplay = formatActionVerbDisplay(specificGoal);
-    const promptReply = `${da}, ${addressing} sắp ${actionVerbDisplay} phải không ạ. ${addressing.charAt(0).toUpperCase() + addressing.slice(1)} muốn ${me} hỗ trợ từng bước khi chuẩn bị và thực hiện, hay tạo nhắc nhở trước giờ đi ạ?`;
 
-    return {
-      handled: true,
-      confidence: 0.92,
-      source: 'pattern',
-      needsClarification: true,
-      clarificationActionType: 'CHOOSE_SUPPORT_MODE',
-      clarificationQuestion: promptReply,
-      clarificationPayload: {
-        originalText: rawText,
-        scenarioFamily: templateMatch.family,
-        proposedGoal: specificGoal,
-        hasDate: dateInfo.hasDate,
-        dateLabel: dateInfo.dateLabel,
-        dateIso: dateInfo.hasDate ? dateInfo.dateObj.toISOString() : undefined,
-        hasEventTime: timeInfo.hasTime,
-        eventTimeStr: timeInfo.timeStr,
-        eventHour: timeInfo.hour,
-        eventMinute: timeInfo.minute,
-        hasLeadTime: leadTimeInfo.hasLeadTime,
-        leadMinutes: leadTimeInfo.leadMinutes,
-        isExactLead: leadTimeInfo.isExact,
-      },
-      reply: promptReply,
-      speech: `${da}, ${addressing} muốn ${me} hỗ trợ từng bước hay tạo nhắc nhở trước giờ đi ạ?`,
-      suggestedReplies: ['Hỗ trợ từng bước', 'Tạo nhắc nhở', 'Không cần'],
-    };
+  // B7. Scenario Match -> ONLY for explicit creation commands (e.g. "Tạo phiên đi khám bệnh", "Lập kế hoạch mua sắm")
+  const isExplicitScenarioCreate =
+    !isComplexInquiry &&
+    (normalized.startsWith('tạo phiên') ||
+      normalized.startsWith('lập kế hoạch') ||
+      normalized.startsWith('tạo kế hoạch') ||
+      normalized.startsWith('bắt đầu phiên'));
+
+  if (isExplicitScenarioCreate) {
+    const templateMatch = matchScenarioTemplate(normalized, unaccented);
+    if (templateMatch) {
+      const fallbackTitle = templateMatch.label.replace(/^[\p{Extended_Pictographic}\u{1F300}-\u{1F9FF}\u{2600}-\u{26FF}\u{2700}-\u{27BF}\s]+/gu, '');
+      const specificGoal = extractSpecificGoal(rawText) || fallbackTitle;
+      const dateInfo = extractDateFromText(rawText);
+      const timeInfo = extractTimeFromText(rawText);
+      const leadTimeInfo = extractLeadTimeFromText(rawText);
+
+      const actionVerbDisplay = formatActionVerbDisplay(specificGoal);
+      const promptReply = `${da}, ${addressing} muốn ${me} hỗ trợ từng bước khi chuẩn bị và thực hiện ${actionVerbDisplay}, hay tạo nhắc nhở trước giờ đi ạ?`;
+
+      return {
+        handled: true,
+        confidence: 0.92,
+        source: 'pattern',
+        needsClarification: true,
+        clarificationActionType: 'CHOOSE_SUPPORT_MODE',
+        clarificationQuestion: promptReply,
+        clarificationPayload: {
+          originalText: rawText,
+          scenarioFamily: templateMatch.family,
+          proposedGoal: specificGoal,
+          hasDate: dateInfo.hasDate,
+          dateLabel: dateInfo.dateLabel,
+          dateIso: dateInfo.hasDate ? dateInfo.dateObj.toISOString() : undefined,
+          hasEventTime: timeInfo.hasTime,
+          eventTimeStr: timeInfo.timeStr,
+          eventHour: timeInfo.hour,
+          eventMinute: timeInfo.minute,
+          hasLeadTime: leadTimeInfo.hasLeadTime,
+          leadMinutes: leadTimeInfo.leadMinutes,
+          isExactLead: leadTimeInfo.isExact,
+        },
+        reply: promptReply,
+        speech: `${da}, ${addressing} muốn ${me} hỗ trợ từng bước hay tạo nhắc nhở trước giờ đi ạ?`,
+        suggestedReplies: ['Hỗ trợ từng bước', 'Tạo nhắc nhở', 'Không cần'],
+      };
+    }
   }
+
 
   // -------------------------------------------------------------
   // LAYER C: Ambiguous or Low Confidence Check -> Clarification / Fallback

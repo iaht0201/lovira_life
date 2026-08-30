@@ -2,7 +2,7 @@
 <html lang="vi">
   <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
     <title>Lovira Life — Trợ lý Đời sống thông minh</title>
     <meta name="description" content="Trợ lý Đời sống thông minh dành cho người khuyết tật, người cao tuổi và người cần hỗ trợ trong các hoạt động đời sống" />
     <meta name="theme-color" content="#287C78" />
@@ -21,11 +21,23 @@
     <div id="root"></div>
     <script type="module" src="/src/main.tsx"></script>
     <script>
+      // Disable pinch-to-zoom and multi-touch gesture zoom on iOS Safari & Android
+      document.addEventListener('gesturestart', function (e) {
+        e.preventDefault();
+      });
+      document.addEventListener('gesturechange', function (e) {
+        e.preventDefault();
+      });
+      document.addEventListener('gestureend', function (e) {
+        e.preventDefault();
+      });
+
       // Capture PWA beforeinstallprompt globally as early as possible
       window.addEventListener('beforeinstallprompt', (e) => {
         e.preventDefault();
         window.deferredPWAInstallPrompt = e;
       });
+
 
       if ('serviceWorker' in navigator) {
         window.addEventListener('load', () => {

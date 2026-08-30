@@ -96,6 +96,16 @@ export const AVAILABLE_APP_CAPABILITIES: AppCapability[] = [
     description: 'Mở camera trợ lý thị giác để quét văn bản, toa thuốc hoặc bảng hiệu.',
   },
   {
+    name: 'Mở màn hình Nhìn giúp tôi',
+    actionType: 'OPEN_VISION',
+    description: 'Mở màn hình Nhìn giúp tôi (quét OCR, nhận diện đồ vật & phân tích hình ảnh AI).',
+  },
+  {
+    name: 'Mở màn hình Nghe giúp tôi',
+    actionType: 'OPEN_LISTEN',
+    description: 'Mở màn hình Nghe giúp tôi (ghi âm hội thoại, tóm tắt AI & hiển thị ký hiệu VSL).',
+  },
+  {
     name: 'Cập nhật cài đặt trợ năng',
     actionType: 'UPDATE_ACCESSIBILITY_SETTING',
     description: 'Bật/tắt chế độ tương phản cao, đọc to, ngôn ngữ ký hiệu, v.v.',
@@ -117,8 +127,9 @@ export function getCapabilityGroundingPrompt(): string {
   return `
 QUY TẮC NĂNG LỰC ỨNG DỤNG:
 - NHẮC NHỞ & LỊCH TRÌNH: Lovira CÓ tính năng nhắc nhở thật (appActions: CREATE_REMINDER, SNOOZE_REMINDER, COMPLETE_REMINDER, DELETE_REMINDER, OPEN_REMINDERS). Khi người dùng nhờ nhắc nhở/hẹn giờ, PHẢI tạo appAction CREATE_REMINDER với scheduledAt chuẩn ISO 8601.
-- ĐIỀU HƯỚNG: Hỗ trợ GO_HOME, GO_BACK, OPEN_SESSION, CREATE_SESSION, OPEN_SETTINGS, OPEN_PROFILE, OPEN_CAMERA, UPDATE_ACCESSIBILITY_SETTING.
+- ĐIỀU HƯỚNG & CÔNG CỤ: Hỗ trợ GO_HOME, GO_BACK, OPEN_SESSION, CREATE_SESSION, OPEN_SETTINGS, OPEN_PROFILE, OPEN_CAMERA, OPEN_VISION (Nhìn giúp tôi), OPEN_LISTEN (Nghe giúp tôi), UPDATE_ACCESSIBILITY_SETTING.
 - TÍNH NĂNG KHÔNG HỖ TRỢ: Bản đồ/GPS, gọi điện/SMS ngoài, đặt Grab/Taxi, thanh toán ví điện tử. Khi nhờ việc này, giải thích từ tốn và để actions/appActions rỗng.
 - CHAT/HỎI ĐÁP THÔNG THƯỜNG: Đặt actions: [] và appActions: [].
 `;
 }
+

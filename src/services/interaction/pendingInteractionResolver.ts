@@ -178,7 +178,7 @@ export async function resolvePendingInteraction(
   pending: PendingInteraction | null,
   opts?: { addressing?: string; me?: string; da?: string }
 ): Promise<PendingResolution> {
-  if (!pending) {
+  if (!pending || !pending.data) {
     return { resolved: false, clearPending: false };
   }
 
@@ -192,6 +192,7 @@ export async function resolvePendingInteraction(
   if (isExpired) {
     return { resolved: false, clearPending: true };
   }
+
 
   const trimmed = userText.trim();
 
@@ -308,11 +309,12 @@ export async function resolvePendingInteraction(
   // --------------------------------------------------------------------------
   // CONFIRM REMINDER: Strict User Confirmation Before Creation + In-flight Editing
   // --------------------------------------------------------------------------
-  if (pending.type === 'confirm_reminder' || pending.data.actionType === 'CONFIRM_REMINDER') {
+  if (pending.type === 'confirm_reminder' || pending.data?.actionType === 'CONFIRM_REMINDER') {
     const draft: PendingDraftReminder | undefined =
-      pending.data.draftReminder ||
-      (pending.data.payload?.draftReminder as PendingDraftReminder) ||
-      (pending.data.payload as PendingDraftReminder);
+      pending.data?.draftReminder ||
+      (pending.data?.payload?.draftReminder as PendingDraftReminder) ||
+      (pending.data?.payload as PendingDraftReminder);
+
 
     if (!draft || !draft.title) {
       return { resolved: false, clearPending: true };

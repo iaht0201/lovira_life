@@ -738,8 +738,17 @@ export function useSessionManager({
       availableSessions: sessionsList,
     };
 
+    console.log('[sendInteraction] Processing message:', {
+      text: trimmedText,
+      inputMode,
+      isSessionContext,
+      page: appContext.page,
+    });
+
+
     // A0. Check Instant Accessibility & System Voice Commands (Highest Priority)
     const directAccessCmd = matchAccessibilityVoiceCommand(trimmedText, accessibilitySettings);
+
     if (directAccessCmd && directAccessCmd.handled && directAccessCmd.appAction) {
       setPendingInteraction(null);
       await executeValidatedAppAction(directAccessCmd.appAction, appContext, runtimeContext, { trustedSource: true });
@@ -1232,6 +1241,10 @@ export function useSessionManager({
       setActiveSession(sessionWithUserMsg);
 
       try {
+        const fetchSignal = typeof AbortSignal !== 'undefined' && 'timeout' in AbortSignal && 'any' in AbortSignal
+          ? (AbortSignal as any).any([controller.signal, AbortSignal.timeout(7000)])
+          : controller.signal;
+
         const res = await fetch('/api/chat', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -1244,8 +1257,9 @@ export function useSessionManager({
             inputMode,
             appContext,
           }),
-          signal: controller.signal,
+          signal: fetchSignal,
         });
+
 
         if (!res.ok) {
           throw new Error(`Server returned ${res.status}`);
@@ -1389,6 +1403,10 @@ export function useSessionManager({
 
     // C. Fallback when no session exists at all
     try {
+      const fetchSignal = typeof AbortSignal !== 'undefined' && 'timeout' in AbortSignal && 'any' in AbortSignal
+        ? (AbortSignal as any).any([controller.signal, AbortSignal.timeout(7000)])
+        : controller.signal;
+
       const res = await fetch('/api/chat', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -1405,8 +1423,9 @@ export function useSessionManager({
           inputMode,
           appContext,
         }),
-        signal: controller.signal,
+        signal: fetchSignal,
       });
+
 
       if (!res.ok) {
         throw new Error(`Server returned ${res.status}`);

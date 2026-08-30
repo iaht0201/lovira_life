@@ -78,13 +78,18 @@
     color: var(--text-primary);
     font-family: 'Inter', SF Pro, system-ui, -apple-system, sans-serif;
     transition: background-color 0.2s ease, color 0.2s ease;
+    touch-action: pan-x pan-y;
+    -webkit-text-size-adjust: 100%;
   }
 
   body {
     background-color: var(--bg-base);
     color: var(--text-primary);
     min-height: 100vh;
+    touch-action: pan-x pan-y;
+    -webkit-text-size-adjust: 100%;
   }
+
 
   *:focus-visible {
     outline: 3px solid var(--color-focus-ring) !important;

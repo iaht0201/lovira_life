@@ -20,6 +20,7 @@ export class SpeechRecognitionService {
   // Silence & Timeout Timers
   private silenceTimer: any = null;
   private sessionTimeoutTimer: any = null;
+  private inactivityTimeoutTimer: any = null;
   private restartTimer: any = null;
   private hasHeardSpeech = false;
 
@@ -27,10 +28,11 @@ export class SpeechRecognitionService {
   private consecutiveRapidEnds = 0;
   private restartCount = 0;
   private lastStartTime = 0;
-  private readonly MAX_CONSECUTIVE_RESTARTS = 3;
+  private readonly MAX_CONSECUTIVE_RESTARTS = 15; // Allow smooth continuous waiting up to 60s
 
-  private readonly SILENCE_COMMIT_MS = 1200; // 1.2s of silence after speaking -> auto-commit
-  private readonly MAX_SESSION_MS = 15000; // 15s max listening window
+  private readonly SILENCE_COMMIT_MS = 2000; // 2.0s of silence after speaking -> auto-commit
+  private readonly MAX_SESSION_MS = 30000; // 30s max continuous speaking window
+  private readonly INACTIVITY_TIMEOUT_MS = 60000; // 60s (1 phút) không phản hồi -> kết thúc và báo lại
 
   public isSupported(): boolean {
     if (typeof window === 'undefined') return false;
@@ -47,11 +49,16 @@ export class SpeechRecognitionService {
       clearTimeout(this.sessionTimeoutTimer);
       this.sessionTimeoutTimer = null;
     }
+    if (this.inactivityTimeoutTimer) {
+      clearTimeout(this.inactivityTimeoutTimer);
+      this.inactivityTimeoutTimer = null;
+    }
     if (this.restartTimer) {
       clearTimeout(this.restartTimer);
       this.restartTimer = null;
     }
   }
+
 
   private mapError(errCode: string): { type: VoiceErrorType; message: string } {
     switch (errCode) {
@@ -153,10 +160,26 @@ export class SpeechRecognitionService {
 
       let hasFatalError = false;
 
-      // 15 seconds session max window
+      // 60 seconds (1 minute) Inactivity Timeout: If no speech input within 1 minute, terminate and notify
+      this.inactivityTimeoutTimer = setTimeout(() => {
+        if (this.isListening && !this.isSubmitted && !this.isCancelled) {
+          console.log('[SpeechRecognition] 60s inactivity timeout reached without speech');
+          if (this.latestTranscript.trim()) {
+            this.commitTranscript(this.latestTranscript);
+          } else {
+            this.cancelListening();
+            this.events.onError?.(
+              'no-speech',
+              'Đã quá 1 phút không nhận được câu nói nào. Lovira xin phép dừng micro, bạn nhấn vào biểu tượng micro khi sẵn sàng nói lại nhé!'
+            );
+          }
+        }
+      }, this.INACTIVITY_TIMEOUT_MS);
+
+      // 30 seconds max listening window for long continuous speech
       this.sessionTimeoutTimer = setTimeout(() => {
         if (this.isListening && !this.isSubmitted && !this.isCancelled) {
-          console.log('[SpeechRecognition] Max session timeout reached');
+          console.log('[SpeechRecognition] Max 30s continuous session timeout reached');
           if (this.latestTranscript.trim()) {
             this.commitTranscript(this.latestTranscript);
           } else {
@@ -168,6 +191,7 @@ export class SpeechRecognitionService {
           }
         }
       }, this.MAX_SESSION_MS);
+
 
       recognition.onstart = () => {
         if (this.isCancelled) return;
