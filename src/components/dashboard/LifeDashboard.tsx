@@ -16,6 +16,7 @@ import {
 import { LifeSession, ScenarioType } from '../../types';
 import { SCENARIO_TEMPLATES } from '../../data/initialData';
 import { BriefSessionHeader } from '../../services/storageService';
+import { calculateSessionTaskProgress } from '../../services/actionEngine';
 
 interface LifeDashboardProps {
   activeSession: LifeSession | null;
@@ -240,7 +241,7 @@ export const LifeDashboard: React.FC<LifeDashboardProps> = ({
 
             <div className="flex items-center justify-between pt-2">
               <div className="text-xs font-medium text-text-secondary">
-                Việc đã làm: {activeSession.tasks.filter(t => t.status === 'completed').length} / {activeSession.tasks.length}
+                Việc đã làm: {calculateSessionTaskProgress(activeSession.tasks).completedUnits} / {calculateSessionTaskProgress(activeSession.tasks).totalUnits}
               </div>
               <button
                 onClick={() => onOpenSession(activeSession.id)}

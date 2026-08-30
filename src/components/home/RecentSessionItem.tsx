@@ -80,8 +80,8 @@ export const RecentSessionItem: React.FC<RecentSessionItemProps> = ({
     }
   };
 
-  const completedCount = session.completedTasks ?? 3;
-  const totalCount = session.totalTasks ?? 7;
+  const completedCount = session.completedTasksCount ?? session.completedTasks ?? 0;
+  const totalCount = session.totalTasksCount ?? session.totalTasks ?? 0;
 
   return (
     <div className="group flex items-center justify-between p-3.5 sm:p-4 rounded-[18px] bg-lovira-card border border-lovira hover:border-lovira-purple hover:bg-lovira-card-hover transition-all duration-150 gap-3 shadow-xs">

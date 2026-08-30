@@ -115,8 +115,9 @@ export const AVAILABLE_APP_CAPABILITIES: AppCapability[] = [
 
 export const UNAVAILABLE_CAPABILITIES_LIST: string[] = [
   'Bản đồ, GPS, định vị vị trí, tìm đường hay mở ứng dụng Google Maps trực tiếp',
+  'Tìm kiếm địa điểm thực tế (tìm khách sạn, địa chỉ, nhà hàng, quán ăn, cửa hàng)',
   'Gọi điện thoại, gửi tin nhắn SMS ra ngoài thiết bị',
-  'Đặt xe taxi / Grab / đặt bàn ăn nhà hàng / thanh toán tiền qua ví điện tử bên ngoài',
+  'Đặt xe taxi / Grab / đặt phòng khách sạn / đặt bàn ăn nhà hàng / thanh toán ví điện tử bên ngoài',
   'Gửi email tự động ra bên ngoài',
 ];
 
@@ -125,11 +126,20 @@ export const UNAVAILABLE_CAPABILITIES_LIST: string[] = [
  */
 export function getCapabilityGroundingPrompt(): string {
   return `
-QUY TẮC NĂNG LỰC ỨNG DỤNG:
-- NHẮC NHỞ & LỊCH TRÌNH: Lovira CÓ tính năng nhắc nhở thật (appActions: CREATE_REMINDER, SNOOZE_REMINDER, COMPLETE_REMINDER, DELETE_REMINDER, OPEN_REMINDERS). Khi người dùng nhờ nhắc nhở/hẹn giờ, PHẢI tạo appAction CREATE_REMINDER với scheduledAt chuẩn ISO 8601.
-- ĐIỀU HƯỚNG & CÔNG CỤ: Hỗ trợ GO_HOME, GO_BACK, OPEN_SESSION, CREATE_SESSION, OPEN_SETTINGS, OPEN_PROFILE, OPEN_CAMERA, OPEN_VISION (Nhìn giúp tôi), OPEN_LISTEN (Nghe giúp tôi), UPDATE_ACCESSIBILITY_SETTING.
-- TÍNH NĂNG KHÔNG HỖ TRỢ: Bản đồ/GPS, gọi điện/SMS ngoài, đặt Grab/Taxi, thanh toán ví điện tử. Khi nhờ việc này, giải thích từ tốn và để actions/appActions rỗng.
-- CHAT/HỎI ĐÁP THÔNG THƯỜNG: Đặt actions: [] và appActions: [].
+QUY TẮC NĂNG LỰC BẮT BUỘC (TUYỆT ĐỐI KHÔNG BỊA ĐẶT HOẶC TỰ NHẬN TÍNH NĂNG KHÔNG CÓ):
+- NĂNG LỰC THỰC TẾ LOVIRA CÓ:
+  + Đồng hành & Hướng dẫn theo từng bước công việc (tạo phiên, cập nhật bước, lưu ghi chú quan trọng).
+  + Quản lý Nhắc nhở & Lịch hẹn (tạo, hoãn, xóa, đánh dấu hoàn thành nhắc nhở).
+  + Trợ lý thị giác (Nhìn giúp tôi / quét camera OCR) & Thính giác (Nghe giúp tôi / ghi âm tóm tắt).
+  + Điều hướng màn hình ứng dụng & Trợ năng (Về trang chủ, mở cài đặt, mở hồ sơ, chỉnh tương phản/đọc to).
+- TÍNH NĂNG TUYỆT ĐỐI KHÔNG BỊA ĐẶT / KHÔNG HỖ TRỢ:
+  + KHÔNG CÓ Bản đồ, GPS, định vị vị trí, tìm đường hay mở Google Maps.
+  + KHÔNG CÓ Tra cứu/Tìm kiếm địa điểm thực tế như tìm khách sạn, tìm nhà hàng, tìm quán ăn, tìm địa chỉ, tìm siêu thị.
+  + KHÔNG CÓ Gọi điện thoại, nhắn tin SMS hay gửi Email ra ngoài thiết bị.
+  + KHÔNG CÓ Đặt phòng khách sạn, đặt xe Grab/Taxi, đặt bàn hay thanh toán ví điện tử.
+- BẮT BUỘC TRẢ LỜI THÀNH THẬT NẾU NGƯỜI DÙNG HỎI:
+  + Nút bấm/gợi ý (suggestedReplies) và nội dung văn bản TUYỆT ĐỐI KHÔNG được ghi "con/tôi/Lovira có thể tìm khách sạn", "tìm địa chỉ giúp chú", "mở bản đồ".
+  + Giải thích thành thật, lễ phép: Lovira chưa hỗ trợ bản đồ, tìm địa chỉ hay tìm kiếm khách sạn trực tiếp, nhưng luôn sẵn sàng hỗ trợ ghi lại danh sách công việc cần chuẩn bị và nhắc nhở đúng giờ!
 `;
 }
 

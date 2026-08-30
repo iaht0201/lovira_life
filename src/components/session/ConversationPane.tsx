@@ -42,15 +42,20 @@ export const ConversationPane: React.FC<ConversationPaneProps> = ({
 
   const rawReplies = lastAssistantMessage?.suggestedReplies;
 
-  // Filter out capabilities that don't exist (e.g., search map/stores near me)
+  // Filter out capabilities that don't exist (e.g., search map/stores/hotels near me)
   const filterValidReplies = (replies?: string[]) => {
     if (!replies) return [];
     return replies
-      .map((r) => {
-        if (r.toLowerCase().includes('tìm quán gần đây') || r.toLowerCase().includes('bản đồ')) {
-          return 'Gợi ý cách chọn quán';
-        }
-        return r;
+      .filter((r) => {
+        const lower = r.toLowerCase();
+        return (
+          !lower.includes('bản đồ') &&
+          !lower.includes('khách sạn') &&
+          !lower.includes('địa chỉ') &&
+          !lower.includes('tìm quán gần') &&
+          !lower.includes('định vị') &&
+          !lower.includes('chỉ đường')
+        );
       })
       .slice(0, 4);
   };

@@ -116,17 +116,7 @@ export const Topbar: React.FC<TopbarProps> = ({
         </div>
       </div>
 
-      {/* Search Input (Desktop & Tablet) */}
-      <div className="relative flex-1 max-w-[240px] sm:max-w-[280px] lg:max-w-[320px] hidden sm:block">
-        <Search className="w-[18px] h-[18px] text-lovira-sub absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none" />
-        <input
-          type="text"
-          value={searchQuery}
-          onChange={handleSearchChange}
-          placeholder="Tìm kiếm..."
-          className="w-full h-[40px] pl-10 pr-4 rounded-[12px] bg-lovira-input text-[14px] text-lovira-main placeholder-lovira-sub focus:outline-none focus:ring-2 focus:ring-[#287C78] transition-all"
-        />
-      </div>
+      {/* Search Input temporarily removed */}
 
       {/* Right Controls Area */}
       <div className="flex items-center gap-1.5 sm:gap-2 ml-auto">

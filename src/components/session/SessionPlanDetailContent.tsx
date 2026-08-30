@@ -5,6 +5,7 @@ import { NextRecommendedAction } from './NextRecommendedAction';
 import { TaskProgressPanel } from './TaskProgressPanel';
 import { ImportantFactsPanel } from './ImportantFactsPanel';
 import { SessionResourcePanel } from './SessionResourcePanel';
+import { calculateSessionTaskProgress } from '../../services/actionEngine';
 
 export interface SessionPlanDetailContentProps {
   session: LifeSession;
@@ -39,9 +40,7 @@ export const SessionPlanDetailContent: React.FC<SessionPlanDetailContentProps> =
   onDeleteResource,
   onOpenCamera,
 }) => {
-  const completedTasks = session.tasks.filter((t) => t.isCompleted).length;
-  const totalTasks = session.tasks.length;
-  const progressPercent = totalTasks > 0 ? Math.round((completedTasks / totalTasks) * 100) : 0;
+  const { completedUnits: completedTasks, totalUnits: totalTasks, progressPercent } = calculateSessionTaskProgress(session.tasks);
 
   return (
     <div className="flex flex-col h-full w-full bg-white dark:bg-[#152020] overflow-hidden">

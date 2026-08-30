@@ -1,6 +1,7 @@
 import React from 'react';
 import { ArrowLeft, Sliders, CheckCircle2, PauseCircle, PlayCircle, Menu, ChevronRight } from 'lucide-react';
 import { LifeSession, SessionStatus } from '../../types';
+import { calculateSessionTaskProgress } from '../../services/actionEngine';
 
 interface SessionConversationHeaderProps {
   session: LifeSession;
@@ -17,8 +18,7 @@ export const SessionConversationHeader: React.FC<SessionConversationHeaderProps>
   onToggleMobileSessionsList,
   isDetailOpen = false,
 }) => {
-  const completedCount = session.tasks.filter((t) => t.isCompleted).length;
-  const totalCount = session.tasks.length;
+  const { completedUnits: completedCount, totalUnits: totalCount } = calculateSessionTaskProgress(session.tasks);
 
   const getStatusBadge = (status: SessionStatus) => {
     switch (status) {

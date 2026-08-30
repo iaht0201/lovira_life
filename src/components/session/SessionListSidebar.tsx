@@ -212,7 +212,9 @@ export const SessionListSidebar: React.FC<SessionListSidebarProps> = ({
         ) : (
           filteredSessions.map((s) => {
             const isActive = s.id === activeSessionId;
-            const progressText = s.totalTasksCount ? `${s.completedTasksCount}/${s.totalTasksCount}` : undefined;
+            const completedCount = s.completedTasksCount ?? s.completedTasks ?? 0;
+            const totalCount = s.totalTasksCount ?? s.totalTasks ?? 0;
+            const progressText = totalCount > 0 ? `${completedCount}/${totalCount}` : undefined;
 
             return (
               <button

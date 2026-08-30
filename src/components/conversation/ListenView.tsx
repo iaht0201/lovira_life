@@ -29,6 +29,13 @@ export const ListenView: React.FC<ListenViewProps> = ({ onNavigate, onShowToast 
   const [vslCurrentText, setVslCurrentText] = useState<string>('Nghe giúp tôi sẵn sàng');
 
   const recognitionRef = useRef<any>(null);
+  const isRecordingRef = useRef<boolean>(false);
+  const baseTranscriptRef = useRef<string>('');
+
+  // Keep isRecordingRef in sync with state
+  useEffect(() => {
+    isRecordingRef.current = isRecording;
+  }, [isRecording]);
 
   useEffect(() => {
     const SpeechRecognition =
@@ -41,46 +48,75 @@ export const ListenView: React.FC<ListenViewProps> = ({ onNavigate, onShowToast 
       recognition.lang = 'vi-VN';
 
       recognition.onresult = (event: any) => {
+        const sessionFinals: string[] = [];
         let currentInterim = '';
-        let currentFinal = '';
 
-        for (let i = event.resultIndex; i < event.results.length; i++) {
+        // Iterate through all results in the current recognition session to build accurate non-repeating text
+        for (let i = 0; i < event.results.length; i++) {
           const res = event.results[i];
+          const text = res[0]?.transcript ? res[0].transcript.trim() : '';
+          if (!text) continue;
+
           if (res.isFinal) {
-            currentFinal += res[0].transcript + ' ';
+            sessionFinals.push(text);
           } else {
-            currentInterim += res[0].transcript;
+            currentInterim += (currentInterim ? ' ' : '') + text;
           }
         }
 
-        if (currentFinal) {
-          setTranscript((prev) => (prev ? prev + '\n' + currentFinal.trim() : currentFinal.trim()));
-          setVslCurrentText(currentFinal.trim());
-        }
+        const sessionFinalText = sessionFinals.join(' ');
+        const fullFinal = [baseTranscriptRef.current, sessionFinalText]
+          .filter((s) => s && s.trim())
+          .join('\n');
+
+        setTranscript(fullFinal);
         setInterimText(currentInterim);
+
+        // Update VSL avatar text with latest spoken words
+        const latestSpoken = sessionFinalText.slice(-30) || currentInterim.slice(-30);
+        if (latestSpoken) {
+          setVslCurrentText(latestSpoken);
+        }
       };
 
       recognition.onerror = (err: any) => {
         console.warn('[SpeechRecognition error]:', err);
         if (err.error === 'not-allowed') {
           if (onShowToast) onShowToast('Chưa cấp quyền micro');
+          setIsRecording(false);
+          isRecordingRef.current = false;
         }
-        setIsRecording(false);
       };
 
       recognition.onend = () => {
-        if (isRecording) {
+        // Save current transcript to base before potentially restarting
+        setTranscript((currentTrans) => {
+          baseTranscriptRef.current = currentTrans;
+          return currentTrans;
+        });
+
+        if (isRecordingRef.current) {
           try {
             recognition.start();
           } catch (e) {
+            console.warn('[SpeechRecognition] Restart error:', e);
             setIsRecording(false);
+            isRecordingRef.current = false;
           }
         }
       };
 
       recognitionRef.current = recognition;
     }
-  }, [isRecording, onShowToast]);
+
+    return () => {
+      if (recognitionRef.current) {
+        try {
+          recognitionRef.current.stop();
+        } catch (e) {}
+      }
+    };
+  }, [onShowToast]);
 
   const toggleRecording = () => {
     if (!recognitionRef.current) {
@@ -89,22 +125,41 @@ export const ListenView: React.FC<ListenViewProps> = ({ onNavigate, onShowToast 
     }
 
     if (isRecording) {
-      recognitionRef.current.stop();
+      isRecordingRef.current = false;
       setIsRecording(false);
+      try {
+        recognitionRef.current.stop();
+      } catch (e) {}
+      baseTranscriptRef.current = transcript;
       setInterimText('');
       if (onShowToast) onShowToast('Đã dừng ghi âm cuộc trò chuyện');
     } else {
       try {
-        recognitionRef.current.start();
+        baseTranscriptRef.current = transcript;
+        isRecordingRef.current = true;
         setIsRecording(true);
+        recognitionRef.current.start();
         if (onShowToast) onShowToast('Đang lắng nghe cuộc trò chuyện...');
       } catch (e) {
         console.error('Failed to start recognition:', e);
+        // If recognition fails to start (e.g. already started), attempt stop then start
+        try {
+          recognitionRef.current.stop();
+          setTimeout(() => {
+            recognitionRef.current.start();
+            setIsRecording(true);
+            isRecordingRef.current = true;
+          }, 200);
+        } catch (retryErr) {
+          setIsRecording(false);
+          isRecordingRef.current = false;
+        }
       }
     }
   };
 
   const handleClear = () => {
+    baseTranscriptRef.current = '';
     setTranscript('');
     setInterimText('');
     setSummary(null);

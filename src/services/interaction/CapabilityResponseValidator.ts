@@ -30,16 +30,28 @@ export interface GroundingResult {
  */
 const PROSE_HALLUCINATION_PATTERNS = [
   {
-    category: 'map_gps',
-    regex: /\b(đang|đã|sẽ|vừa)\s+(mở|bật|tải|chạy)\s+(bản\s*đồ|google\s*maps?|gps|định\s*vị|chỉ\s*đường)\b/i,
+    category: 'hotel_search_claim',
+    regex: /\b(có\s+thể|giúp|sẽ|đang|đã)\s+.*(tìm|tra\s*cứu|đặt|chọn)\s+.*(khách\s*sạn|nhà\s*nghỉ|homestay|resort|phòng\s*trọ)\b/i,
     replacementMsg: (h: HonorificContext) =>
-      `Dạ ${h.addressing}, hiện tại Lovira chưa hỗ trợ mở bản đồ hoặc định vị trực tiếp, nhưng ${h.me} luôn có thể gợi ý địa chỉ và hướng dẫn ${h.addressing} các bước chuẩn bị nha${h.a}!`,
+      `Dạ ${h.addressing}, ứng dụng Lovira chưa hỗ trợ tìm kiếm hay đặt phòng khách sạn ạ. ${h.me.charAt(0).toUpperCase() + h.me.slice(1)} có thể hỗ trợ ${h.addressing} lập danh sách các việc cần chuẩn bị và hẹn giờ nhắc nhở nhé${h.a}!`,
+  },
+  {
+    category: 'map_gps',
+    regex: /\b(đang|đã|sẽ|vừa|có\s+thể)\s+(mở|bật|tải|chạy|xem|định\s*vị|chỉ\s*đường|tìm)\s+.*(bản\s*đồ|google\s*maps?|gps|định\s*vị|chỉ\s*đường|tọa\s*độ)\b/i,
+    replacementMsg: (h: HonorificContext) =>
+      `Dạ ${h.addressing}, ứng dụng Lovira chưa tích hợp bản đồ hoặc định vị trực tiếp ạ. ${h.me.charAt(0).toUpperCase() + h.me.slice(1)} có thể giúp ${h.addressing} chuẩn bị các việc cần làm và tạo nhắc nhở nhé${h.a}!`,
+  },
+  {
+    category: 'address_search_claim',
+    regex: /\b(có\s+thể|sẽ|đang|đã)\s+.*(tìm|tra\s*cứu|dẫn|chỉ)\s+.*(địa\s*chỉ|vị\s*trí)\b/i,
+    replacementMsg: (h: HonorificContext) =>
+      `Dạ ${h.addressing}, Lovira chưa hỗ trợ tra cứu địa chỉ hoặc định vị trực tiếp ạ. ${h.me.charAt(0).toUpperCase() + h.me.slice(1)} có thể hỗ trợ ${h.addressing} theo dõi danh sách các bước công việc nhé${h.a}!`,
   },
   {
     category: 'map_gps_open',
-    regex: /\bcon\s+(đang|đã)\s+mở\s+bản\s*đồ\b/i,
+    regex: /\bcon\s+(đang|đã|có\s+thể)\s+mở\s+bản\s*đồ\b/i,
     replacementMsg: (h: HonorificContext) =>
-      `Dạ ${h.addressing}, hiện tại Lovira chưa hỗ trợ mở bản đồ trực tiếp, nhưng ${h.me} có thể gợi ý các việc cần chuẩn bị và lộ trình đi cho ${h.addressing} nhé${h.a}!`,
+      `Dạ ${h.addressing}, Lovira chưa hỗ trợ mở bản đồ trực tiếp ạ. ${h.me.charAt(0).toUpperCase() + h.me.slice(1)} có thể gợi ý các việc cần chuẩn bị cho ${h.addressing} nhé${h.a}!`,
   },
   {
     category: 'phone_sms',
@@ -49,15 +61,15 @@ const PROSE_HALLUCINATION_PATTERNS = [
   },
   {
     category: 'booking_ride',
-    regex: /\b(đang|đã|sẽ|vừa)\s+(đặt\s+xe|gọi\s+xe|đặt\s+grab|đặt\s+be|đặt\s+bàn|thanh\s+toán\s+hộ)\b/i,
+    regex: /\b(đang|đã|sẽ|vừa)\s+(đặt\s+xe|gọi\s+xe|đặt\s+grab|đặt\s+be|đặt\s+bàn|thanh\s+toán\s+hộ|đặt\s+phòng)\b/i,
     replacementMsg: (h: HonorificContext) =>
-      `Dạ ${h.addressing}, Lovira chưa thể đặt xe hoặc thanh toán trực tiếp thay ${h.addressing}, nhưng ${h.me} đã nhắc nhở các việc chuẩn bị sẵn sàng rồi ạ!`,
+      `Dạ ${h.addressing}, Lovira chưa thể đặt xe, đặt phòng hay thanh toán trực tiếp thay ${h.addressing}, nhưng ${h.me} đã sẵn sàng giúp ${h.addressing} lên danh sách chuẩn bị rồi ạ!`,
   },
   {
     category: 'realtime_store_search',
-    regex: /\b(đang\s+tìm\s+kiếm|đã\s+tìm\s+thấy)\s+danh\s+sách\s+(quán|tiệm|cửa\s*hàng|quầy)\s+thời\s+gian\s+thực\s+trên\s+bản\s*đồ\b/i,
+    regex: /\b(đang\s+tìm\s+kiếm|đã\s+tìm\s+thấy)\s+danh\s+sách\s+(quán|tiệm|cửa\s*hàng|quầy|khách\s*sạn)\s+thời\s+gian\s+thực\s+trên\s+bản\s*đồ\b/i,
     replacementMsg: (h: HonorificContext) =>
-      `Dạ ${h.addressing}, ${h.me} có một số gợi ý phù hợp dựa trên thông tin phiên, ${h.addressing} xem qua nhé!`,
+      `Dạ ${h.addressing}, ${h.me} có một số gợi ý chuẩn bị phù hợp, ${h.addressing} xem qua nhé!`,
   },
 ];
 
@@ -68,9 +80,13 @@ const BANNED_SUGGESTED_REPLY_PATTERNS = [
   /\bbản\s*đồ\b/i,
   /\bmaps?\b/i,
   /\bđịnh\s*vị\b/i,
+  /\bkhách\s*sạn\b/i,
+  /\bđịa\s*chỉ\b/i,
+  /\bchỉ\s+đường\b/i,
   /\bgọi\s+xe\b/i,
   /\bđặt\s+xe\b/i,
   /\bđặt\s+grab\b/i,
+  /\bđặt\s+phòng\b/i,
   /\bgọi\s+điện\b/i,
 ];
 

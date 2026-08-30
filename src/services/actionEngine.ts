@@ -642,6 +642,42 @@ export function calculateNextRecommendedAction(session: LifeSession): Recommende
 }
 
 /**
+ * Calculates total units, completed units, and progress percentage for a session
+ * taking into account both parent tasks and subtasks accurately.
+ */
+export function calculateSessionTaskProgress(tasks: LifeTask[] = []): {
+  totalUnits: number;
+  completedUnits: number;
+  progressPercent: number;
+} {
+  let totalUnits = 0;
+  let completedUnits = 0;
+
+  if (!tasks || tasks.length === 0) {
+    return { totalUnits: 0, completedUnits: 0, progressPercent: 0 };
+  }
+
+  tasks.forEach((t) => {
+    if (t.subtasks && t.subtasks.length > 0) {
+      t.subtasks.forEach((st) => {
+        totalUnits += 1;
+        if (st.status === 'completed' || st.status === 'skipped') {
+          completedUnits += 1;
+        }
+      });
+    } else {
+      totalUnits += 1;
+      if (t.status === 'completed' || t.status === 'skipped') {
+        completedUnits += 1;
+      }
+    }
+  });
+
+  const progressPercent = totalUnits > 0 ? Math.round((completedUnits / totalUnits) * 100) : 0;
+  return { totalUnits, completedUnits, progressPercent };
+}
+
+/**
  * Reconciles all derived session states:
  * - Subtask statuses & parent status
  * - Calculates nextRecommendedAction
@@ -649,10 +685,16 @@ export function calculateNextRecommendedAction(session: LifeSession): Recommende
  */
 export function reconcileSessionDerivedState(session: LifeSession): LifeSession {
   const reconciledTasks = session.tasks.map((t) => reconcileParentTaskStatus(t));
+  const { totalUnits, completedUnits } = calculateSessionTaskProgress(reconciledTasks);
+
   const updated: LifeSession = {
     ...session,
     tasks: reconciledTasks,
   };
+
+  if (totalUnits > 0 && completedUnits === totalUnits) {
+    updated.status = 'completed';
+  }
 
   const nextRec = calculateNextRecommendedAction(updated);
   updated.nextRecommendedAction = nextRec;

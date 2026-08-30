@@ -1,6 +1,6 @@
 import { LifeSession, AccessibilitySettings, AISettings, UserProfile, ScenarioFamily, GlobalChatMessage, PendingInteraction } from '../types.js';
 import { DEMO_MEDICAL_SESSION } from '../data/initialData.js';
-import { calculateNextRecommendedAction, resolveCurrentStep } from './actionEngine.js';
+import { calculateNextRecommendedAction, resolveCurrentStep, calculateSessionTaskProgress } from './actionEngine.js';
 
 const KEY_SESSIONS_LIST = 'lovira_sessions';
 const KEY_SESSION_PREFIX = 'lovira_session_';
@@ -25,6 +25,10 @@ export interface BriefSessionHeader {
   deadlineAt?: string;
   pinned?: boolean;
   updatedAt: string;
+  completedTasksCount?: number;
+  totalTasksCount?: number;
+  completedTasks?: number;
+  totalTasks?: number;
 }
 
 export const DEFAULT_ACCESSIBILITY: AccessibilitySettings = {
@@ -126,6 +130,7 @@ class StorageService {
   saveSession(session: LifeSession): void {
     try {
       const migrated = migrateSession(session);
+      const { completedUnits, totalUnits } = calculateSessionTaskProgress(migrated.tasks);
 
       // 1. Save detailed session
       localStorage.setItem(`${KEY_SESSION_PREFIX}${migrated.id}`, JSON.stringify(migrated));
@@ -145,6 +150,10 @@ class StorageService {
         deadlineAt: migrated.deadlineAt,
         pinned: migrated.pinned,
         updatedAt: migrated.updatedAt,
+        completedTasksCount: completedUnits,
+        totalTasksCount: totalUnits,
+        completedTasks: completedUnits,
+        totalTasks: totalUnits,
       };
 
       if (existingIdx >= 0) {

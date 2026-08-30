@@ -24,6 +24,7 @@ import {
 } from 'lucide-react';
 import { LifeSession, ScenarioType } from '../../types';
 import { BriefSessionHeader, storageService } from '../../services/storageService';
+import { calculateSessionTaskProgress } from '../../services/actionEngine';
 
 interface HistoryPageProps {
   activeSession: LifeSession | null;
@@ -168,9 +169,7 @@ export const HistoryPage: React.FC<HistoryPageProps> = ({
   // Calculate quick stats for active session
   const activeStats = useMemo(() => {
     if (!activeSession) return null;
-    const total = activeSession.tasks?.length || 0;
-    const completed = activeSession.tasks?.filter((t) => t.status === 'completed').length || 0;
-    const pct = total > 0 ? Math.round((completed / total) * 100) : 0;
+    const { totalUnits: total, completedUnits: completed, progressPercent: pct } = calculateSessionTaskProgress(activeSession.tasks);
     return { total, completed, pct };
   }, [activeSession]);
 
@@ -408,8 +407,7 @@ export const HistoryPage: React.FC<HistoryPageProps> = ({
 
                   // Pull full session details if cached to count completed tasks
                   const full = storageService.getSession(session.id);
-                  const totalTasks = full?.tasks?.length || 0;
-                  const completedTasks = full?.tasks?.filter((t) => t.status === 'completed').length || 0;
+                  const { totalUnits: totalTasks, completedUnits: completedTasks } = calculateSessionTaskProgress(full?.tasks || []);
 
                   return (
                     <div
